@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ghostclip.Core/Ghostclip.Core.csproj" />
+    <Project Path="src/Ghostclip.Host/Ghostclip.Host.csproj" />
+    <Project Path="src/Ghostclip.Worker/Ghostclip.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ghostclip.Core.Tests/Ghostclip.Core.Tests.csproj" />
+  </Folder>
+</Solution>
