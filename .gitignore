@@ -1,0 +1,21 @@
+# Local editor/assistant settings
+CLAUDE.local.md
+.claude/
+
+# Tools downloaded by tools/get-tools.ps1
+/tools/ffmpeg/
+/tools/presentmon/
+
+# Local benchmark results (the consolidated table goes in the README)
+/bench/results/
+
+# Media produced while testing
+*.ts
+*.mp4
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
