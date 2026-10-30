@@ -11,10 +11,10 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
 $required = [ordered]@{
-    encoders = 'h264_nvenc', 'hevc_nvenc', 'h264_amf', 'hevc_amf', 'h264_qsv', 'hevc_qsv', 'aac'
+    encoders = 'h264_nvenc', 'hevc_nvenc', 'h264_amf', 'hevc_amf', 'h264_qsv', 'hevc_qsv', 'aac', 'mjpeg'
     decoders = 'h264', 'hevc', 'aac', 'pcm_f32le'
-    filters  = 'ddagrab', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'fps', 'amix'
-    muxers   = 'segment', 'mpegts', 'mp4', 'null'
+    filters  = 'ddagrab', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'fps', 'amix', 'aresample', 'asetnsamples', 'astats', 'ametadata'
+    muxers   = 'segment', 'mpegts', 'mp4', 'null', 'image2'
     demuxers = 'concat', 'mpegts', 'mov', 'f32le'
 }
 $listFlag = @{ encoders = '-encoders'; decoders = '-decoders'; filters = '-filters'; muxers = '-muxers'; demuxers = '-demuxers' }

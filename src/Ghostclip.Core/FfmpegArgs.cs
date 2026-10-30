@@ -198,6 +198,31 @@ public static class FfmpegArgs
         "-f", "mp4", output,
     ];
 
+    /// <summary>One frame as a small JPEG for the library. Seeking before the input decodes from the nearest keyframe only.</summary>
+    public static IReadOnlyList<string> Thumbnail(string input, string output, double atSeconds) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+        "-ss", Inv($"{atSeconds:0.000}"), "-i", input,
+        "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", "-f", "image2", output,
+    ];
+
+    /// <summary>
+    /// Prints the peak level of each bucket of the first audio track
+    /// (<see cref="ClipMedia.ParsePeaks"/>). Audio only, resampled down: no video is decoded.
+    /// </summary>
+    public static IReadOnlyList<string> AudioPeaks(string input, int samplesPerPeak) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "info", "-i", input, "-map", "0:a:0",
+        "-af", Inv($"aresample=8000,asetnsamples=n={samplesPerPeak}:p=0,astats=metadata=1:reset=1,ametadata=mode=print:key=lavfi.astats.Overall.Peak_level"),
+        "-f", "null", "-",
+    ];
+
+    /// <summary>ffprobe arguments listing video packets and their flags; "K" marks keyframes. Reads the index, decodes nothing.</summary>
+    public static IReadOnlyList<string> Keyframes(string input) =>
+    [
+        "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time,flags", "-of", "csv=p=0", input,
+    ];
+
     /// <summary>
     /// Re-encodes a clip to fit a size limit, on the hardware encoder. Several
     /// audio tracks are mixed into one, since Discord plays only the first.
