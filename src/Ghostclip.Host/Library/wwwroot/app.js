@@ -225,6 +225,7 @@ function showView(name) {
   $('library').hidden = name !== 'library';
   $('clip').hidden = name !== 'clip';
   $('settings').hidden = name !== 'settings';
+  if (name !== 'settings') Settings.stopListening();
   // The sidebar marks where you are: a game, or Settings.
   document.body.classList.toggle('settings-open', name === 'settings');
   $('nav-settings').classList.toggle('on', name === 'settings');

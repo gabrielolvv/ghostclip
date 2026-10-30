@@ -1,3 +1,5 @@
+using Ghostclip.Core;
+
 namespace Ghostclip.Host;
 
 /// <summary>
@@ -59,6 +61,12 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         if (key == Keys.None)
         {
             error = $"\"{gesture}\" has no main key. Use something like Alt+F10.";
+            return false;
+        }
+        if (modifiers == 0 && !HotkeyRules.AllowedWithoutModifier(key.ToString()))
+        {
+            error = $"\"{gesture}\" alone would stop working in every other program. Add Ctrl, Alt, Shift or Win, or use an F key.";
+            key = Keys.None;
             return false;
         }
         return true;

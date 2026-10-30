@@ -43,7 +43,15 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
     private async Task SendSettingsAsync()
     {
         // The file as it is now (a hand edit, the tray's defaults), not what this window started with.
-        var config = ConfigStore.TryRead(paths.ConfigFile, out var read, out _) ? read! : current();
+        // One that can't be read is shown as such: showing defaults instead and saving them would
+        // overwrite every setting in it.
+        if (!ConfigStore.TryRead(paths.ConfigFile, out var read, out var error))
+        {
+            window.Post(new LibraryEvent("error", Op: "settings", Message: Unreadable(error)));
+            return;
+        }
+        var config = read!;
+        saved(config);
         var root = clipsRoot();
         var games = await Task.Run(() => ClipLibrary.Scan(root).Select(c => c.Game)).ConfigureAwait(true);
         window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(),
@@ -60,18 +68,26 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;
         }
-        var before = current();
-        if (!r.Confirmed && !config.SameCaptureAs(before))
+        // What the tray is recording with is what the file says now, not what this window opened with.
+        if (!ConfigStore.TryRead(paths.ConfigFile, out var before, out var error))
+        {
+            window.Post(new LibraryEvent("error", Op: r.Type, Message: Unreadable(error)));
+            return;
+        }
+        if (!r.Confirmed && !config.SameCaptureAs(before!))
         {
             // Segments in two formats can't be joined: the buffer starts over.
             window.Post(new LibraryEvent("confirm", Op: r.Type,
-                Message: $"Saving restarts recording and clears the last {before.MaxClipSeconds} s of replay."));
+                Message: $"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay."));
             return;
         }
         ConfigStore.Save(paths.ConfigFile, config);
         saved(config);
         window.Post(new LibraryEvent("done", Op: r.Type, Config: config));
     }
+
+    private static string Unreadable(string? error) =>
+        $"config.json can't be read ({error}). Fix the file, or delete it to start from the defaults; nothing is saved from here until then.";
 
     // What the recorder measured working on this PC, for marking the encoder choices.
     private IReadOnlyList<string> DetectedEncoders()

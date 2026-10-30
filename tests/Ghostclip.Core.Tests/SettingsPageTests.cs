@@ -54,6 +54,23 @@ public sealed class SettingsPageTests : IDisposable
         Assert.Equal(Path.Combine(_dir, "status.json"), new GhostclipPaths(_dir).StatusFile);
     }
 
+    // A key alone would stop working everywhere in Windows: every press would save a clip instead.
+    [Theory]
+    [InlineData("F10", true)]
+    [InlineData("f24", true)]
+    [InlineData("Pause", true)]
+    [InlineData("Scroll", true)]
+    [InlineData("NumPad5", true)]
+    [InlineData("E", false)]
+    [InlineData("9", false)]
+    [InlineData("Space", false)]
+    [InlineData("Enter", false)]
+    [InlineData("F25", false)]
+    public void Only_keys_nobody_types_with_can_be_a_hotkey_alone(string key, bool alone)
+    {
+        Assert.Equal(alone, HotkeyRules.AllowedWithoutModifier(key));
+    }
+
     [Fact]
     public void Live_reload_reads_without_touching_the_file()
     {

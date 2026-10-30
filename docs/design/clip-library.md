@@ -173,7 +173,7 @@ at below-normal priority.
   `SameCaptureAs` says so. A hand edit of the file applies the same way. A
   changed clips folder takes effect in the open library at once.
 - **Status badge.** The tray writes a small `status.json` (its process id,
-  recording state, encoder, rounded frame rate, audio) only when one of those
+  recording state, encoder, capture frame rate, audio) only when one of those
   changes, and deletes it on exit; the library shows it in the sidebar as
   `REC · QSV · 60 FPS`, `PAUSED · SCREEN LOCKED` or `NOT RUNNING` when the file
   is missing or its process is gone.

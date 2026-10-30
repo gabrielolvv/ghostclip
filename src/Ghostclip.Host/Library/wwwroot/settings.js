@@ -112,7 +112,9 @@ const Settings = (() => {
         });
         // The app clamps too; showing the clamped value says what will be used.
         input.addEventListener('change', () => {
-          const n = Math.min(field.max, Math.max(field.min, Math.round(Number(input.value) || field.min)));
+          const typed = input.value === '' ? NaN : Number(input.value);
+          const raw = Number.isFinite(typed) ? typed : s.saved[field.key];
+          const n = Math.min(field.max, Math.max(field.min, Math.round(raw)));
           input.value = n;
           s.draft[field.key] = n;
           changed();
@@ -174,6 +176,8 @@ const Settings = (() => {
         b.type = 'button';
         b.setAttribute('aria-label', `${field.label}: ${value}`);
         b.addEventListener('click', () => listen(b, field.key));
+        // Listening ends when focus leaves the field, so a key pressed elsewhere never becomes the hotkey.
+        b.addEventListener('blur', () => stopListening());
         return b;
       }
     }
@@ -184,6 +188,9 @@ const Settings = (() => {
   const KEY_NAMES = { ' ': 'Space', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
     PageUp: 'PageUp', PageDown: 'PageDown', Home: 'Home', End: 'End', Insert: 'Insert', Delete: 'Delete',
     Pause: 'Pause', ScrollLock: 'Scroll', PrintScreen: 'PrintScreen', Tab: 'Tab', Enter: 'Enter' };
+
+  // Mirrors HotkeyRules.AllowedWithoutModifier: a key alone would stop working in every other program.
+  const ALONE = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scroll|NumPad[0-9])$/;
 
   function keyName(e) {
     if (/^F([1-9]|1[0-9]|2[0-4])$/.test(e.key)) return e.key;
@@ -215,6 +222,10 @@ const Settings = (() => {
     if (e.key === 'Escape') { stopListening(); return; }
     const main = keyName(e);
     if (!main) return; // only modifiers so far
+    if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && !ALONE.test(main)) {
+      s.listening.button.textContent = 'Add Ctrl, Alt or Shift';
+      return;
+    }
     const combo = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win', main].filter(Boolean).join('+');
     s.draft[s.listening.key] = combo;
     stopListening(combo);
@@ -304,11 +315,13 @@ const Settings = (() => {
   }
 
   function render() {
+    stopListening();
     const form = $('settings-form');
     const scroll = $('settings').scrollTop;
     form.replaceChildren();
     if (!s.draft) {
-      form.append(el('p', 'muted', 'Loading…'));
+      form.append(el('p', 'muted', s.unreadable || 'Loading…'));
+      $('savebar').hidden = true;
       return;
     }
     for (const section of SECTIONS) {
@@ -374,13 +387,20 @@ const Settings = (() => {
   function onMessage(message) {
     switch (message.type) {
       case 'settings':
-        s.saved = message.config;
-        s.draft = clone(message.config);
         s.encoders = message.encoders || [];
         s.games = message.games || [];
-        s.confirming = false;
+        s.unreadable = null;
         badge(message.status);
+        // Edits in progress win over a refresh that arrives late.
+        if (dirty()) return true;
+        s.saved = message.config;
+        s.draft = clone(message.config);
+        s.confirming = false;
         render();
+        return true;
+      case 'settingsChanged':
+        // config.json changed outside this page (a hand edit, another window): show it unless you're editing.
+        if (!$('settings').hidden && !dirty()) post({ type: 'settings' });
         return true;
       case 'confirm':
         $('s-save').classList.remove('busy');
@@ -408,6 +428,14 @@ const Settings = (() => {
         toast('Settings saved');
         return true;
       case 'error':
+        if (message.op === 'settings') {
+          // Nothing is shown or saved from a file that can't be read: saving would replace it with defaults.
+          s.saved = null;
+          s.draft = null;
+          s.unreadable = message.message;
+          render();
+          return true;
+        }
         if (message.op !== 'saveSettings') return false;
         $('s-save').classList.remove('busy');
         s.confirming = false;

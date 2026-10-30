@@ -23,6 +23,9 @@ internal sealed class LibraryBridge : IDisposable
     private readonly StatusWatcher _status;
     private readonly CancellationTokenSource _closing = new();
     private readonly System.Windows.Forms.Timer _changed = new() { Interval = 500 };
+    private readonly System.Windows.Forms.Timer _configChanged = new() { Interval = 300 };
+    private readonly FileSystemWatcher? _configWatcher;
+    private readonly GhostclipPaths _paths;
     private GhostclipConfig _config;
     private FileSystemWatcher? _watcher;
     private string? _rootError;
@@ -32,6 +35,7 @@ internal sealed class LibraryBridge : IDisposable
     {
         _window = window;
         _log = log;
+        _paths = paths;
         _config = config;
         Root = config.ResolvedClipsFolder;
         _tools = new ClipTools(paths, () => _config, log);
@@ -47,6 +51,24 @@ internal sealed class LibraryBridge : IDisposable
             _window.Post(new LibraryEvent("changed"));
         };
         UseRoot();
+
+        // A hand edit or the tray's own defaults: this window follows config.json like the tray does.
+        _configChanged.Tick += (_, _) => OnConfigFileChanged();
+        try
+        {
+            _configWatcher = new FileSystemWatcher(paths.DataDir, Path.GetFileName(paths.ConfigFile))
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+                EnableRaisingEvents = true,
+            };
+            _configWatcher.Changed += OnConfigEvent;
+            _configWatcher.Created += OnConfigEvent;
+            _configWatcher.Renamed += OnConfigEvent;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException)
+        {
+            _log.Warning("Not watching config.json: {Error}", ex.Message);
+        }
     }
 
     public string Root { get; private set; }
@@ -212,6 +234,25 @@ internal sealed class LibraryBridge : IDisposable
         }
     }
 
+    private void OnConfigEvent(object sender, FileSystemEventArgs e)
+    {
+        if (_window.IsDisposed || !_window.IsHandleCreated) return;
+        _window.BeginInvoke(() =>
+        {
+            _configChanged.Stop();
+            _configChanged.Start();
+        });
+    }
+
+    private void OnConfigFileChanged()
+    {
+        _configChanged.Stop();
+        // A file caught mid-write or half-edited is left for the next change; the settings page says so if opened.
+        if (!ConfigStore.TryRead(_paths.ConfigFile, out var config, out _)) return;
+        OnSettingsSaved(config!);
+        _window.Post(new LibraryEvent("settingsChanged"));
+    }
+
     private void OnFolderChanged(object sender, FileSystemEventArgs e)
     {
         if (_window.IsDisposed || !_window.IsHandleCreated) return;
@@ -226,6 +267,8 @@ internal sealed class LibraryBridge : IDisposable
     {
         _closing.Cancel();
         _watcher?.Dispose();
+        _configWatcher?.Dispose();
+        _configChanged.Dispose();
         _status.Dispose();
         _changed.Dispose();
         _closing.Dispose();
