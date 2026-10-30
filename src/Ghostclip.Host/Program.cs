@@ -127,6 +127,8 @@ internal static class Program
                 using (p)
                 {
                     if (p.Id == Environment.ProcessId || !IsOurs(p)) continue;
+                    // The library has a window: closing it lets it save its place and stop its FFmpeg runs.
+                    p.CloseMainWindow();
                     var left = deadline - DateTime.UtcNow;
                     if (left > TimeSpan.Zero && p.WaitForExit(left)) continue;
                     try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }

@@ -103,7 +103,8 @@ installer and the minimal FFmpeg is described in
   Recycle Bin.
 - Settings are a page in the library (the gear in its sidebar, or Settings in
   the tray menu). They live in `%LOCALAPPDATA%\GhostclipData\config.json`;
-  edit that by hand and the tray applies it right away. Logs are in
+  edit that by hand and the tray applies it right away (saving from the page
+  rewrites the file, so comments you added go). Logs are in
   `%LOCALAPPDATA%\GhostclipData\Logs`.
 - Command line, for scripts, macros or a Stream Deck:
 

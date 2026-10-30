@@ -47,11 +47,21 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     /// <summary>Cuts by stream copy into Game_..._trim.mp4. Takes about as long as copying the file.</summary>
-    public async Task<string> TrimAsync(string clip, double start, double end)
+    public async Task<string> TrimAsync(string clip, double start, double end, CancellationToken ct = default)
     {
         var output = ClipNaming.DerivedPath(clip, "trim", File.Exists);
-        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Trim(clip, PartFile.For(output), start, end),
-            TimeSpan.FromMinutes(2), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Trim(clip, PartFile.For(output), start, end),
+                TimeSpan.FromMinutes(2), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // FFmpeg was stopped (the library closed): nothing half-written stays behind.
+            PartFile.Discard(output);
+            throw;
+        }
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
@@ -67,7 +77,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// encoder, always as H.264 (Discord doesn't embed HEVC). Retries once,
     /// lower, if the encoder overshoots.
     /// </summary>
-    public async Task<(string Path, long Bytes)> CompressAsync(string clip)
+    public async Task<(string Path, long Bytes)> CompressAsync(string clip, CancellationToken ct = default)
     {
         var cfg = config();
         var info = await ProbeAsync(clip).ConfigureAwait(false);
@@ -81,7 +91,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
 
         var encoder = HardwareEncoder(cfg);
         var output = ClipNaming.DerivedPath(clip, "discord", File.Exists);
-        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks).ConfigureAwait(false);
+        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, ct).ConfigureAwait(false);
         var limitBytes = limit * 1024L * 1024;
         if (size > limitBytes)
         {
@@ -89,7 +99,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             if (retry is not null)
             {
                 log.Information("Compressed clip came out at {Size} bytes, over {Limit} MB; retrying at {Kbps} kbps", size, limit, retry.VideoKbps);
-                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks).ConfigureAwait(false);
+                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, ct).ConfigureAwait(false);
             }
         }
         PartFile.Commit(output);
@@ -98,10 +108,19 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.
-    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks)
+    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, CancellationToken ct)
     {
-        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks),
-            TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks),
+                TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
         if (!r.Succeeded)
         {
             PartFile.Discard(output);

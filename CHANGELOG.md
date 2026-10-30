@@ -3,6 +3,20 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Closing the library while a trim or compression runs stops it and leaves
+  no half-written file; leftovers of work cut off earlier are cleaned up.
+- Updating or uninstalling with the library open closes it properly instead
+  of waiting 15 s to end it.
+- The hotkey recorder takes the letter your keyboard layout prints (AZERTY
+  included), punctuation keys and the numpad's operators.
+- Thumbnails of clips deleted long ago are removed from the cache after 90
+  days, and the clip list refreshes itself if the folder watcher misses
+  changes.
+
 ## 0.5.0
 
 ### Added

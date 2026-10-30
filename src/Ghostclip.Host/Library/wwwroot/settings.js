@@ -205,12 +205,20 @@ const Settings = (() => {
   // Mirrors HotkeyRules.AllowedWithoutModifier: a key alone would stop working in every other program.
   const ALONE = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scroll|NumPad[0-9])$/;
 
+  // Punctuation and numpad keys by position, under the names Windows' key list uses (WinForms Keys).
+  const CODE_NAMES = { Backquote: 'Oemtilde', Minus: 'OemMinus', Equal: 'Oemplus', BracketLeft: 'OemOpenBrackets',
+    BracketRight: 'OemCloseBrackets', Backslash: 'OemPipe', IntlBackslash: 'OemBackslash', Semicolon: 'OemSemicolon',
+    Quote: 'OemQuotes', Comma: 'Oemcomma', Period: 'OemPeriod', Slash: 'OemQuestion',
+    NumpadAdd: 'Add', NumpadSubtract: 'Subtract', NumpadMultiply: 'Multiply', NumpadDivide: 'Divide', NumpadDecimal: 'Decimal' };
+
   function keyName(e) {
     if (/^F([1-9]|1[0-9]|2[0-4])$/.test(e.key)) return e.key;
+    // A letter as your layout prints it (A on an AZERTY keyboard is A), which is the key Windows registers.
+    if (/^[a-z]$/i.test(e.key)) return e.key.toUpperCase();
     if (/^Key[A-Z]$/.test(e.code)) return e.code.slice(3);
     if (/^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
     if (/^Numpad[0-9]$/.test(e.code)) return 'NumPad' + e.code.slice(6);
-    return KEY_NAMES[e.key] || null;
+    return KEY_NAMES[e.key] || CODE_NAMES[e.code] || null;
   }
 
   function listen(button, key) {

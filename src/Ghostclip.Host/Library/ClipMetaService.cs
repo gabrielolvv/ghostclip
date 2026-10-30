@@ -23,7 +23,13 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
         var metaFile = Path.Combine(ThumbsDir, key + ".json");
         var thumb = Path.Combine(ThumbsDir, key + ".jpg");
         var meta = ReadCached(metaFile);
-        if (meta is not null && File.Exists(thumb)) return (meta, thumb);
+        if (meta is not null && File.Exists(thumb))
+        {
+            // Seen again: kept out of the cache pruning for another 90 days.
+            ClipMedia.Touch(metaFile, DateTime.UtcNow);
+            ClipMedia.Touch(thumb, DateTime.UtcNow);
+            return (meta, thumb);
+        }
 
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try

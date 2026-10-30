@@ -27,6 +27,8 @@ internal sealed class LibraryBridge : IDisposable
     private readonly FileSystemWatcher? _configWatcher;
     private readonly GhostclipPaths _paths;
     private GhostclipConfig _config;
+    // FFmpeg runs for trims, compressions and probes; closing the window stops them and waits for that.
+    private readonly HashSet<Task> _work = [];
     private FileSystemWatcher? _watcher;
     private string? _rootError;
     private bool _listed;
@@ -140,16 +142,16 @@ internal sealed class LibraryBridge : IDisposable
             switch (r.Type)
             {
                 case "meta":
-                    var (meta, thumb) = await _meta.GetAsync(path, _closing.Token).ConfigureAwait(true);
+                    var (meta, thumb) = await Track(_meta.GetAsync(path, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("meta", Path: path, Meta: meta,
                         Thumb: thumb is null ? null : $"https://{LibraryWindow.CacheHost}/{Path.GetFileName(thumb)}"));
                     break;
                 case "trim":
-                    var trimmed = await _tools.TrimAsync(path, r.Start, r.End).ConfigureAwait(true);
+                    var trimmed = await Track(_tools.TrimAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: trimmed));
                     break;
                 case "compress":
-                    var (compressed, bytes) = await _tools.CompressAsync(path).ConfigureAwait(true);
+                    var (compressed, bytes) = await Track(_tools.CompressAsync(path, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: compressed,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
@@ -177,6 +179,13 @@ internal sealed class LibraryBridge : IDisposable
             _log.Warning("Library {Op} failed for {Path}: {Error}", r.Type, r.Path, ex.Message);
             _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path, Message: ex.Message));
         }
+    }
+
+    private Task<T> Track<T>(Task<T> task)
+    {
+        lock (_work) _work.Add(task);
+        _ = task.ContinueWith(t => { lock (_work) _work.Remove(t); }, TaskScheduler.Default);
+        return task;
     }
 
     private async Task ListAsync()
@@ -220,12 +229,22 @@ internal sealed class LibraryBridge : IDisposable
         _watcher = null;
         RootAvailable = ClipLibrary.TryPrepare(Root, out _rootError);
         if (!RootAvailable) return;
+        // Leftovers of work that was cut off, and thumbnails of clips long gone; only while the library is open.
+        var root = Root;
+        var thumbs = ThumbsDir;
+        _ = Task.Run(() =>
+        {
+            PartFile.CleanAbandoned(root, TimeSpan.FromDays(1), DateTime.UtcNow);
+            ClipMedia.PruneCache(thumbs, TimeSpan.FromDays(90), DateTime.UtcNow);
+        });
         try
         {
             _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
             _watcher.Created += OnFolderChanged;
             _watcher.Deleted += OnFolderChanged;
             _watcher.Renamed += OnFolderChanged;
+            // Too many changes at once overflow the watcher; a fresh list catches up.
+            _watcher.Error += (_, _) => OnFolderChanged(this, new FileSystemEventArgs(WatcherChangeTypes.All, Root, null));
         }
         catch (Exception ex) when (ex is IOException or ArgumentException or PlatformNotSupportedException)
         {
@@ -266,6 +285,10 @@ internal sealed class LibraryBridge : IDisposable
     public void Dispose()
     {
         _closing.Cancel();
+        // The cancelled FFmpeg runs are killed and their .part files deleted off the UI thread; give them a moment.
+        Task[] running;
+        lock (_work) running = [.. _work];
+        try { Task.WaitAll(running, TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
         _watcher?.Dispose();
         _configWatcher?.Dispose();
         _configChanged.Dispose();

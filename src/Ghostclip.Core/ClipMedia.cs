@@ -86,6 +86,43 @@ public static class ClipMedia
             peaks is null ? [] : ParsePeaks(peaks.StdErr));
     }
 
+    /// <summary>
+    /// Deletes cached thumbnails and details (16-hex-digit names) not used for <paramref name="age"/>,
+    /// such as those of clips deleted long ago. Returns how many files went.
+    /// </summary>
+    public static int PruneCache(string dir, TimeSpan age, DateTime nowUtc)
+    {
+        if (!Directory.Exists(dir)) return 0;
+        var removed = 0;
+        foreach (var file in Directory.EnumerateFiles(dir))
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (name.Length != 16 || !name.All(Uri.IsHexDigit)) continue;
+            try
+            {
+                if (nowUtc - File.GetLastWriteTimeUtc(file) < age) continue;
+                File.Delete(file);
+                removed++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+        return removed;
+    }
+
+    /// <summary>Marks a cache file as used now, so <see cref="PruneCache"/> keeps it.</summary>
+    public static void Touch(string file, DateTime nowUtc)
+    {
+        try
+        {
+            File.SetLastWriteTimeUtc(file, nowUtc);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
     public static int SamplesPerPeak(double durationSeconds) =>
         Math.Max(1, (int)Math.Ceiling(durationSeconds * PeakSampleRate / PeakCount));
 

@@ -11,14 +11,47 @@ public static class PartFile
     /// <summary>Moves the finished part file to <paramref name="output"/>. Never replaces an existing file.</summary>
     public static void Commit(string output) => File.Move(For(output), output, overwrite: false);
 
+    /// <summary>
+    /// Deletes .part files under <paramref name="root"/> older than <paramref name="age"/>:
+    /// a save, trim or compress that was cut off and will never be finished. Returns how many.
+    /// </summary>
+    public static int CleanAbandoned(string root, TimeSpan age, DateTime nowUtc)
+    {
+        if (!Directory.Exists(root)) return 0;
+        var removed = 0;
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+        foreach (var part in Directory.EnumerateFiles(root, "*.mp4.part", options))
+        {
+            try
+            {
+                if (nowUtc - File.GetLastWriteTimeUtc(part) < age) continue;
+                File.Delete(part);
+                removed++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+        return removed;
+    }
+
+    /// <summary>
+    /// Deletes the part file. Right after FFmpeg stops, it can stay locked for a moment
+    /// (antivirus scanning the closed file), so this tries for about half a second.
+    /// </summary>
     public static void Discard(string output)
     {
-        try
+        for (var attempt = 1; attempt <= 10; attempt++)
         {
-            File.Delete(For(output));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
+            try
+            {
+                File.Delete(For(output));
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 }
