@@ -3,7 +3,7 @@
 [![CI](https://github.com/gabrielolvv/ghostclip/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielolvv/ghostclip/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Português](README.pt-BR.md)
+[Português](README.pt-BR.md) · [Website](https://gabrielolvv.github.io/ghostclip/) · [Download for Windows](https://github.com/gabrielolvv/ghostclip/releases/latest/download/Ghostclip-win-Setup.exe)
 
 Open-source instant replay recorder for Windows 10/11. It sits in the tray,
 keeps the last minute of your screen, game audio and microphone, and saves a
