@@ -89,7 +89,7 @@ public class Phase3ArgsTests
     public void Trim_is_stream_copy_between_two_points()
     {
         var args = FfmpegArgs.Trim("in.mp4", "out.mp4", 12.5, 40).ToList();
-        Assert.Equal("12.500", args[args.IndexOf("-ss") + 1]);
+        Assert.Equal("12.500000", args[args.IndexOf("-ss") + 1]);
         Assert.Equal("40.000", args[args.IndexOf("-to") + 1]);
         Assert.True(args.IndexOf("-ss") < args.IndexOf("-i"), "-ss before -i seeks the input instead of decoding to it");
         Assert.Equal("copy", args[args.IndexOf("-c") + 1]);

@@ -24,6 +24,7 @@ internal sealed partial class LibraryWindow : Form
     private readonly ILogger _log;
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Canvas };
     private readonly LibraryBridge _bridge;
+    private readonly string _boundsFile;
 
     public LibraryWindow(GhostclipPaths paths, GhostclipConfig config, ILogger log, string? clip)
     {
@@ -33,7 +34,15 @@ internal sealed partial class LibraryWindow : Form
         Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(1280, 800);
-        MinimumSize = new Size(900, 600);
+        MinimumSize = new Size(WindowBounds.MinWidth, WindowBounds.MinHeight);
+        // Back where it was, unless that spot is off every screen now.
+        _boundsFile = Path.Combine(paths.DataDir, "library-window.json");
+        if (WindowBounds.Read(_boundsFile) is { } last && last.FitsOn(Screen.AllScreens.Select(s => s.WorkingArea)))
+        {
+            StartPosition = FormStartPosition.Manual;
+            Bounds = new Rectangle(last.X, last.Y, last.Width, last.Height);
+            if (last.Maximized) WindowState = FormWindowState.Maximized;
+        }
         BackColor = Canvas;
         Controls.Add(_web);
         _bridge = new LibraryBridge(this, paths, config, log) { PendingClip = clip };
@@ -118,6 +127,13 @@ internal sealed partial class LibraryWindow : Form
             MessageBox.Show($"The clip library couldn't start: {ex.Message}", "Ghostclip", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             Close();
         }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        var r = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        new WindowBounds(r.X, r.Y, r.Width, r.Height, WindowState == FormWindowState.Maximized).Write(_boundsFile);
+        base.OnFormClosing(e);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

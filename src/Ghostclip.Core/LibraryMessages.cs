@@ -60,6 +60,7 @@ public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = n
 [JsonSerializable(typeof(LibraryEvent))]
 [JsonSerializable(typeof(ClipMeta))]
 [JsonSerializable(typeof(RecorderStatus))]
+[JsonSerializable(typeof(WindowBounds))]
 public sealed partial class LibraryJson : JsonSerializerContext
 {
     /// <summary>Same contract, indented: for files people may open.</summary>

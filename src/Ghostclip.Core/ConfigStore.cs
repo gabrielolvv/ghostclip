@@ -67,6 +67,23 @@ public static class ConfigStore
         {
             JsonSerializer.Serialize(stream, config, CoreJson.Indented.GhostclipConfig);
         }
-        File.Move(temp, path, overwrite: true);
+        // A reader (the tray applying the last save, an editor, antivirus) can hold the file for a moment.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 10)
+            {
+                Thread.Sleep(50);
+            }
+            catch
+            {
+                try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
     }
 }

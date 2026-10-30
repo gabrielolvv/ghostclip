@@ -354,7 +354,10 @@ function togglePlay() {
   if (!state.current) return;
   if (video.paused) {
     if (video.currentTime < state.start || video.currentTime >= state.end) video.currentTime = state.start;
-    video.play().catch(() => toast("This clip can't be played here.", true));
+    video.play().catch(err => {
+      if (err && err.name === 'AbortError') return;
+      toast("This clip can't be played here.", true);
+    });
   } else {
     video.pause();
   }
@@ -364,6 +367,11 @@ video.addEventListener('play', () => {
   document.body.classList.add('playing');
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(tick);
+});
+video.addEventListener('ended', () => {
+  if (!state.current || state.end <= 0) return;
+  video.currentTime = state.start;
+  video.play().catch(() => {});
 });
 video.addEventListener('pause', () => {
   document.body.classList.remove('playing');
@@ -440,13 +448,13 @@ function busy(button, on) { button.classList.toggle('busy', on); }
 
 $('back').addEventListener('click', closeClip);
 $('a-trim').addEventListener('click', () => {
-  if (!state.current || !currentMeta()) return;
+  if (!state.current || !currentMeta() || $('a-trim').classList.contains('busy')) return;
   busy($('a-trim'), true);
   toast('Saving trim…');
   post({ type: 'trim', path: state.current.path, start: state.start, end: state.end });
 });
 $('a-discord').addEventListener('click', () => {
-  if (!state.current) return;
+  if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
   toast('Compressing on the GPU…');
   post({ type: 'compress', path: state.current.path });
@@ -568,6 +576,9 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
+      if (message.op === 'delete' && state.current && state.current.path === message.path) {
+        video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;
+      }
       // A clip whose details can't be read keeps its plain tile and is asked for again when the list next
       // changes (a clip still being copied in, say); only say so when it's open.
       if (message.op === 'meta') state.requested.delete(message.path);

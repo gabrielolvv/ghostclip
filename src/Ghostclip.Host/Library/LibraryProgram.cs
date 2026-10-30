@@ -9,7 +9,7 @@ namespace Ghostclip.Host.Library;
 /// started on demand and gone when its window closes. A second launch hands
 /// its clip to the open window and exits.
 /// </summary>
-internal static class LibraryProgram
+internal static partial class LibraryProgram
 {
     public const string MutexName = @"Local\Ghostclip.Library";
     public const string PipeName = "Ghostclip.Library";
@@ -56,6 +56,9 @@ internal static class LibraryProgram
 
     private static bool Forward(string? clip)
     {
+        // This launch came from you (a click, the tray), so it may hand the foreground to the open window;
+        // without this Windows only flashes its taskbar button.
+        _ = AllowSetForegroundWindow(AsfwAny);
         try
         {
             using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.CurrentUserOnly);
@@ -69,6 +72,12 @@ internal static class LibraryProgram
             return false;
         }
     }
+
+    private const int AsfwAny = -1;
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool AllowSetForegroundWindow(int processId);
 
     // One line per connection: a clip path to show, or empty to just come to the front.
     private static async Task ListenAsync(LibraryWindow window, CancellationToken ct)

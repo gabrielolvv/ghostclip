@@ -52,7 +52,19 @@ const Settings = (() => {
   ];
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
-  function dirty() { return s.saved && JSON.stringify(s.draft) !== JSON.stringify(s.saved); }
+  function canonical(value) {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === 'object') {
+      const out = {};
+      for (const key of Object.keys(value).sort()) {
+        if (value[key] !== null && value[key] !== undefined) out[key] = canonical(value[key]);
+      }
+      return out;
+    }
+    return value;
+  }
+
+  function dirty() { return !!s.saved && JSON.stringify(canonical(s.draft)) !== JSON.stringify(canonical(s.saved)); }
 
   function changed() {
     s.confirming = false;
@@ -60,10 +72,11 @@ const Settings = (() => {
   }
 
   function updateBar(message) {
+    if (message) s.confirmText = message;
     const bar = $('savebar');
     bar.hidden = !dirty();
     bar.classList.toggle('warn', s.confirming);
-    $('savebar-text').textContent = s.confirming ? message : 'Unsaved changes';
+    $('savebar-text').textContent = s.confirming ? s.confirmText : 'Unsaved changes';
     $('s-save').textContent = s.confirming ? 'Save and restart' : 'Save';
   }
 
@@ -272,6 +285,11 @@ const Settings = (() => {
         if (length.value === '') delete p.clipSeconds; else p.clipSeconds = Math.round(Number(length.value));
         changed();
       });
+      length.addEventListener('change', () => {
+        if (length.value === '' || !Number.isFinite(Number(length.value))) { delete p.clipSeconds; length.value = ''; }
+        else { p.clipSeconds = Math.min(600, Math.max(10, Math.round(Number(length.value)))); length.value = p.clipSeconds; }
+        changed();
+      });
 
       const sound = el('select', 'field');
       sound.setAttribute('aria-label', 'Sound');
@@ -283,7 +301,7 @@ const Settings = (() => {
 
       const mic = el('select', 'field');
       mic.setAttribute('aria-label', 'Microphone');
-      options(mic, [['', 'Default'], ['true', 'Muted'], ['false', 'Recorded']], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
+      options(mic, [['', 'Default'], ['true', 'Muted'], ['false', 'Not muted']], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
       mic.addEventListener('change', () => {
         if (mic.value === '') delete p.muteMicrophone; else p.muteMicrophone = mic.value === 'true';
         changed();
@@ -379,7 +397,22 @@ const Settings = (() => {
     s.confirming = false;
     render();
   });
+  // A profile without a name would vanish on save, and a second one for the same game would never apply.
+  function profileProblem() {
+    const seen = new Set();
+    for (const p of s.draft.profiles || []) {
+      const name = (p.game || '').trim().toLowerCase();
+      if (!name) return 'Give each game profile a name, or remove it.';
+      if (seen.has(name)) return `There are two profiles for ${p.game.trim()}. Keep one.`;
+      seen.add(name);
+    }
+    return null;
+  }
+
   $('s-save').addEventListener('click', () => {
+    if (!s.draft || $('s-save').classList.contains('busy')) return;
+    const problem = profileProblem();
+    if (problem) { toast(problem, true); return; }
     $('s-save').classList.add('busy');
     post({ type: 'saveSettings', config: s.draft, confirmed: s.confirming });
   });

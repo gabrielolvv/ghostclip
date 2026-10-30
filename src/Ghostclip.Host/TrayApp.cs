@@ -164,11 +164,17 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
-    private void RegisterHotkey()
+    // A new hotkey another program already holds must not leave you without one: the old one stays.
+    private void RegisterHotkey(string? previous = null)
     {
         if (_hotkey.TryRegister(_config.Hotkey, out var error))
         {
             _saveItem.Text = $"Save clip ({_config.Hotkey})";
+        }
+        else if (previous is not null && _hotkey.TryRegister(previous, out _))
+        {
+            _saveItem.Text = $"Save clip ({previous})";
+            Notify("Hotkey not changed", $"{error} Still using {previous}. Pick another one in Settings.", ToolTipIcon.Warning);
         }
         else
         {
@@ -336,10 +342,10 @@ internal sealed class TrayApp : ApplicationContext
     // The worker restarts recording only when the capture settings changed (GhostclipConfig.SameCaptureAs).
     private void ApplyConfig(GhostclipConfig config)
     {
-        var hotkeyChanged = config.Hotkey != _config.Hotkey;
+        var previousHotkey = _config.Hotkey;
         _config = config;
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
-        if (hotkeyChanged) RegisterHotkey();
+        if (config.Hotkey != previousHotkey) RegisterHotkey(previousHotkey);
         ApplyAutostart();
         _worker.UpdateConfig(config);
         _log.Information("Settings applied");

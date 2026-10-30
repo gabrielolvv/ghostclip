@@ -193,7 +193,9 @@ public static class FfmpegArgs
     public static IReadOnlyList<string> Trim(string input, string output, double startSeconds, double endSeconds) =>
     [
         "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
-        "-ss", Inv($"{startSeconds:0.000}"), "-to", Inv($"{endSeconds:0.000}"), "-i", input,
+        // The start is a keyframe time from the library (8.233333 at 60 fps): rounded to
+        // milliseconds it would fall just before the keyframe and cut from the one before.
+        "-ss", Inv($"{startSeconds:0.000000}"), "-to", Inv($"{endSeconds:0.000}"), "-i", input,
         "-map", "0", "-c", "copy", "-avoid_negative_ts", "make_zero", "-movflags", "+faststart",
         "-f", "mp4", output,
     ];

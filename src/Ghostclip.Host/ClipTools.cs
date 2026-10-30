@@ -18,7 +18,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     {
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
             "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate", "-of", "json", clip,
-        ], TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
         if (!r.Succeeded) throw new InvalidOperationException($"Could not read the clip: {r.FirstError}");
 
         using var json = JsonDocument.Parse(r.StdOut);
