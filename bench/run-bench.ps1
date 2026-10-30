@@ -12,7 +12,7 @@ Runs N rounds with the recorder off and N with it on. In each round it:
     (encoding, Video Processing, 3D) every -SampleSeconds.
 At the end it writes summary.md with the table (bench\summarize.ps1).
 
-Ghostclip runs with your own settings (%LOCALAPPDATA%\Ghostclip\Data\config.json),
+Ghostclip runs with your own settings (%LOCALAPPDATA%\GhostclipData\config.json),
 so set the resolution, bitrate and audio you want to measure there first.
 A running Ghostclip is closed before the first round and started again at the
 end. -Recorder Spike measures the Phase 0 script (spike\record.ps1) instead.
@@ -74,7 +74,7 @@ $recordPs1 = Join-Path $RepoRoot 'spike\record.ps1'
 $savePs1 = Join-Path $RepoRoot 'spike\save.ps1'
 $psExe = (Get-Process -Id $PID).Path
 
-$appData = Join-Path $env:LOCALAPPDATA 'Ghostclip\Data'
+$appData = Join-Path $env:LOCALAPPDATA 'GhostclipData'
 $appLogs = Join-Path $appData 'Logs'
 $appExe = $null
 if ($Recorder -eq 'App') {

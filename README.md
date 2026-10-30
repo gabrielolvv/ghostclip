@@ -52,7 +52,7 @@ page (`assets\make-gif.ps1` makes one from a clip). The full plan is in
 Ghostclip.exe (tray)              Ghostclip.Worker.exe (headless)        ffmpeg.exe
   hotkey, settings, game       ⇄    supervises the recorder,        →     ddagrab → GPU encoder
   detection, saving, trimming,      game/system audio  ── pipe →          → 2 s MPEG-TS segments
-  compression                       microphone         ── pipe →          %LOCALAPPDATA%\Ghostclip\Buffer
+  compression                       microphone         ── pipe →          %LOCALAPPDATA%\GhostclipData\Buffer
         named pipe (JSON)           rotates the buffer
 ```
 
@@ -93,8 +93,8 @@ installer and the minimal FFmpeg is described in
 - **Alt+F10** saves to `Videos\Ghostclip\<Game>\<Game>_YYYY-MM-DD_HH-MM-SS.mp4`.
 - The tray menu shows what is being recorded and has trim, compress, settings
   and folders. The icon's dot is red while recording.
-- Settings live in `%LOCALAPPDATA%\Ghostclip\Data\config.json` (also editable
-  from the tray) and logs in `%LOCALAPPDATA%\Ghostclip\Data\Logs`.
+- Settings live in `%LOCALAPPDATA%\GhostclipData\config.json` (also editable
+  from the tray) and logs in `%LOCALAPPDATA%\GhostclipData\Logs`.
 - Command line, for scripts, macros or a Stream Deck:
 
 | Command | Does |

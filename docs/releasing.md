@@ -34,7 +34,9 @@
 
 The installer is per-user: it installs to `%LOCALAPPDATA%\Ghostclip\current`
 with no admin prompt, and settings, buffer and logs live in
-`%LOCALAPPDATA%\Ghostclip\Data`. Uninstalling removes both.
+`%LOCALAPPDATA%\GhostclipData`, outside the install folder because Velopack
+empties `%LOCALAPPDATA%\Ghostclip` on a fresh install. Uninstalling removes
+both.
 
 ## Integrity and signing
 

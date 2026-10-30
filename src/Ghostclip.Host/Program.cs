@@ -29,6 +29,9 @@ internal static class Program
             {
                 StopRunningInstance();
                 Autostart.Remove();
+                // The installer only removes its own folder; settings, buffer and logs live next to it.
+                try { Directory.Delete(GhostclipPaths.Default.DataDir, recursive: true); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             })
             .OnBeforeUpdateFastCallback(_ => StopRunningInstance())
             .Run();
@@ -132,7 +135,7 @@ internal static class Program
     {
         try
         {
-            return p.MainModule?.FileName?.StartsWith(GhostclipPaths.InstallRoot, StringComparison.OrdinalIgnoreCase) == true;
+            return p.MainModule?.FileName?.StartsWith(GhostclipPaths.InstallRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) == true;
         }
         catch (System.ComponentModel.Win32Exception)
         {
@@ -143,7 +146,17 @@ internal static class Program
     private static (GhostclipPaths, GhostclipConfig, string?, LoggingLevelSwitch) Start(string logName)
     {
         var paths = GhostclipPaths.Default;
-        paths.MigrateConfigFrom(GhostclipPaths.InstallRoot);
+        string? migrationError = null;
+        try
+        {
+            paths.MigrateFrom(GhostclipPaths.OldDataDir, deleteOld: true);
+            paths.MigrateFrom(GhostclipPaths.InstallRoot, deleteOld: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Tried again on the next start; nothing here is needed to record.
+            migrationError = ex.Message;
+        }
         paths.EnsureCreated();
         var config = ConfigStore.Load(paths.ConfigFile, out var problem);
         var level = new LoggingLevelSwitch(ToSerilog(config.LogLevel));
@@ -158,6 +171,7 @@ internal static class Program
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
         if (problem is not null) Log.Warning("{Problem}", problem);
+        if (migrationError is not null) Log.Warning("Could not move data from {Old}: {Error}", GhostclipPaths.OldDataDir, migrationError);
         return (paths, config, problem, level);
     }
 

@@ -116,7 +116,7 @@ internal sealed class SettingsModel
     [Category("4. Advanced"), DisplayName("FFmpeg path"), Description("Empty uses the bundled FFmpeg.")]
     public string FfmpegPath { get; set; } = "";
 
-    [Category("4. Advanced"), DisplayName("Log level"), Description("Logs are in %LOCALAPPDATA%\\Ghostclip\\Logs.")]
+    [Category("4. Advanced"), DisplayName("Log level"), Description("Logs are in %LOCALAPPDATA%\\GhostclipData\\Logs.")]
     public GhostclipLogLevel LogLevel { get; set; }
 
     public static SettingsModel From(GhostclipConfig c) => new()

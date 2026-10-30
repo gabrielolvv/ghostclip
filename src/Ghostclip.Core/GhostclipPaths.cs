@@ -1,16 +1,20 @@
 namespace Ghostclip.Core;
 
 /// <summary>
-/// Where Ghostclip keeps its files: %LOCALAPPDATA%\Ghostclip\Data. The installer
-/// owns the rest of %LOCALAPPDATA%\Ghostclip (current\, packages\), so data sits
-/// in its own subfolder and uninstalling removes both.
+/// Where Ghostclip keeps its files: %LOCALAPPDATA%\GhostclipData. The installer
+/// owns %LOCALAPPDATA%\Ghostclip and wipes it on a fresh install, so data lives
+/// next to it rather than inside it; the uninstaller removes both.
 /// </summary>
 public sealed record GhostclipPaths(string DataDir)
 {
-    public static string InstallRoot { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ghostclip");
+    private static readonly string LocalAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    public static GhostclipPaths Default { get; } = new(Path.Combine(InstallRoot, "Data"));
+    public static string InstallRoot { get; } = Path.Combine(LocalAppData, "Ghostclip");
+
+    public static GhostclipPaths Default { get; } = new(Path.Combine(LocalAppData, "GhostclipData"));
+
+    /// <summary>Where 0.4.0 kept its data, inside the install folder. Builds before it used the install root itself.</summary>
+    public static string OldDataDir { get; } = Path.Combine(InstallRoot, "Data");
 
     public string BufferDir => Path.Combine(DataDir, "Buffer");
 
@@ -26,14 +30,37 @@ public sealed record GhostclipPaths(string DataDir)
     public static string DefaultClipsRoot =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Ghostclip");
 
-    /// <summary>Moves config.json from where builds before 0.2 kept it (the root folder).</summary>
-    public void MigrateConfigFrom(string oldDir)
+    /// <summary>
+    /// Brings over what an earlier version left in <paramref name="oldDir"/>:
+    /// config.json and clips still waiting to be written. A dedicated old data
+    /// folder is then deleted (its buffer alone can be hundreds of MB); the
+    /// install root itself is never deleted, since the installer owns it.
+    /// </summary>
+    public void MigrateFrom(string oldDir, bool deleteOld)
     {
-        var old = Path.Combine(oldDir, "config.json");
-        if (File.Exists(old) && !File.Exists(ConfigFile))
+        if (!Directory.Exists(oldDir) || string.Equals(Path.GetFullPath(oldDir), Path.GetFullPath(DataDir), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        var oldConfig = Path.Combine(oldDir, "config.json");
+        if (File.Exists(oldConfig) && !File.Exists(ConfigFile))
         {
             Directory.CreateDirectory(DataDir);
-            File.Move(old, ConfigFile);
+            File.Move(oldConfig, ConfigFile);
+        }
+        var oldPending = Path.Combine(oldDir, "Pending");
+        if (Directory.Exists(oldPending))
+        {
+            Directory.CreateDirectory(PendingDir);
+            foreach (var snapshot in Directory.EnumerateDirectories(oldPending))
+            {
+                var target = Path.Combine(PendingDir, Path.GetFileName(snapshot));
+                if (!Directory.Exists(target)) Directory.Move(snapshot, target);
+            }
+        }
+        if (deleteOld)
+        {
+            Directory.Delete(oldDir, recursive: true);
         }
     }
 

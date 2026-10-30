@@ -53,7 +53,7 @@ um clipe). O plano completo está em [docs/spec.md](docs/spec.md) (em inglês).
 Ghostclip.exe (bandeja)           Ghostclip.Worker.exe (sem UI)          ffmpeg.exe
   hotkey, config, detecção     ⇄    supervisiona o gravador,        →     ddagrab → encoder da GPU
   do jogo, save, corte,             áudio do jogo/sistema ── pipe →       → segmentos MPEG-TS de 2 s
-  compressão                        microfone             ── pipe →       %LOCALAPPDATA%\Ghostclip\Buffer
+  compressão                        microfone             ── pipe →       %LOCALAPPDATA%\GhostclipData\Buffer
         named pipe (JSON)           rotação do buffer
 ```
 
@@ -93,9 +93,9 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 - **Alt+F10** salva em `Vídeos\Ghostclip\<Jogo>\<Jogo>_AAAA-MM-DD_HH-MM-SS.mp4`.
 - O menu da bandeja mostra o que está sendo gravado e tem corte, compressão,
   configurações e pastas. O ponto do ícone fica vermelho enquanto grava.
-- As configurações ficam em `%LOCALAPPDATA%\Ghostclip\Data\config.json`
+- As configurações ficam em `%LOCALAPPDATA%\GhostclipData\config.json`
   (também editáveis pela bandeja) e os logs em
-  `%LOCALAPPDATA%\Ghostclip\Data\Logs`.
+  `%LOCALAPPDATA%\GhostclipData\Logs`.
 - Linha de comando, para scripts, macros ou Stream Deck:
 
 | Comando | Faz |

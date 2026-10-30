@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## 0.4.1
+
+### Fixed
+
+- Running the installer again no longer deletes your settings, per-game
+  profiles and logs. They now live in `%LOCALAPPDATA%\GhostclipData`, outside
+  the install folder; this version moves them there from
+  `%LOCALAPPDATA%\Ghostclip\Data`, along with any clip still waiting to be
+  written, and frees the old replay buffer.
+
 ## 0.4.0
 
 First public release.

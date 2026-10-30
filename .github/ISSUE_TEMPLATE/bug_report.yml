@@ -41,6 +41,6 @@ body:
     attributes:
       label: Logs
       description: |
-        From `%LOCALAPPDATA%\Ghostclip\Data\Logs`: the `host-` and `worker-` files of the day it happened.
-        `%LOCALAPPDATA%\Ghostclip\Data\probe.json` says which encoders worked. Check for anything you'd rather not share (folder names, for example) before pasting.
+        From `%LOCALAPPDATA%\GhostclipData\Logs`: the `host-` and `worker-` files of the day it happened.
+        `%LOCALAPPDATA%\GhostclipData\probe.json` says which encoders worked. Check for anything you'd rather not share (folder names, for example) before pasting.
       render: text
