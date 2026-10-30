@@ -32,6 +32,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly RegisteredWaitHandle _saveRequestWait;
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
     private readonly RegisteredWaitHandle _exitRequestWait;
+    private bool _shuttingDown;
     private GhostclipConfig _config;
     private WorkerStatus _status = new() { State = WorkerState.Starting };
     private SettingsForm? _settings;
@@ -85,6 +86,9 @@ internal sealed class TrayApp : ApplicationContext
         _worker.StatusChanged += s => _ui.Post(_ => OnStatus(s), null);
         _worker.ErrorReported += (message, fatal) => _ui.Post(_ => OnWorkerError(message, fatal), null);
         _hotkey.Pressed += SaveClip;
+        // An exit request set before this instance existed (by the installer's hook,
+        // while some other process kept the event alive) is not meant for it.
+        _exitRequest.Reset();
         _saveRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _saveRequest, (_, _) => _ui.Post(_ => SaveClip(), null), null, Timeout.Infinite, executeOnlyOnce: false);
         _exitRequestWait = ThreadPool.RegisterWaitForSingleObject(
@@ -283,6 +287,8 @@ internal sealed class TrayApp : ApplicationContext
 
     private void OnStatus(WorkerStatus status)
     {
+        // A status posted just before shutdown arrives after the icon is gone.
+        if (_shuttingDown) return;
         _status = status;
         var (icon, text) = status.State switch
         {
@@ -339,8 +345,10 @@ internal sealed class TrayApp : ApplicationContext
         _log.Information("Settings saved");
     }
 
-    private void Notify(string title, string text, ToolTipIcon icon) =>
-        _icon.ShowBalloonTip(4000, title, text, icon);
+    private void Notify(string title, string text, ToolTipIcon icon)
+    {
+        if (!_shuttingDown) _icon.ShowBalloonTip(4000, title, text, icon);
+    }
 
     private void RevealLastClip()
     {
@@ -364,6 +372,7 @@ internal sealed class TrayApp : ApplicationContext
 
     private void Shutdown()
     {
+        _shuttingDown = true;
         _icon.Visible = false;
         _hotkey.Dispose();
         _foregroundTimer.Dispose();

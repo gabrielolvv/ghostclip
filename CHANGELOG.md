@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Ghostclip no longer closes right after starting when a request to quit was
+  left over from before it started, which could happen when it restarted
+  after an update.
+
 ## 0.4.1
 
 ### Fixed
