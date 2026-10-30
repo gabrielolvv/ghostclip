@@ -83,14 +83,17 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, snapshot.Game, snapshot.Time, File.Exists);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
 
-            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), output, snapshot.AudioLeadMs, snapshot.AudioTitles),
+            // Written under a temporary name, so the library never lists a half-written clip.
+            var part = output + ".part";
+            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), part, snapshot.AudioLeadMs, snapshot.AudioTitles),
                 TimeSpan.FromSeconds(120), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
             if (!result.Succeeded)
             {
-                TryDelete(output);
+                TryDelete(part);
                 // The snapshot stays in Pending and is retried on the next start.
                 throw new InvalidOperationException($"Could not write the clip: {result.FirstError}");
             }
+            File.Move(part, output);
             Directory.Delete(snapshot.Dir, recursive: true);
             log.Information("Clip saved: {Path} (remux {Ms} ms)", output, (long)result.Elapsed.TotalMilliseconds);
             return output;
