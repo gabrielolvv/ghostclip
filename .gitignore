@@ -1,7 +1,3 @@
-# Local editor/assistant settings
-CLAUDE.local.md
-.claude/
-
 # Tools downloaded by tools/get-tools.ps1
 /tools/ffmpeg/
 /tools/ffmpeg-min/
