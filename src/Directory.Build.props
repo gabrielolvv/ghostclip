@@ -1,9 +1,10 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
-    <!-- Host and worker land in the same folder so the host finds the worker next to itself. -->
+    <!-- Host and worker land in the same folder so the host finds the worker next to itself.
+         A publish for a runtime (release.ps1) builds into a win-x64 subfolder, so its
+         self-contained runtime files never end up next to the framework-dependent build. -->
     <OutputPath>$(MSBuildThisFileDirectory)..\artifacts\bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 </Project>
