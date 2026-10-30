@@ -6,6 +6,10 @@
     <!-- Rolling log files with size and day limits. -->
     <PackageVersion Include="Serilog" Version="4.3.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <!-- Native capture (Phase 2): D3D11, DXGI Desktop Duplication, Media Foundation encoders. -->
+    <PackageVersion Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />
+    <PackageVersion Include="Vortice.MediaFoundation" Version="3.8.3" />
     <!-- Tests only. Runs on Microsoft.Testing.Platform, so no VSTest packages. -->
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
