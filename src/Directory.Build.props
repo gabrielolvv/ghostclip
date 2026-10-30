@@ -1,6 +1,10 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
+    <!-- Defined here, not later by the SDK: OutputPath below needs it, and a build of the test
+         project alone (no -c) would otherwise put Core in artifacts\bin\ and clean it out of
+         artifacts\bin\Debug\. -->
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <!-- Host and worker land in the same folder so the host finds the worker next to itself.
          A publish for a runtime (release.ps1) builds into a win-x64 subfolder, so its
          self-contained runtime files never end up next to the framework-dependent build. -->
