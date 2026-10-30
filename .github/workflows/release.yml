@@ -15,12 +15,12 @@ jobs:
     name: Minimal LGPL FFmpeg
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The build only changes when build/ffmpeg changes.
       - name: Cache
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: out
           key: ffmpeg-${{ hashFiles('build/ffmpeg/Dockerfile', 'build/ffmpeg/configure-flags.txt') }}
@@ -34,7 +34,7 @@ jobs:
           for f in bin/ffmpeg.exe bin/ffprobe.exe COPYING.LGPLv2.1; do docker cp "$id:/out/$f" out/; done
           docker rm "$id"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ffmpeg
           path: out
@@ -46,13 +46,13 @@ jobs:
       # Code signing turns on once the SignPath project exists (see docs/releasing.md).
       SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ffmpeg
           path: tools/ffmpeg-min
@@ -68,14 +68,14 @@ jobs:
       - name: Upload binaries for signing
         if: env.SIGNPATH_ENABLED == 'true'
         id: unsigned
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned
           path: artifacts/publish
 
       - name: Sign with SignPath
         if: env.SIGNPATH_ENABLED == 'true'
-        uses: signpath/github-action-submit-signing-request@v1
+        uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
