@@ -1,6 +1,6 @@
 # Clip library window: design
 
-Status: proposal, not built.
+Status: step 1 built (library window); step 2 (settings page) not started.
 
 ## Why
 
@@ -128,7 +128,7 @@ complexity), keeping WinForms only (no decent video player or timeline).
 | While | Cost | Why it's acceptable |
 |---|---|---|
 | Window closed | none: no process | the point of the separate process |
-| Window open | WebView2 processes, roughly 150–250 MB RAM (to be measured) | only while you're looking at clips, usually not mid-game |
+| Window open | about 440–460 MB RAM across the library process and its 6 WebView2 processes (measured; the estimate was 150–250 MB) | only while you're looking at clips, usually not mid-game; all of it is returned on close |
 | First open of many new clips | one FFmpeg frame decode per visible clip | lazy, two at a time, below-normal priority, then cached |
 | Playing a clip | GPU video decode | the same engine as playing a video in Edge |
 
@@ -157,6 +157,25 @@ at below-normal priority.
 - Numbers: time to show the grid with 100 clips (cold and cached), RAM while
   open, RAM and processes after closing (back to the tray alone), thumbnail
   time per clip.
+
+### Measured (step 1)
+
+i7-13620H laptop, Intel UHD, Debug build, recording 1080p60 at the same
+time, 100 clips (24 s each) in 5 game folders.
+
+| Measure | First open (no cache) | Cached |
+|---|---:|---:|
+| Grid with 100 clips on screen | 2.35 s | 1.01 s |
+| First 8 thumbnails | 3.99 s | 1.01 s |
+| RAM: library process + 6 WebView2 processes | 456 MB | 439 MB |
+| After closing | process ends, WebView2 gone within 2 s | same |
+| Recorder (host + worker + FFmpeg) | 255 MB before, 256–261 MB after | unchanged |
+
+Per clip, made once and cached (24 s clip): thumbnail 1.2 s, keyframes
+1.9 s, waveform peaks 0.25 s; the cache holds about 13 KB per clip. Only
+clips scrolled into view are probed. A trim with the start dragged to
+9.6 s snapped to the keyframe at 8.23 s and the file came out 9.80 s long
+(8.23 to 18 s), matching the timeline.
 
 ## Calls made in this proposal (open to change)
 
