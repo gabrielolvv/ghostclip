@@ -24,7 +24,10 @@ QuickSync). There is no CPU encoder fallback.
   music. It follows the game you're playing, not whatever window is in front.
 - **Microphone on its own track,** so you can mute or rebalance it later.
 - **Per-game profiles** for clip length, audio source and microphone mute.
-- **Trim** a clip without re-encoding.
+- **Clip library.** Every clip by game, with thumbnails, a player and a
+  timeline over the audio waveform. It runs only while its window is open.
+- **Trim** by dragging two handles, without re-encoding. The start snaps to
+  a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
   (10 MB by default), mixing game and mic into one track.
 
@@ -91,8 +94,12 @@ installer and the minimal FFmpeg is described in
 ## Usage
 
 - **Alt+F10** saves to `Videos\Ghostclip\<Game>\<Game>_YYYY-MM-DD_HH-MM-SS.mp4`.
-- The tray menu shows what is being recorded and has trim, compress, settings
-  and folders. The icon's dot is red while recording.
+- Double-click the tray icon, or click a "Clip saved" notification, to open
+  the library. The tray menu also shows what is being recorded and has
+  settings and folders. The icon's dot is red while recording.
+- In the library: copy a clip and paste it straight into Discord, compress
+  it to Discord's size limit, show it in its folder or send it to the
+  Recycle Bin.
 - Settings live in `%LOCALAPPDATA%\GhostclipData\config.json` (also editable
   from the tray) and logs in `%LOCALAPPDATA%\GhostclipData\Logs`.
 - Command line, for scripts, macros or a Stream Deck:
@@ -146,8 +153,12 @@ NVIDIA and AMD especially, are very welcome in an issue.
 
 - Only QuickSync has been tested. NVENC and AMF are built in but have not run
   on real hardware yet.
-- Trimming by stream copy starts at a keyframe, so a cut can begin up to 2 s
-  before the requested start.
+- Trimming by stream copy starts at a keyframe, every 2 s; the library snaps
+  the start there, and `--trim` cuts from the keyframe before the start.
+- The library's player needs the HEVC Video Extensions from the Microsoft
+  Store to show HEVC clips; without them it plays the sound only. H.264,
+  the default, always plays. The preview plays the game track; the
+  microphone is in the file and in the Discord version.
 - Game detection for game-only audio: a program counts as the game when it
   runs fullscreen or borderless, or has a profile. A windowed game needs a
   profile.

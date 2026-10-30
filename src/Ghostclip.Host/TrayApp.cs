@@ -22,7 +22,6 @@ internal sealed class TrayApp : ApplicationContext
     private readonly HotkeyWindow _hotkey = new();
     private readonly WorkerSupervisor _worker;
     private readonly ClipSaver _saver;
-    private readonly ClipTools _tools;
     private readonly System.Windows.Forms.Timer _foregroundTimer = new() { Interval = 2000 };
     private string _foreground = ClipNaming.FallbackGame;
     private string _game = ClipNaming.FallbackGame;
@@ -53,9 +52,8 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
+        menu.Items.Add("Open library", null, (_, _) => OpenLibrary());
         menu.Items.Add("Open clips folder", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
-        menu.Items.Add("Trim a clip...", null, (_, _) => _ = TrimClipAsync());
-        menu.Items.Add("Compress a clip for Discord...", null, (_, _) => _ = CompressClipAsync());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Settings...", null, (_, _) => ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
@@ -63,11 +61,10 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add("Exit", null, (_, _) => Exit());
 
         _icon = new NotifyIcon { Icon = TrayIcons.Waiting, Text = "Ghostclip: starting", ContextMenuStrip = menu, Visible = true };
-        _icon.DoubleClick += (_, _) => ShowSettings();
-        _icon.BalloonTipClicked += (_, _) => RevealLastClip();
+        _icon.DoubleClick += (_, _) => OpenLibrary();
+        _icon.BalloonTipClicked += (_, _) => OpenLibrary(_lastClip);
 
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
-        _tools = new ClipTools(paths, () => _config, Log.ForContext<ClipTools>());
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
         _foregroundTimer.Tick += (_, _) => CheckForeground();
         _foregroundTimer.Start();
@@ -217,61 +214,12 @@ internal sealed class TrayApp : ApplicationContext
         {
             var path = await Task.Run(() => _saver.RemuxAsync(snapshot)).ConfigureAwait(true);
             _lastClip = path;
-            Notify("Clip saved", $"{snapshot.Game}: {snapshot.Seconds:0} s. Click to show it.", ToolTipIcon.None);
+            Notify("Clip saved", $"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Error("Remux failed: {Error}", ex.Message);
             Notify("Clip not saved", ex.Message, ToolTipIcon.Error);
-        }
-    }
-
-    private string? PickClip(string title)
-    {
-        var folder = _lastClip is not null ? Path.GetDirectoryName(_lastClip)! : _config.ResolvedClipsFolder;
-        Directory.CreateDirectory(folder);
-        using var dialog = new OpenFileDialog
-        {
-            Title = title,
-            Filter = "MP4 clips|*.mp4",
-            InitialDirectory = folder,
-            FileName = _lastClip is not null ? Path.GetFileName(_lastClip) : "",
-        };
-        return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : null;
-    }
-
-    private async Task TrimClipAsync()
-    {
-        if (PickClip("Trim a clip") is not { } clip) return;
-        try
-        {
-            var info = await _tools.ProbeAsync(clip).ConfigureAwait(true);
-            using var form = new TrimForm(clip, info.Duration);
-            if (form.ShowDialog() != DialogResult.OK) return;
-            var output = await _tools.TrimAsync(clip, form.StartSeconds, form.EndSeconds).ConfigureAwait(true);
-            _lastClip = output;
-            Notify("Clip trimmed", $"{Path.GetFileName(output)}. Click to show it.", ToolTipIcon.None);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
-        {
-            Notify("Trim failed", ex.Message, ToolTipIcon.Warning);
-        }
-    }
-
-    private async Task CompressClipAsync()
-    {
-        if (PickClip("Compress a clip for Discord") is not { } clip) return;
-        Notify("Compressing for Discord", $"{Path.GetFileName(clip)}: this runs in the background at low priority.", ToolTipIcon.Info);
-        try
-        {
-            var (output, bytes) = await Task.Run(() => _tools.CompressAsync(clip)).ConfigureAwait(true);
-            _lastClip = output;
-            var note = bytes > _config.DiscordLimitMB * 1024L * 1024 ? " Still over the limit: trim it a bit." : "";
-            Notify("Ready for Discord", $"{Path.GetFileName(output)}: {bytes / 1048576.0:0.0} MB.{note} Click to show it.", ToolTipIcon.None);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
-        {
-            Notify("Compression failed", ex.Message, ToolTipIcon.Warning);
         }
     }
 
@@ -350,11 +298,19 @@ internal sealed class TrayApp : ApplicationContext
         if (!_shuttingDown) _icon.ShowBalloonTip(4000, title, text, icon);
     }
 
-    private void RevealLastClip()
+    // The library is its own process: nothing of it stays in the tray once its window closes.
+    private void OpenLibrary(string? clip = null)
     {
-        if (_lastClip is not null && File.Exists(_lastClip))
+        var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        info.ArgumentList.Add("--library");
+        if (clip is not null) info.ArgumentList.Add(clip);
+        try
         {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_lastClip}\"") { UseShellExecute = false });
+            using var _ = Process.Start(info);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            _log.Warning("Could not open the library: {Error}", ex.Message);
         }
     }
 

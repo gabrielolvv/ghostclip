@@ -5,6 +5,22 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ## Unreleased
 
+### Added
+
+- Clip library: every clip by game with thumbnails, a player, and a timeline
+  over the audio waveform where trimming is dragging two handles (the start
+  snaps to a keyframe, so the cut is exact). Compress for Discord, copy the
+  file to paste into Discord, show in folder or send to the Recycle Bin from
+  the same window. Double-click the tray icon or click "Clip saved" to open
+  it. It is a separate process that exists only while its window is open.
+
+### Changed
+
+- The tray's trim dialog and its "Trim a clip" and "Compress a clip for
+  Discord" items are gone; the library does both. `--trim` and `--compress`
+  still work from the command line.
+- Clips are written under a temporary name and renamed when complete.
+
 ### Fixed
 
 - Ghostclip no longer closes right after starting when a request to quit was

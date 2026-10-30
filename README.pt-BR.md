@@ -25,7 +25,11 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   janela em primeiro plano.
 - **Microfone em faixa separada,** para silenciar ou rebalancear depois.
 - **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo.
-- **Corte** de clipe sem reencode.
+- **Biblioteca de clipes.** Todos os clipes por jogo, com miniaturas, player
+  e linha do tempo sobre a forma de onda do áudio. Só roda enquanto a janela
+  está aberta.
+- **Corte** arrastando duas alças, sem reencode. O início encaixa num
+  keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
 
@@ -91,8 +95,12 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 ## Uso
 
 - **Alt+F10** salva em `Vídeos\Ghostclip\<Jogo>\<Jogo>_AAAA-MM-DD_HH-MM-SS.mp4`.
-- O menu da bandeja mostra o que está sendo gravado e tem corte, compressão,
-  configurações e pastas. O ponto do ícone fica vermelho enquanto grava.
+- Clique duas vezes no ícone da bandeja, ou numa notificação "Clip saved",
+  para abrir a biblioteca. O menu da bandeja também mostra o que está sendo
+  gravado e tem configurações e pastas. O ponto do ícone fica vermelho
+  enquanto grava.
+- Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
+  limite do Discord, mostre na pasta ou mande para a Lixeira.
 - As configurações ficam em `%LOCALAPPDATA%\GhostclipData\config.json`
   (também editáveis pela bandeja) e os logs em
   `%LOCALAPPDATA%\GhostclipData\Logs`.
@@ -148,8 +156,12 @@ GPUs, principalmente NVIDIA e AMD, são muito bem-vindos numa issue.
 
 - Só o QuickSync foi testado. NVENC e AMF estão implementados, mas ainda não
   rodaram em hardware real.
-- O corte por stream copy começa num keyframe, então pode começar até 2 s antes
-  do início pedido.
+- O corte por stream copy começa num keyframe, a cada 2 s; a biblioteca
+  encaixa o início ali, e o `--trim` corta a partir do keyframe anterior.
+- O player da biblioteca precisa das Extensões de Vídeo HEVC da Microsoft
+  Store para mostrar clipes HEVC; sem elas, toca só o som. H.264, o padrão,
+  sempre toca. A prévia toca a faixa do jogo; o microfone está no arquivo e
+  na versão para o Discord.
 - Detecção do jogo para o áudio só do jogo: um programa conta como jogo quando
   roda em tela cheia ou sem borda, ou quando tem perfil. Jogo em janela precisa
   de perfil.
