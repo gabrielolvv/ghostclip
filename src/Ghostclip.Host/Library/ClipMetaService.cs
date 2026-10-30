@@ -54,8 +54,17 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
 
             // A clip works without a thumbnail; a failed one is tried again the next time it is asked for.
             var part = $"{thumb}.{Guid.NewGuid():N}.part";
-            var shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, part, meta.Duration / 3),
-                TimeSpan.FromSeconds(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+            ProcessResult shot;
+            try
+            {
+                shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, part, meta.Duration / 3),
+                    TimeSpan.FromSeconds(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                TryDelete(part);
+                throw;
+            }
             if (!shot.Succeeded || !File.Exists(part))
             {
                 log.Warning("No thumbnail for {Clip}: {Error}", clip, shot.TimedOut ? "timed out" : shot.FirstError);
@@ -87,8 +96,16 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
     private static async Task WriteAtomicallyAsync(string path, string text, CancellationToken ct)
     {
         var temp = $"{path}.{Environment.ProcessId}.{Environment.CurrentManagedThreadId}.tmp";
-        await File.WriteAllTextAsync(temp, text, ct).ConfigureAwait(false);
-        File.Move(temp, path, overwrite: true);
+        try
+        {
+            await File.WriteAllTextAsync(temp, text, ct).ConfigureAwait(false);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            TryDelete(temp);
+            throw;
+        }
     }
 
     private static void TryDelete(string path)

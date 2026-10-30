@@ -131,6 +131,13 @@ internal sealed partial class LibraryWindow : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        if (e.CloseReason == CloseReason.UserClosing && _bridge.HasRunningJobs &&
+            MessageBox.Show(this, "A trim or compression is still running. Close and stop it?", "Ghostclip",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            e.Cancel = true;
+            return;
+        }
         var r = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
         new WindowBounds(r.X, r.Y, r.Width, r.Height, WindowState == FormWindowState.Maximized).Write(_boundsFile);
         base.OnFormClosing(e);

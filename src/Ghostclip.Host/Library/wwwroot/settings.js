@@ -185,9 +185,11 @@ const Settings = (() => {
         return parts;
       }
       case 'hotkey': {
-        const b = el('button', 'act hotkey', value);
+        // The saved hotkey as the app names it on this keyboard; a new one as you pressed it.
+        const shown = value === (s.saved && s.saved[field.key]) ? (s.hotkeyLabel || value) : (s.recordedLabel || value);
+        const b = el('button', 'act hotkey', shown);
         b.type = 'button';
-        b.setAttribute('aria-label', `${field.label}: ${value}`);
+        b.setAttribute('aria-label', `${field.label}: ${shown}`);
         b.addEventListener('click', () => listen(b, field.key));
         // Listening ends when focus leaves the field, so a key pressed elsewhere never becomes the hotkey.
         b.addEventListener('blur', () => stopListening());
@@ -247,9 +249,15 @@ const Settings = (() => {
       s.listening.button.textContent = 'Add Ctrl, Alt or Shift';
       return;
     }
-    const combo = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win', main].filter(Boolean).join('+');
+    const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
+    const combo = [...mods, main].join('+');
+    // What the key prints ("´", "ç"), for people; the stored name is for Windows.
+    const printed = e.key.length === 1 && e.key !== ' '
+      ? (e.code.startsWith('Numpad') ? `Num ${e.key}` : e.key.toUpperCase())
+      : main;
+    s.recordedLabel = [...mods, printed].join('+');
     s.draft[s.listening.key] = combo;
-    stopListening(combo);
+    stopListening(s.recordedLabel);
     changed();
   }, true);
 
@@ -436,6 +444,8 @@ const Settings = (() => {
         if (dirty()) return true;
         s.saved = message.config;
         s.draft = clone(message.config);
+        s.hotkeyLabel = message.hotkeyLabel;
+        s.recordedLabel = null;
         s.confirming = false;
         render();
         return true;
@@ -464,6 +474,8 @@ const Settings = (() => {
         $('s-save').classList.remove('busy');
         s.saved = message.config;
         s.draft = clone(message.config);
+        s.hotkeyLabel = message.hotkeyLabel;
+        s.recordedLabel = null;
         s.confirming = false;
         render();
         toast('Settings saved');

@@ -49,7 +49,7 @@ public static class LibraryOrigin
 public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = null, string? Root = null, string? Path = null,
     ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null,
     GhostclipConfig? Config = null, IReadOnlyList<string>? Encoders = null, IReadOnlyList<string>? Games = null,
-    RecorderStatus? Status = null);
+    RecorderStatus? Status = null, string? HotkeyLabel = null);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

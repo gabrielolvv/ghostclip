@@ -29,6 +29,8 @@ internal sealed class LibraryBridge : IDisposable
     private GhostclipConfig _config;
     // FFmpeg runs for trims, compressions and probes; closing the window stops them and waits for that.
     private readonly HashSet<Task> _work = [];
+    // Trims and compressions you started: closing the window asks first while one runs.
+    private int _jobs;
     private FileSystemWatcher? _watcher;
     private string? _rootError;
     private bool _listed;
@@ -78,6 +80,8 @@ internal sealed class LibraryBridge : IDisposable
     public bool RootAvailable { get; private set; }
 
     public string ThumbsDir => _meta.ThumbsDir;
+
+    public bool HasRunningJobs => Volatile.Read(ref _jobs) > 0;
 
     /// <summary>A clip (or <see cref="LibraryProgram.SettingsArgument"/>) to show once the page has its list.</summary>
     public string? PendingClip { get; set; }
@@ -147,11 +151,11 @@ internal sealed class LibraryBridge : IDisposable
                         Thumb: thumb is null ? null : $"https://{LibraryWindow.CacheHost}/{Path.GetFileName(thumb)}"));
                     break;
                 case "trim":
-                    var trimmed = await Track(_tools.TrimAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
+                    var trimmed = await Job(_tools.TrimAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: trimmed));
                     break;
                 case "compress":
-                    var (compressed, bytes) = await Track(_tools.CompressAsync(path, _closing.Token)).ConfigureAwait(true);
+                    var (compressed, bytes) = await Job(_tools.CompressAsync(path, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: compressed,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
@@ -186,6 +190,19 @@ internal sealed class LibraryBridge : IDisposable
         lock (_work) _work.Add(task);
         _ = task.ContinueWith(t => { lock (_work) _work.Remove(t); }, TaskScheduler.Default);
         return task;
+    }
+
+    private async Task<T> Job<T>(Task<T> task)
+    {
+        Interlocked.Increment(ref _jobs);
+        try
+        {
+            return await Track(task).ConfigureAwait(true);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _jobs);
+        }
     }
 
     private async Task ListAsync()
@@ -234,8 +251,25 @@ internal sealed class LibraryBridge : IDisposable
         var thumbs = ThumbsDir;
         _ = Task.Run(() =>
         {
-            PartFile.CleanAbandoned(root, TimeSpan.FromDays(1), DateTime.UtcNow);
-            ClipMedia.PruneCache(thumbs, TimeSpan.FromDays(90), DateTime.UtcNow);
+            // The cache first: it is small and local, and done before the page asks for thumbnails.
+            try
+            {
+                var pruned = ClipMedia.PruneCache(thumbs, TimeSpan.FromDays(90), DateTime.UtcNow);
+                if (pruned > 0) _log.Information("Removed {Count} unused cache files", pruned);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.Warning("Could not clean the thumbnail cache: {Error}", ex.Message);
+            }
+            try
+            {
+                var parts = PartFile.CleanAbandoned(root, TimeSpan.FromDays(1), DateTime.UtcNow);
+                if (parts > 0) _log.Information("Removed {Count} abandoned .part files in {Root}", parts, root);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.Warning("Could not clean leftovers in {Root}: {Error}", root, ex.Message);
+            }
         });
         try
         {

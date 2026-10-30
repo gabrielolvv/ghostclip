@@ -42,11 +42,11 @@ public static class PartFile
 
     /// <summary>
     /// Deletes the part file. Right after FFmpeg stops, it can stay locked for a moment
-    /// (antivirus scanning the closed file), so this tries for about half a second.
+    /// (antivirus scanning the closed file), so this tries for about a second.
     /// </summary>
     public static void Discard(string output)
     {
-        for (var attempt = 1; attempt <= 10; attempt++)
+        for (var attempt = 1; attempt <= 20; attempt++)
         {
             try
             {

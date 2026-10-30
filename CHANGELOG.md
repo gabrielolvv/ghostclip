@@ -3,6 +3,20 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- Hotkeys read as your keyboard prints them, in the tray menu and on the
+  settings page: Ctrl+ç rather than Ctrl+OemSemicolon.
+- Closing the library with the window's X while a trim or compression runs
+  asks first; updates and uninstalls still close it without asking.
+
+### Fixed
+
+- Cut-off thumbnail and cache writes no longer leave temporary files behind,
+  and the cleanup's results and failures go to the log.
+
 ## 0.5.1
 
 ### Fixed

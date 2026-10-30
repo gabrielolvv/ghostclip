@@ -96,11 +96,14 @@ public static class ClipMedia
         var removed = 0;
         foreach (var file in Directory.EnumerateFiles(dir))
         {
-            var name = Path.GetFileNameWithoutExtension(file);
-            if (name.Length != 16 || !name.All(Uri.IsHexDigit)) continue;
+            // "<key>.jpg", "<key>.json", or what a cut-off write left: "<key>.jpg.<guid>.part", "<key>.json.<pid>.<tid>.tmp".
+            var fileName = Path.GetFileName(file);
+            var key = fileName.Split('.')[0];
+            if (key.Length != 16 || !key.All(Uri.IsHexDigit)) continue;
+            var leftover = fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
             try
             {
-                if (nowUtc - File.GetLastWriteTimeUtc(file) < age) continue;
+                if (nowUtc - File.GetLastWriteTimeUtc(file) < (leftover ? TimeSpan.FromDays(1) : age)) continue;
                 File.Delete(file);
                 removed++;
             }

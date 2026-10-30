@@ -169,12 +169,12 @@ internal sealed class TrayApp : ApplicationContext
     {
         if (_hotkey.TryRegister(_config.Hotkey, out var error))
         {
-            _saveItem.Text = $"Save clip ({_config.Hotkey})";
+            _saveItem.Text = $"Save clip ({KeyLabels.Describe(_config.Hotkey)})";
         }
         else if (previous is not null && _hotkey.TryRegister(previous, out _))
         {
-            _saveItem.Text = $"Save clip ({previous})";
-            Notify("Hotkey not changed", $"{error} Still using {previous}. Pick another one in Settings.", ToolTipIcon.Warning);
+            _saveItem.Text = $"Save clip ({KeyLabels.Describe(previous)})";
+            Notify("Hotkey not changed", $"{error} Still using {KeyLabels.Describe(previous)}. Pick another one in Settings.", ToolTipIcon.Warning);
         }
         else
         {

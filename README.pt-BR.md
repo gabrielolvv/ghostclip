@@ -104,9 +104,9 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
   limite do Discord, mostre na pasta ou mande para a Lixeira.
 - As configurações são uma página da biblioteca (a engrenagem na barra
   lateral, ou Settings no menu da bandeja). Elas ficam em
-  `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão (salvar pela página
-  reescreve o arquivo e leva os comentários que você pôs), a bandeja aplica
-  na hora. Os logs ficam em `%LOCALAPPDATA%\GhostclipData\Logs`.
+  `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão, a bandeja aplica
+  na hora. Salvar pela página reescreve o arquivo e apaga os comentários que
+  você tiver escrito nele. Os logs ficam em `%LOCALAPPDATA%\GhostclipData\Logs`.
 - Linha de comando, para scripts, macros ou Stream Deck:
 
 | Comando | Faz |

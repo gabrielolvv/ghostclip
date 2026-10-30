@@ -54,7 +54,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         saved(config);
         var root = clipsRoot();
         var games = await Task.Run(() => ClipLibrary.Scan(root).Select(c => c.Game)).ConfigureAwait(true);
-        window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(),
+        window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(), HotkeyLabel: KeyLabels.Describe(config.Hotkey),
             Games: games.Concat(config.Profiles.Select(p => p.Game)).Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase).ToList(),
             Status: status.Current));
@@ -83,7 +83,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         }
         ConfigStore.Save(paths.ConfigFile, config);
         saved(config);
-        window.Post(new LibraryEvent("done", Op: r.Type, Config: config));
+        window.Post(new LibraryEvent("done", Op: r.Type, Config: config, HotkeyLabel: KeyLabels.Describe(config.Hotkey)));
     }
 
     private static string Unreadable(string? error) =>
