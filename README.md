@@ -123,3 +123,9 @@ both paths sit on the same Intel media driver. So Ghostclip stays on FFmpeg.
   recording and clears the buffer, because segments in two formats can't be
   joined without re-encoding. The audio source and per-game settings switch
   live.
+
+## License
+
+[MIT](LICENSE). FFmpeg is not part of this repository: `tools\get-tools.ps1`
+downloads an LGPL build (no GPL components) that Ghostclip runs as a separate
+program.

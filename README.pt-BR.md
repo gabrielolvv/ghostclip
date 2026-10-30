@@ -125,3 +125,9 @@ Intel. Por isso o Ghostclip continua no FFmpeg.
 - Mudar uma configuração de vídeo ou ligar/desligar o microfone reinicia a
   gravação e limpa o buffer, porque segmentos em dois formatos não se juntam
   sem reencode. A fonte de áudio e as configurações por jogo trocam ao vivo.
+
+## Licença
+
+[MIT](LICENSE). O FFmpeg não faz parte deste repositório: o
+`tools\get-tools.ps1` baixa uma build LGPL (sem componentes GPL) que o
+Ghostclip executa como programa separado.
