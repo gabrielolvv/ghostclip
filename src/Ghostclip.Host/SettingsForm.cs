@@ -95,8 +95,20 @@ internal sealed class SettingsModel
     [Category("3. Audio"), DisplayName("System audio"), Description("Records what plays on the default output device.")]
     public bool SystemAudio { get; set; }
 
+    [Category("3. Audio"), DisplayName("Audio source"), Description("System records everything you hear. GameOnly records just the game (no Discord, no music). Switches without restarting.")]
+    public AudioSourceMode AudioSource { get; set; }
+
+    [Category("3. Audio"), DisplayName("Microphone"), Description("Records the default microphone as a separate track. Turning it on or off restarts recording.")]
+    public bool Microphone { get; set; }
+
     [Category("3. Audio"), DisplayName("Audio offset (ms)"), Description("Positive delays audio against video. Use it to fix a constant lip-sync error.")]
     public int AudioOffsetMs { get; set; }
+
+    [Category("1. Clips"), DisplayName("Discord size limit (MB)"), Description("\"Compress for Discord\" fits clips under this size. 10 MB on a free account.")]
+    public int DiscordLimitMB { get; set; }
+
+    [Category("5. Game profiles"), DisplayName("Profiles"), Description("Per-game overrides. The game name must match the clip folder name. Empty fields use the global setting.")]
+    public List<GameProfileModel> Profiles { get; set; } = [];
 
     [Category("4. Advanced"), DisplayName("FFmpeg path"), Description("Empty uses the bundled FFmpeg.")]
     public string FfmpegPath { get; set; } = "";
@@ -119,7 +131,11 @@ internal sealed class SettingsModel
         Monitor = c.Monitor,
         QsvAsyncDepth = c.QsvAsyncDepth,
         SystemAudio = c.SystemAudio,
+        AudioSource = c.AudioSource,
+        Microphone = c.Microphone,
         AudioOffsetMs = c.AudioOffsetMs,
+        DiscordLimitMB = c.DiscordLimitMB,
+        Profiles = c.Profiles.Select(GameProfileModel.From).ToList(),
         FfmpegPath = c.FfmpegPath ?? "",
         LogLevel = c.LogLevel,
     };
@@ -139,8 +155,46 @@ internal sealed class SettingsModel
         Monitor = Monitor,
         QsvAsyncDepth = QsvAsyncDepth,
         SystemAudio = SystemAudio,
+        AudioSource = AudioSource,
+        Microphone = Microphone,
         AudioOffsetMs = AudioOffsetMs,
+        DiscordLimitMB = DiscordLimitMB,
+        Profiles = new GameProfileList(Profiles.Select(p => p.ToProfile())),
         FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? null : FfmpegPath,
         LogLevel = LogLevel,
     };
+}
+
+/// <summary>One row in the profiles editor. Empty fields inherit the global setting.</summary>
+internal sealed class GameProfileModel
+{
+    [DisplayName("Game"), Description("As shown in the tray menu and used for the clip folder.")]
+    public string Game { get; set; } = "";
+
+    [DisplayName("Clip length (s)"), Description("Empty uses the global clip length.")]
+    public int? ClipSeconds { get; set; }
+
+    [DisplayName("Audio source"), Description("Empty uses the global audio source.")]
+    public AudioSourceMode? AudioSource { get; set; }
+
+    [DisplayName("Mute microphone"), Description("Records silence on the microphone track while this game is in front.")]
+    public bool? MuteMicrophone { get; set; }
+
+    public static GameProfileModel From(GameProfile p) => new()
+    {
+        Game = p.Game,
+        ClipSeconds = p.ClipSeconds,
+        AudioSource = p.AudioSource,
+        MuteMicrophone = p.MuteMicrophone,
+    };
+
+    public GameProfile ToProfile() => new()
+    {
+        Game = Game,
+        ClipSeconds = ClipSeconds,
+        AudioSource = AudioSource,
+        MuteMicrophone = MuteMicrophone,
+    };
+
+    public override string ToString() => string.IsNullOrWhiteSpace(Game) ? "(new profile)" : Game;
 }

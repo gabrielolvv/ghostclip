@@ -71,4 +71,12 @@ public class ClipNamingTests
     [InlineData(null, null, null, "Desktop")]
     public void Resolves_game_name(string? process, string? product, string? description, string expected) =>
         Assert.Equal(expected, GameNameResolver.Resolve(process, product, description));
+
+    [Fact]
+    public void Localized_windows_product_name_is_generic()
+    {
+        const string os = "Sistema Operacional Microsoft® Windows®";
+        Assert.Equal("Windows PowerShell", GameNameResolver.Resolve("powershell", os, "Windows PowerShell", os));
+        Assert.Equal("notepad", GameNameResolver.Resolve("notepad", os, os, os));
+    }
 }

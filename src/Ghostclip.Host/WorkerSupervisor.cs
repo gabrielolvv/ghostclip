@@ -33,6 +33,18 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
         _loop = Task.Run(() => LoopAsync(_cts.Token));
     }
 
+    private volatile IpcMessage _foreground = new() { Type = IpcType.Foreground, Game = ClipNaming.FallbackGame };
+
+    /// <summary>Tells the worker which game is in front, for game-only audio and per-game mic mute.</summary>
+    public void SetForeground(string game, uint processId)
+    {
+        _foreground = new IpcMessage { Type = IpcType.Foreground, Game = game, ProcessId = processId };
+        if (_channel is { } channel)
+        {
+            _ = SendQuietlyAsync(channel, _foreground);
+        }
+    }
+
     public void UpdateConfig(GhostclipConfig config)
     {
         _config = config;
@@ -99,6 +111,7 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
 
             await using var channel = new IpcChannel(server);
             await channel.SendAsync(new IpcMessage { Type = IpcType.Config, Config = _config }, ct).ConfigureAwait(false);
+            await channel.SendAsync(_foreground, ct).ConfigureAwait(false);
             _channel = channel;
 
             var lastMessage = Stopwatch.StartNew();

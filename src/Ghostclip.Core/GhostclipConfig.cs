@@ -19,6 +19,39 @@ public enum EncoderInput { Auto, Nv12, Direct }
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }
 
+/// <summary>What the main audio track records.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AudioSourceMode>))]
+public enum AudioSourceMode
+{
+    /// <summary>Everything the default playback device plays.</summary>
+    System,
+
+    /// <summary>Only the foreground game and its child processes (process loopback). Discord and music stay out.</summary>
+    GameOnly,
+}
+
+/// <summary>Per-game overrides. Null fields inherit the global setting.</summary>
+public sealed record GameProfile
+{
+    /// <summary>The name Ghostclip shows for the game (the clip folder name).</summary>
+    public string Game { get; set; } = "";
+    public int? ClipSeconds { get; set; }
+    public AudioSourceMode? AudioSource { get; set; }
+    public bool? MuteMicrophone { get; set; }
+}
+
+/// <summary>A list with value equality, so configs compare by content.</summary>
+public sealed class GameProfileList : List<GameProfile>
+{
+    public GameProfileList() { }
+
+    public GameProfileList(IEnumerable<GameProfile> items) : base(items) { }
+
+    public override bool Equals(object? obj) => obj is GameProfileList other && this.SequenceEqual(other);
+
+    public override int GetHashCode() => Count;
+}
+
 // Settable rather than init-only: the JSON source generator sets every init-only
 // property, so a field missing from a hand-edited config.json would become 0
 // instead of keeping its default.
@@ -42,6 +75,17 @@ public sealed record GhostclipConfig
     public int Monitor { get; set; }
 
     public bool SystemAudio { get; set; } = true;
+
+    /// <summary>System audio or only the game's. Switches live: no restart, buffer kept.</summary>
+    public AudioSourceMode AudioSource { get; set; } = AudioSourceMode.System;
+
+    /// <summary>Records the default microphone as a second audio track.</summary>
+    public bool Microphone { get; set; }
+
+    /// <summary>Size limit for "Compress for Discord" (10 MB on a free account).</summary>
+    public int DiscordLimitMB { get; set; } = 10;
+
+    public GameProfileList Profiles { get; set; } = [];
 
     /// <summary>Shifts audio against video to fix a constant lip-sync offset.</summary>
     public int AudioOffsetMs { get; set; }
@@ -72,7 +116,27 @@ public sealed record GhostclipConfig
         Monitor = Math.Max(0, Monitor),
         AudioOffsetMs = Math.Clamp(AudioOffsetMs, -1000, 1000),
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
+        DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
+        Profiles = new GameProfileList((Profiles ?? [])
+            .Where(p => !string.IsNullOrWhiteSpace(p.Game))
+            .Select(p => p with
+            {
+                Game = p.Game.Trim(),
+                ClipSeconds = p.ClipSeconds is { } s ? Math.Clamp(s, 10, 600) : null,
+            })),
     };
+
+    public GameProfile? ProfileFor(string? game) =>
+        game is null ? null : Profiles.FirstOrDefault(p => string.Equals(p.Game, game, StringComparison.OrdinalIgnoreCase));
+
+    public int ClipSecondsFor(string? game) => ProfileFor(game)?.ClipSeconds ?? ClipSeconds;
+
+    public AudioSourceMode AudioSourceFor(string? game) => ProfileFor(game)?.AudioSource ?? AudioSource;
+
+    public bool MicrophoneMutedFor(string? game) => ProfileFor(game)?.MuteMicrophone ?? false;
+
+    /// <summary>The longest clip any profile can ask for: the buffer must hold that much.</summary>
+    public int MaxClipSeconds => Profiles.Select(p => p.ClipSeconds ?? 0).Append(ClipSeconds).Max();
 
     /// <summary>
     /// True when the two configs produce the same encoded stream. A change here
@@ -82,7 +146,7 @@ public sealed record GhostclipConfig
     public bool SameCaptureAs(GhostclipConfig other) =>
         Fps == other.Fps && BitrateMbps == other.BitrateMbps && Codec == other.Codec &&
         Encoder == other.Encoder && Input == other.Input && OutputHeight == other.OutputHeight &&
-        Monitor == other.Monitor && SystemAudio == other.SystemAudio &&
+        Monitor == other.Monitor && SystemAudio == other.SystemAudio && Microphone == other.Microphone &&
         AudioOffsetMs == other.AudioOffsetMs && QsvAsyncDepth == other.QsvAsyncDepth &&
         FfmpegPath == other.FfmpegPath;
 }

@@ -53,6 +53,10 @@ try
             {
                 supervisor.ApplyConfig(config.Normalize());
             }
+            else if (message.Type == IpcType.Foreground)
+            {
+                supervisor.SetForeground(message.Game, message.ProcessId);
+            }
         }
     }
     catch (IOException)

@@ -27,11 +27,14 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private readonly EncoderProber _prober;
     private readonly JobObject _job = new();
     private readonly Channel<GhostclipConfig> _configs = Channel.CreateUnbounded<GhostclipConfig>();
-    private AudioLoopback? _audio;
+    private AudioCapture? _audio;
+    private AudioCapture? _mic;
     private FfmpegRunner? _runner;
     private GhostclipConfig _config = new();
     private volatile WorkerState _state = WorkerState.Starting;
     private string? _encoder;
+    private string? _game;
+    private uint _gamePid;
 
     public CaptureSupervisor(GhostclipPaths paths, IpcChannel channel, LoggingLevelSwitch level, ILogger log)
     {
@@ -43,6 +46,23 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     }
 
     public void ApplyConfig(GhostclipConfig config) => _configs.Writer.TryWrite(config);
+
+    /// <summary>The host saw a different program in the foreground.</summary>
+    public void SetForeground(string? game, uint processId)
+    {
+        _game = game;
+        _gamePid = processId;
+        ApplyAudioRouting();
+    }
+
+    // Game-only audio and per-game mic mute switch live: no restart, buffer kept.
+    private void ApplyAudioRouting()
+    {
+        var config = _config;
+        var gameOnly = config.AudioSourceFor(_game) == AudioSourceMode.GameOnly && _gamePid != 0;
+        _audio?.SetTargetProcess(gameOnly ? _gamePid : 0);
+        if (_mic is not null) _mic.Muted = config.MicrophoneMutedFor(_game);
+    }
 
     public async Task RunAsync(CancellationToken ct)
     {
@@ -122,32 +142,54 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
 
     private async Task<Outcome> RecordOnceAsync(string ffmpeg, CaptureSettings settings, CancellationToken ct)
     {
-        string? audioPipe = null;
+        var pipes = new List<string>();
+        var titles = new List<string>();
+        AudioCapture? first = null;
         if (_config.SystemAudio)
         {
-            _audio ??= new AudioLoopback(_log);
-            audioPipe = _audio.BeginSession();
+            _audio ??= new AudioCapture(_log, microphone: false);
+            pipes.Add(_audio.BeginSession());
+            titles.Add("Game");
+            first = _audio;
         }
+        else
+        {
+            _audio?.Dispose();
+            _audio = null;
+        }
+        if (_config.Microphone)
+        {
+            _mic ??= new AudioCapture(_log, microphone: true);
+            pipes.Add(_mic.BeginSession());
+            titles.Add("Microphone");
+            first ??= _mic;
+        }
+        else
+        {
+            _mic?.Dispose();
+            _mic = null;
+        }
+        ApplyAudioRouting();
 
         var start = SegmentRing.NextStartNumber(SegmentRing.Scan(_paths.BufferDir));
-        var args = FfmpegArgs.Record(settings, _paths.BufferDir, start, audioPipe, _config.AudioOffsetMs);
+        var args = FfmpegArgs.Record(settings, _paths.BufferDir, start, pipes, _config.AudioOffsetMs);
         _runner?.Dispose();
         _runner = FfmpegRunner.Start(ffmpeg, args, _job, _log);
         _state = WorkerState.Recording;
-        _log.Information("Recording with {Encoder}, {Fps} fps, {Bitrate} Mbps, audio {Audio}, from segment {Start}",
-            settings.Describe(), settings.Fps, settings.BitrateMbps, audioPipe is not null, start);
+        _log.Information("Recording with {Encoder}, {Fps} fps, {Bitrate} Mbps, audio tracks [{Tracks}], from segment {Start}",
+            settings.Describe(), settings.Fps, settings.BitrateMbps, string.Join(", ", titles), start);
 
         var nextConfig = _configs.Reader.ReadAsync(ct).AsTask();
-        var syncMeasured = audioPipe is null;
+        var syncMeasured = first is null;
         while (true)
         {
             var done = await Task.WhenAny(_runner.Exited, nextConfig, Task.Delay(1000, ct)).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
 
-            if (!syncMeasured && _runner.FirstSample is { } sample && _audio!.StreamStartTicks is var audioStart and > 0)
+            if (!syncMeasured && _runner.FirstSample is { } sample && first!.StreamStartTicks is var audioStart and > 0)
             {
                 var lead = AudioSync.MeasureLeadMs((sample.Ticks - audioStart) / (double)Stopwatch.Frequency, sample.Frames, settings.Fps);
-                AudioSync.Write(_paths.BufferDir, new RecordingSession(start, lead));
+                AudioSync.Write(_paths.BufferDir, new RecordingSession(start, lead, titles.Count > 1 ? titles.ToArray() : null));
                 _log.Information("Audio stream started {Lead} ms before video; saves will compensate", lead);
                 syncMeasured = true;
             }
@@ -155,6 +197,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             if (done == _runner.Exited)
             {
                 _audio?.EndSession();
+                _mic?.EndSession();
                 return Outcome.Exited;
             }
 
@@ -164,6 +207,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 var restart = !config.SameCaptureAs(_config);
                 _config = config;
                 SetLogLevel(config.LogLevel);
+                ApplyAudioRouting();
                 if (restart)
                 {
                     _log.Information("Capture settings changed; restarting the recorder with an empty buffer");
@@ -203,6 +247,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             _runner = null;
         }
         _audio?.EndSession();
+        _mic?.EndSession();
     }
 
     private async Task HeartbeatAsync(CancellationToken ct)
@@ -219,7 +264,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 Fps = r?.Fps ?? 0,
                 Dropped = r?.Dropped ?? 0,
                 Duplicated = r?.Duplicated ?? 0,
-                Audio = _audio?.DeviceOpen ?? false,
+                Audio = _audio is not null,
+                AudioRoute = _audio?.Route,
+                Microphone = _mic is { Muted: false },
             };
             await SendAsync(new IpcMessage { Type = IpcType.Status, Status = status }, ct).ConfigureAwait(false);
         }
@@ -231,7 +278,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
         {
-            var keep = SegmentRing.KeepCount(_config.ClipSeconds, GhostclipConfig.SegmentSeconds);
+            // The longest clip any game profile can ask for.
+            var keep = SegmentRing.KeepCount(_config.MaxClipSeconds, GhostclipConfig.SegmentSeconds);
             var segments = SegmentRing.Scan(_paths.BufferDir);
             DeleteSegments(SegmentRing.SelectForDeletion(segments, keep));
             var oldest = segments.Count > keep ? segments[^keep].Sequence : segments.FirstOrDefault().Sequence;
@@ -245,7 +293,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private void DeleteStaleSegments()
     {
         // Segments older than a clip (plus a margin) are from a session long gone.
-        var maxAge = TimeSpan.FromSeconds(_config.ClipSeconds + 120);
+        var maxAge = TimeSpan.FromSeconds(_config.MaxClipSeconds + 120);
         DeleteSegments(SegmentRing.SelectStale(SegmentRing.Scan(_paths.BufferDir), DateTime.UtcNow, maxAge));
     }
 
@@ -293,6 +341,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     {
         await StopRecorderAsync().ConfigureAwait(false);
         _audio?.Dispose();
+        _mic?.Dispose();
         _job.Dispose();
     }
 }

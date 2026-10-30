@@ -107,9 +107,10 @@ public static class FfmpegArgs
     /// <summary>
     /// The recorder: capture, encode, and 2 s MPEG-TS segments numbered from
     /// <paramref name="startNumber"/>. Progress goes to stdout as key=value lines.
-    /// System audio, when present, arrives as raw float PCM on a named pipe.
+    /// Each audio track (game or system audio, microphone) arrives as raw float
+    /// PCM on its own named pipe and becomes its own AAC track.
     /// </summary>
-    public static IReadOnlyList<string> Record(CaptureSettings s, string bufferDir, long startNumber, string? audioPipe, int audioOffsetMs)
+    public static IReadOnlyList<string> Record(CaptureSettings s, string bufferDir, long startNumber, IReadOnlyList<string> audioPipes, int audioOffsetMs)
     {
         var (init, filter, codec) = Video(s);
         var args = new List<string>
@@ -117,18 +118,22 @@ public static class FfmpegArgs
             "-hide_banner", "-loglevel", "warning", "-nostats", "-progress", "pipe:1", "-stats_period", "1",
         };
         args.AddRange(init);
-        if (audioPipe is not null)
+        foreach (var pipe in audioPipes)
         {
             args.AddRange(["-thread_queue_size", "512"]);
             if (audioOffsetMs != 0) args.AddRange(["-itsoffset", Inv($"{audioOffsetMs / 1000.0:0.000}")]);
             args.AddRange([
-                "-f", "f32le", "-ar", Inv($"{AudioSampleRate}"), "-ac", Inv($"{AudioChannels}"), "-i", audioPipe,
+                "-f", "f32le", "-ar", Inv($"{AudioSampleRate}"), "-ac", Inv($"{AudioChannels}"), "-i", pipe,
             ]);
         }
         args.AddRange(["-filter_complex", filter + "[v]", "-map", "[v]"]);
-        if (audioPipe is not null)
+        for (var i = 0; i < audioPipes.Count; i++)
         {
-            args.AddRange(["-map", "0:a", "-c:a", "aac", "-b:a", "160k"]);
+            args.AddRange(["-map", Inv($"{i}:a")]);
+        }
+        if (audioPipes.Count > 0)
+        {
+            args.AddRange(["-c:a", "aac", "-b:a", "160k"]);
         }
         args.AddRange(codec);
         // Half a frame of slack lets the cut land exactly on the forced keyframe.
@@ -152,7 +157,7 @@ public static class FfmpegArgs
     /// the list is read twice, video from one and audio shifted from the other
     /// (see <see cref="AudioSync"/>).
     /// </summary>
-    public static IReadOnlyList<string> Remux(string concatListPath, string outputPath, int audioLeadMs = 0)
+    public static IReadOnlyList<string> Remux(string concatListPath, string outputPath, int audioLeadMs = 0, IReadOnlyList<string>? audioTitles = null)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y" };
         if (audioLeadMs == 0)
@@ -168,7 +173,60 @@ public static class FfmpegArgs
                 "-map", "0:v", "-map", "1:a?",
             ]);
         }
-        args.AddRange(["-c", "copy", "-avoid_negative_ts", "make_zero", "-f", "mp4", outputPath]);
+        args.AddRange(["-c", "copy", "-avoid_negative_ts", "make_zero"]);
+        // Names the tracks, so a player shows "Game" and "Microphone" to pick from.
+        // MP4 keeps the name in handler_name; title is for players that read it elsewhere.
+        for (var i = 0; i < (audioTitles?.Count ?? 0); i++)
+        {
+            var key = Inv($"-metadata:s:a:{i}");
+            args.AddRange([key, $"handler_name={audioTitles![i]}", key, $"title={audioTitles[i]}"]);
+        }
+        args.AddRange(["-f", "mp4", outputPath]);
+        return args;
+    }
+
+    /// <summary>
+    /// Cuts by stream copy: no re-encode, done in about the time it takes to
+    /// copy the file. The cut starts at the keyframe at or before
+    /// <paramref name="startSeconds"/>, so with 2 s GOPs it can start up to 2 s early.
+    /// </summary>
+    public static IReadOnlyList<string> Trim(string input, string output, double startSeconds, double endSeconds) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+        "-ss", Inv($"{startSeconds:0.000}"), "-to", Inv($"{endSeconds:0.000}"), "-i", input,
+        "-map", "0", "-c", "copy", "-avoid_negative_ts", "make_zero", "-movflags", "+faststart",
+        "-f", "mp4", output,
+    ];
+
+    /// <summary>
+    /// Re-encodes a clip to fit a size limit, on the hardware encoder. Several
+    /// audio tracks are mixed into one, since Discord plays only the first.
+    /// </summary>
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks)
+    {
+        var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
+        if (audioTracks > 1)
+        {
+            var inputs = string.Concat(Enumerable.Range(0, audioTracks).Select(i => Inv($"[0:a:{i}]")));
+            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={audioTracks}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+        }
+        else
+        {
+            args.AddRange(["-map", "0:v:0", "-map", "0:a:0?"]);
+        }
+
+        var vf = new List<string>();
+        if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
+        if (plan.Fps > 0) vf.Add(Inv($"fps={plan.Fps}"));
+        vf.Add("format=nv12");
+        var rate = Inv($"{plan.VideoKbps}k");
+        var gop = Inv($"{(plan.Fps > 0 ? plan.Fps : 60) * 2}");
+        args.AddRange([
+            "-vf", string.Join(',', vf),
+            "-c:v", encoderName, "-b:v", rate, "-maxrate", rate, "-bufsize", Inv($"{plan.VideoKbps * 2}k"), "-g", gop,
+            "-c:a", "aac", "-b:a", Inv($"{plan.AudioKbps}k"),
+            "-movflags", "+faststart", "-f", "mp4", output,
+        ]);
         return args;
     }
 

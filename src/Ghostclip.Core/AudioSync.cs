@@ -5,7 +5,8 @@ namespace Ghostclip.Core;
 
 /// <summary>One FFmpeg run, from its first segment on.</summary>
 /// <param name="AudioLeadMs">How much earlier the audio stream started than the video stream.</param>
-public sealed record RecordingSession(long StartSequence, int AudioLeadMs);
+/// <param name="AudioTitles">Names of the audio tracks, in order ("Game", "Microphone").</param>
+public sealed record RecordingSession(long StartSequence, int AudioLeadMs, string[]? AudioTitles = null);
 
 /// <summary>
 /// Audio/video alignment.

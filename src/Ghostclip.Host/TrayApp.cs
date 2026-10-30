@@ -15,9 +15,15 @@ internal sealed class TrayApp : ApplicationContext
     private readonly SynchronizationContext _ui;
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _saveItem;
+    private readonly ToolStripMenuItem _statusItem = new("Starting...") { Enabled = false };
     private readonly HotkeyWindow _hotkey = new();
     private readonly WorkerSupervisor _worker;
     private readonly ClipSaver _saver;
+    private readonly ClipTools _tools;
+    private readonly System.Windows.Forms.Timer _foregroundTimer = new() { Interval = 2000 };
+    private string _foreground = ClipNaming.FallbackGame;
+    private string _game = ClipNaming.FallbackGame;
+    private uint _gamePid;
     private readonly ConfirmationSound _sound = new();
     private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
     private readonly RegisteredWaitHandle _saveRequestWait;
@@ -37,8 +43,13 @@ internal sealed class TrayApp : ApplicationContext
 
         _saveItem = new ToolStripMenuItem("Save clip", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
         var menu = new ContextMenuStrip();
+        menu.Items.Add(_statusItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
         menu.Items.Add("Open clips folder", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
+        menu.Items.Add("Trim a clip...", null, (_, _) => _ = TrimClipAsync());
+        menu.Items.Add("Compress a clip for Discord...", null, (_, _) => _ = CompressClipAsync());
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Settings...", null, (_, _) => ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Open logs folder", null, (_, _) => OpenFolder(_paths.LogsDir));
@@ -49,6 +60,10 @@ internal sealed class TrayApp : ApplicationContext
         _icon.BalloonTipClicked += (_, _) => RevealLastClip();
 
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
+        _tools = new ClipTools(paths, () => _config, Log.ForContext<ClipTools>());
+        // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
+        _foregroundTimer.Tick += (_, _) => CheckForeground();
+        _foregroundTimer.Start();
         _worker = new WorkerSupervisor(Log.ForContext<WorkerSupervisor>());
         _worker.StatusChanged += s => _ui.Post(_ => OnStatus(s), null);
         _worker.ErrorReported += (message, fatal) => _ui.Post(_ => OnWorkerError(message, fatal), null);
@@ -75,9 +90,59 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
+    // Game-only audio follows the game, not whatever is in front: alt-tabbing to
+    // Discord or a browser must not start recording their audio. A program counts
+    // as the game when it runs fullscreen or borderless, or has a profile.
+    private void CheckForeground()
+    {
+        var front = ForegroundGame.Detect();
+        if (front.Game != _foreground)
+        {
+            _foreground = front.Game;
+            _log.Debug("Foreground: {Game} (pid {Pid}, fullscreen {Fullscreen})", front.Game, front.ProcessId, front.Fullscreen);
+            UpdateStatusItem();
+        }
+
+        var isGame = front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
+        if (isGame && front.ProcessId != _gamePid)
+        {
+            SetGame(front.Game, front.ProcessId);
+        }
+        else if (_gamePid != 0 && !isGame && !ForegroundGame.IsRunning(_gamePid))
+        {
+            SetGame(ClipNaming.FallbackGame, 0);
+        }
+    }
+
+    private void SetGame(string game, uint pid)
+    {
+        _game = game;
+        _gamePid = pid;
+        _log.Information("Current game: {Game} (pid {Pid})", game, pid);
+        _worker.SetForeground(game, pid);
+        UpdateStatusItem();
+    }
+
+    private void UpdateStatusItem()
+    {
+        var state = _status.State switch
+        {
+            WorkerState.Recording => "Recording",
+            WorkerState.Stopped => "Not recording",
+            WorkerState.Probing => "Detecting encoder",
+            _ => "Starting",
+        };
+        var audio = _status.AudioRoute is { } route ? $" · audio: {route}" : "";
+        var mic = _status.Microphone ? " · mic" : "";
+        var game = _gamePid != 0 ? _game : _foreground;
+        _statusItem.Text = $"{state} · {game}{audio}{mic}";
+    }
+
     private void SaveClip()
     {
-        var game = ForegroundGame.Detect();
+        // Named after the game being played, even if the hotkey came from another window.
+        var front = ForegroundGame.Detect();
+        var game = _gamePid != 0 && !front.Fullscreen && _config.ProfileFor(front.Game) is null ? _game : front.Game;
         ClipSnapshot snapshot;
         try
         {
@@ -109,6 +174,55 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
+    private string? PickClip(string title)
+    {
+        var folder = _lastClip is not null ? Path.GetDirectoryName(_lastClip)! : _config.ResolvedClipsFolder;
+        Directory.CreateDirectory(folder);
+        using var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Filter = "MP4 clips|*.mp4",
+            InitialDirectory = folder,
+            FileName = _lastClip is not null ? Path.GetFileName(_lastClip) : "",
+        };
+        return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : null;
+    }
+
+    private async Task TrimClipAsync()
+    {
+        if (PickClip("Trim a clip") is not { } clip) return;
+        try
+        {
+            var info = await _tools.ProbeAsync(clip).ConfigureAwait(true);
+            using var form = new TrimForm(clip, info.Duration);
+            if (form.ShowDialog() != DialogResult.OK) return;
+            var output = await _tools.TrimAsync(clip, form.StartSeconds, form.EndSeconds).ConfigureAwait(true);
+            _lastClip = output;
+            Notify("Clip trimmed", $"{Path.GetFileName(output)}. Click to show it.", ToolTipIcon.None);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Notify("Trim failed", ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
+    private async Task CompressClipAsync()
+    {
+        if (PickClip("Compress a clip for Discord") is not { } clip) return;
+        Notify("Compressing for Discord", $"{Path.GetFileName(clip)}: this runs in the background at low priority.", ToolTipIcon.Info);
+        try
+        {
+            var (output, bytes) = await Task.Run(() => _tools.CompressAsync(clip)).ConfigureAwait(true);
+            _lastClip = output;
+            var note = bytes > _config.DiscordLimitMB * 1024L * 1024 ? " Still over the limit: trim it a bit." : "";
+            Notify("Ready for Discord", $"{Path.GetFileName(output)}: {bytes / 1048576.0:0.0} MB.{note} Click to show it.", ToolTipIcon.None);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            Notify("Compression failed", ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
     // Snapshots a previous run took but never turned into MP4s (crash, shutdown).
     private async Task RecoverPendingAsync()
     {
@@ -132,6 +246,7 @@ internal sealed class TrayApp : ApplicationContext
         if (_icon.Icon != icon) _icon.Icon = icon;
         // NotifyIcon.Text is capped at 127 characters.
         _icon.Text = text.Length > 127 ? text[..127] : text;
+        UpdateStatusItem();
     }
 
     private void OnWorkerError(string message, bool fatal)
@@ -195,6 +310,7 @@ internal sealed class TrayApp : ApplicationContext
     {
         _icon.Visible = false;
         _hotkey.Dispose();
+        _foregroundTimer.Dispose();
         _saveRequestWait.Unregister(null);
         _saveRequest.Dispose();
         _settings?.Close();

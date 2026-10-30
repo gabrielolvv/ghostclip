@@ -23,17 +23,26 @@ public static partial class GameNameResolver
         "Unity", "Unity Player", "BootstrapPackagedGame", "Game", "Launcher",
     };
 
-    public static string Resolve(string? processName, string? productName, string? fileDescription)
+    /// <param name="osProductName">
+    /// The product name Windows' own executables carry on this machine. It is
+    /// localized ("Sistema Operacional Microsoft Windows" in Portuguese), so a
+    /// fixed list can't catch it.
+    /// </param>
+    public static string Resolve(string? processName, string? productName, string? fileDescription, string? osProductName = null)
     {
         if (string.IsNullOrWhiteSpace(processName) || ShellProcesses.Contains(processName))
         {
             return ClipNaming.FallbackGame;
         }
 
+        var os = Clean(osProductName);
         foreach (var candidate in new[] { productName, fileDescription })
         {
             var clean = Clean(candidate);
-            if (clean.Length > 0 && !GenericNames.Contains(clean)) return clean;
+            if (clean.Length > 0 && !GenericNames.Contains(clean) && !string.Equals(clean, os, StringComparison.OrdinalIgnoreCase))
+            {
+                return clean;
+            }
         }
 
         var stripped = BuildSuffix().Replace(processName, "");

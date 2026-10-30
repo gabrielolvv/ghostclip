@@ -6,7 +6,7 @@ using Serilog;
 namespace Ghostclip.Host;
 
 /// <summary>A clip frozen at the moment of the hotkey, waiting to become an MP4.</summary>
-internal sealed record ClipSnapshot(string Dir, string Game, DateTime Time, int Segments, double Seconds, int AudioLeadMs, TimeSpan Took);
+internal sealed record ClipSnapshot(string Dir, string Game, DateTime Time, int Segments, double Seconds, int AudioLeadMs, string[]? AudioTitles, TimeSpan Took);
 
 /// <summary>
 /// Saving happens in two steps.
@@ -32,7 +32,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         var sw = Stopwatch.StartNew();
         var now = DateTime.Now;
         var cfg = config();
-        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), cfg.ClipSeconds, GhostclipConfig.SegmentSeconds, recording);
+        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
         if (plan.IsEmpty)
         {
             throw new InvalidOperationException("Nothing recorded yet: the replay buffer is empty.");
@@ -59,12 +59,14 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
 
         // The newest segment's session decides the audio shift: that's the part people watch.
         var newest = plan.Current ?? plan.Complete[^1];
-        var lead = AudioSync.ForSequence(AudioSync.Scan(paths.BufferDir), newest.Sequence)?.AudioLeadMs ?? 0;
+        var session = AudioSync.ForSequence(AudioSync.Scan(paths.BufferDir), newest.Sequence);
+        var lead = session?.AudioLeadMs ?? 0;
+        var titles = session?.AudioTitles;
 
         File.WriteAllText(Path.Combine(dir, ListFile), FfmpegArgs.ConcatList(names));
         File.WriteAllLines(Path.Combine(dir, MetaFile),
-            [game, now.ToString("o", CultureInfo.InvariantCulture), lead.ToString(CultureInfo.InvariantCulture)]);
-        var snapshot = new ClipSnapshot(dir, game, now, names.Count, plan.EstimatedSeconds, lead, sw.Elapsed);
+            [game, now.ToString("o", CultureInfo.InvariantCulture), lead.ToString(CultureInfo.InvariantCulture), string.Join('|', titles ?? [])]);
+        var snapshot = new ClipSnapshot(dir, game, now, names.Count, plan.EstimatedSeconds, lead, titles, sw.Elapsed);
         log.Information("Snapshot of {Segments} segments (~{Seconds:0} s) for {Game} in {Ms} ms",
             names.Count, plan.EstimatedSeconds, game, sw.ElapsedMilliseconds);
         return snapshot;
@@ -81,7 +83,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, snapshot.Game, snapshot.Time, File.Exists);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
 
-            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), output, snapshot.AudioLeadMs),
+            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), output, snapshot.AudioLeadMs, snapshot.AudioTitles),
                 TimeSpan.FromSeconds(120), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
             if (!result.Succeeded)
             {
@@ -117,8 +119,9 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             var time = lines.Length > 1 && DateTime.TryParse(lines[1], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var t) ? t : Directory.GetCreationTime(dir);
             var segments = Directory.GetFiles(dir, "seg_*.ts").Length;
             var lead = lines.Length > 2 && int.TryParse(lines[2], CultureInfo.InvariantCulture, out var l) ? l : 0;
+            var titles = lines.Length > 3 && lines[3].Length > 0 ? lines[3].Split('|') : null;
             result.Add(new ClipSnapshot(dir, lines.Length > 0 ? lines[0] : ClipNaming.FallbackGame, time, segments,
-                segments * GhostclipConfig.SegmentSeconds, lead, TimeSpan.Zero));
+                segments * GhostclipConfig.SegmentSeconds, lead, titles, TimeSpan.Zero));
         }
         return result;
     }

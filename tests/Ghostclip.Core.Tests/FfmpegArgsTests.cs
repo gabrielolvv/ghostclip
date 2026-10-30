@@ -12,7 +12,7 @@ public class FfmpegArgsTests
     [Fact]
     public void Gop_is_exactly_one_segment()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 0, null, 0);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 0, [], 0);
         Assert.Equal("120", ValueAfter(args, "-g"));
         Assert.Equal("2", ValueAfter(args, "-segment_time"));
         Assert.Equal("expr:gte(t,n_forced*2)", ValueAfter(args, "-force_key_frames"));
@@ -22,7 +22,7 @@ public class FfmpegArgsTests
     [Fact]
     public void Captures_at_clip_rate_with_constant_frame_rate()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 0, null, 0);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 0, [], 0);
         Assert.Contains("ddagrab=output_idx=0:framerate=60", ValueAfter(args, "-filter_complex"));
         Assert.Equal("cfr", ValueAfter(args, "-fps_mode"));
     }
@@ -30,7 +30,7 @@ public class FfmpegArgsTests
     [Fact]
     public void Segments_are_numbered_not_wrapped()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 1234, null, 0);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\buf", 1234, [], 0);
         Assert.DoesNotContain("-segment_wrap", args);
         Assert.Equal("1234", ValueAfter(args, "-segment_start_number"));
         Assert.Equal(@"C:\buf\seg_%08d.ts", args[^1]);
@@ -40,7 +40,7 @@ public class FfmpegArgsTests
     [Fact]
     public void Qsv_uses_low_power_and_hwmap()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, null, 0);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, [], 0);
         Assert.Equal("h264_qsv", ValueAfter(args, "-c:v"));
         Assert.Equal("1", ValueAfter(args, "-low_power"));
         Assert.Equal("1", ValueAfter(args, "-async_depth"));
@@ -79,7 +79,7 @@ public class FfmpegArgsTests
     [Fact]
     public void Audio_comes_from_the_pipe_as_raw_float()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, @"\\.\pipe\gc-audio", 120);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, [@"\\.\pipe\gc-audio"], 120);
         Assert.Equal("f32le", ValueAfter(args, "-f"));
         Assert.Equal("48000", ValueAfter(args, "-ar"));
         Assert.Equal(@"\\.\pipe\gc-audio", ValueAfter(args, "-i"));
@@ -90,7 +90,7 @@ public class FfmpegArgsTests
     [Fact]
     public void No_audio_means_video_only()
     {
-        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, null, 0);
+        var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, [], 0);
         Assert.DoesNotContain("-i", args);
         Assert.DoesNotContain("0:a", args);
     }
@@ -102,7 +102,7 @@ public class FfmpegArgsTests
         try
         {
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("pt-BR");
-            var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, @"\\.\pipe\a", -50);
+            var args = FfmpegArgs.Record(Qsv(), @"C:\b", 0, [@"\\.\pipe\a"], -50);
             Assert.Equal("0.00833", ValueAfter(args, "-segment_time_delta"));
             Assert.Equal("-0.050", ValueAfter(args, "-itsoffset"));
         }

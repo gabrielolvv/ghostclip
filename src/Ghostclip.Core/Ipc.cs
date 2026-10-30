@@ -13,6 +13,9 @@ public static class IpcType
     /// <summary>Host → worker: stop recording and exit.</summary>
     public const string Shutdown = "shutdown";
 
+    /// <summary>Host → worker: the foreground game changed. Drives game-only audio and per-game mic mute.</summary>
+    public const string Foreground = "foreground";
+
     /// <summary>Worker → host: heartbeat, every second. Silence means the worker hung.</summary>
     public const string Status = "status";
 
@@ -32,6 +35,11 @@ public sealed record WorkerStatus
     public long Dropped { get; set; }
     public long Duplicated { get; set; }
     public bool Audio { get; set; }
+
+    /// <summary>What the main audio track is recording right now ("system", "game: Elden Ring").</summary>
+    public string? AudioRoute { get; set; }
+
+    public bool Microphone { get; set; }
 }
 
 public sealed record IpcMessage
@@ -40,6 +48,10 @@ public sealed record IpcMessage
     public GhostclipConfig? Config { get; set; }
     public WorkerStatus? Status { get; set; }
     public string? Message { get; set; }
+
+    /// <summary>On a foreground message: the game's name and process id (0 for the desktop).</summary>
+    public string? Game { get; set; }
+    public uint ProcessId { get; set; }
 
     /// <summary>On an error: the worker can't record until the config changes.</summary>
     public bool Fatal { get; set; }

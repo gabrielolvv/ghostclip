@@ -52,6 +52,54 @@ internal partial interface IAudioCaptureClient
     [PreserveSig] int GetNextPacketSize(out uint frames);
 }
 
+[GeneratedComInterface]
+[Guid("41D949AB-9862-444A-80F6-C261334DA5EB")]
+internal partial interface IActivateAudioInterfaceCompletionHandler
+{
+    [PreserveSig] int ActivateCompleted(nint operation);
+}
+
+[GeneratedComInterface]
+[Guid("72A22D78-CDE4-431D-B8CC-843A71199B6D")]
+internal partial interface IActivateAudioInterfaceAsyncOperation
+{
+    [PreserveSig] int GetActivateResult(out int activateResult, out nint activatedInterface);
+}
+
+/// <summary>Marks the completion handler as free-threaded, which ActivateAudioInterfaceAsync requires.</summary>
+[GeneratedComInterface]
+[Guid("94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90")]
+internal partial interface IAgileObject
+{
+}
+
+[GeneratedComClass]
+internal sealed partial class ActivationHandler : IActivateAudioInterfaceCompletionHandler, IAgileObject
+{
+    private readonly ManualResetEventSlim _done = new();
+    private int _hr;
+    private nint _client;
+
+    public int ActivateCompleted(nint operation)
+    {
+        // Borrowed pointer: wrap it without taking ownership.
+        var op = (IActivateAudioInterfaceAsyncOperation)Wasapi.ComWrappers.GetOrCreateObjectForComInstance(operation, CreateObjectFlags.None);
+        var hr = op.GetActivateResult(out var activateResult, out var client);
+        _hr = hr < 0 ? hr : activateResult;
+        _client = client;
+        _done.Set();
+        return 0;
+    }
+
+    /// <summary>Waits for the activation and returns the IAudioClient pointer (owned by the caller).</summary>
+    public nint Wait(TimeSpan timeout)
+    {
+        if (!_done.Wait(timeout)) throw new TimeoutException("Process loopback activation timed out.");
+        Wasapi.Check(_hr);
+        return _client;
+    }
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 internal struct WaveFormatExtensible
 {
@@ -90,12 +138,62 @@ internal static partial class Wasapi
     public const uint AUDCLNT_STREAMFLAGS_LOOPBACK = 0x00020000;
     public const uint AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY = 0x08000000;
     public const uint AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM = 0x80000000;
+    public const uint AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000;
     public const uint AUDCLNT_BUFFERFLAGS_SILENT = 0x2;
     public const int eRender = 0;
+    public const int eCapture = 1;
     public const int eConsole = 0;
     private const uint CLSCTX_ALL = 0x17;
     private static readonly Guid CLSID_MMDeviceEnumerator = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
-    private static readonly StrategyBasedComWrappers ComWrappers = new();
+    public static readonly StrategyBasedComWrappers ComWrappers = new();
+
+    /// <summary>
+    /// An IAudioClient that captures only what one process tree plays (Windows 10 2004+).
+    /// Nothing is injected into the game: Windows routes the audio itself.
+    /// </summary>
+    public static unsafe IAudioClient ActivateProcessLoopback(uint processId)
+    {
+        // AUDIOCLIENT_ACTIVATION_PARAMS { PROCESS_LOOPBACK, { pid, INCLUDE_TARGET_PROCESS_TREE } }
+        var parameters = stackalloc int[3];
+        parameters[0] = 1;
+        parameters[1] = (int)processId;
+        parameters[2] = 0;
+        // PROPVARIANT holding a VT_BLOB that points at the parameters.
+        var variant = stackalloc byte[24];
+        new Span<byte>(variant, 24).Clear();
+        *(ushort*)variant = 65; // VT_BLOB
+        *(uint*)(variant + 8) = 12;
+        *(nint*)(variant + 16) = (nint)parameters;
+
+        var handler = new ActivationHandler();
+        var unknown = ComWrappers.GetOrCreateComInterfaceForObject(handler, CreateComInterfaceFlags.None);
+        try
+        {
+            var iid = typeof(IActivateAudioInterfaceCompletionHandler).GUID;
+            Check(Marshal.QueryInterface(unknown, in iid, out var handlerPtr));
+            try
+            {
+                var clientIid = typeof(IAudioClient).GUID;
+                Check(ActivateAudioInterfaceAsync(@"VAD\Process_Loopback", clientIid, (nint)variant, handlerPtr, out var operation));
+                try
+                {
+                    return Wrap<IAudioClient>(handler.Wait(TimeSpan.FromSeconds(3)));
+                }
+                finally
+                {
+                    if (operation != 0) Marshal.Release(operation);
+                }
+            }
+            finally
+            {
+                Marshal.Release(handlerPtr);
+            }
+        }
+        finally
+        {
+            Marshal.Release(unknown);
+        }
+    }
 
     public static void InitializeThread() => CoInitializeEx(0, 0 /* COINIT_MULTITHREADED */);
 
@@ -148,4 +246,7 @@ internal static partial class Wasapi
 
     [LibraryImport("ole32.dll")]
     private static partial int CoInitializeEx(nint reserved, uint coInit);
+
+    [LibraryImport("Mmdevapi.dll", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int ActivateAudioInterfaceAsync(string deviceInterfacePath, in Guid iid, nint activationParams, nint completionHandler, out nint operation);
 }
