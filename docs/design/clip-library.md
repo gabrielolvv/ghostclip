@@ -146,6 +146,40 @@ at below-normal priority.
    host watches `config.json` and applies changes, which also makes hand
    edits apply live. Recording status badge in the title bar.
 
+### Step 2 in detail
+
+- **Where.** A gear at the foot of the sidebar opens a Settings view in the
+  main area; the tray's "Settings..." item opens the library straight on it
+  (`--library --settings`). The property grid window is removed.
+- **Layout.** One column of cards, the same tokens as the library: Clips
+  (hotkey, clip length, folder, sound, Discord limit), Video (frame rate,
+  bitrate, codec, encoder, output height, monitor, advanced encoder options),
+  Audio (record sound, everything or game only, microphone, sync offset),
+  Game profiles (one row per game, name suggested from the clip folders) and
+  Advanced (start with Windows, FFmpeg path, log level). Two-value choices
+  are segmented controls, on/off are switches, numbers carry their unit. The
+  encoder list marks what this PC was measured to support.
+- **Hotkey.** Click the field and press the combination; it is checked with
+  the same parser the tray uses before it can be saved.
+- **Saving.** Edits stay on the page until "Save" in a bar that appears at the
+  bottom with "Discard". A change that restarts recording (video, the
+  microphone switch) first turns the bar into a warning that saving clears
+  the replay buffer, and needs a second click. Whether a change restarts
+  recording is decided by `GhostclipConfig.SameCaptureAs`, the rule the worker
+  already uses.
+- **Applying.** The library writes `config.json` (atomically, as now). The
+  tray watches that one file and applies whatever changed: hotkey, log level,
+  autostart, and the worker's settings, which restarts recording only when
+  `SameCaptureAs` says so. A hand edit of the file applies the same way. A
+  changed clips folder takes effect in the open library at once.
+- **Status badge.** The tray writes a small `status.json` (its process id,
+  recording state, encoder, rounded frame rate, audio) only when one of those
+  changes, and deletes it on exit; the library shows it in the sidebar as
+  `REC · QSV · 60 FPS`, `PAUSED · SCREEN LOCKED` or `NOT RUNNING` when the file
+  is missing or its process is gone.
+- **Without WebView2** there is no settings window; `config.json` can still
+  be edited by hand and applies live.
+
 ## How to test and what to measure
 
 - Unit: library scan and grouping (game folders, derived `_trim` /
