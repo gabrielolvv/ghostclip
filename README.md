@@ -43,7 +43,8 @@ QuickSync. Everything else, including .NET and FFmpeg, comes with it.
 **Phase 4.** Recording, saving, audio routing, profiles, trimming, compression
 and the installer with updates work. Not done yet: game benchmark numbers,
 code signing (see [docs/releasing.md](docs/releasing.md)) and a GIF for this
-page. The full plan is in [docs/spec.md](docs/spec.md).
+page (`assets\make-gif.ps1` makes one from a clip). The full plan is in
+[docs/spec.md](docs/spec.md).
 
 ## How it works
 
@@ -125,6 +126,22 @@ be in VRAM. A native capture and encode spike (DXGI + Media Foundation, in
 [spike/native](spike/native/README.md)) used more memory, not less, because
 both paths sit on the same Intel media driver. So Ghostclip stays on FFmpeg.
 
+### Measure it on your PC
+
+The benchmark runs a game's built-in benchmark with Ghostclip off and on,
+alternating, and writes the table above with FPS and 1% lows from
+[PresentMon](https://github.com/GameTechDev/PresentMon). It measures the real
+app with your settings: host, worker and FFmpeg together, plus a clip saved
+halfway through each round. From PowerShell as administrator:
+
+```powershell
+.\tools\get-tools.ps1                                            # PresentMon
+.\bench\run-bench.ps1 -ProcessName "Game.exe" -SaveDuringRun     # 3 rounds off, 3 on
+```
+
+Results land in `bench\results\<date>\summary.md`. Numbers from other GPUs,
+NVIDIA and AMD especially, are very welcome in an issue.
+
 ## Known limitations
 
 - Only QuickSync has been tested. NVENC and AMF are built in but have not run
@@ -142,7 +159,7 @@ both paths sit on the same Intel media driver. So Ghostclip stays on FFmpeg.
 
 ## License
 
-[MIT](LICENSE). FFmpeg is not part of this repository. Releases ship a minimal
-LGPL build made by [build/ffmpeg](build/ffmpeg) (no GPL or nonfree components)
+[MIT](LICENSE). Changes are listed in [CHANGELOG.md](CHANGELOG.md). FFmpeg is
+not part of this repository. Releases ship a minimal LGPL build made by [build/ffmpeg](build/ffmpeg) (no GPL or nonfree components)
 that Ghostclip runs as a separate program; for development
 `tools\get-tools.ps1` downloads an LGPL build.

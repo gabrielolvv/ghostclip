@@ -44,8 +44,8 @@ o .NET e o FFmpeg, vem junto.
 **Fase 4.** Funcionam gravação, save, roteamento de áudio, perfis, corte,
 compressão e o instalador com atualizações. Ainda falta: números de benchmark
 em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
-inglês) e um GIF para esta página. O plano completo está em
-[docs/spec.md](docs/spec.md) (em inglês).
+inglês) e um GIF para esta página (`assets\make-gif.ps1` gera um a partir de
+um clipe). O plano completo está em [docs/spec.md](docs/spec.md) (em inglês).
 
 ## Como funciona
 
@@ -128,6 +128,22 @@ Foundation, em [spike/native](spike/native/README.md), em inglês) gastou mais
 memória, não menos, porque os dois caminhos usam o mesmo driver de mídia da
 Intel. Por isso o Ghostclip continua no FFmpeg.
 
+### Meça no seu PC
+
+O benchmark roda o benchmark embutido de um jogo com o Ghostclip desligado e
+ligado, alternando, e gera a tabela acima com FPS e 1% low pelo
+[PresentMon](https://github.com/GameTechDev/PresentMon). Ele mede o app de
+verdade com as suas configurações: host, worker e FFmpeg juntos, mais um clipe
+salvo no meio de cada rodada. No PowerShell como administrador:
+
+```powershell
+.\tools\get-tools.ps1                                            # PresentMon
+.\bench\run-bench.ps1 -ProcessName "Jogo.exe" -SaveDuringRun     # 3 rodadas desligado, 3 ligado
+```
+
+Os resultados ficam em `bench\results\<data>\summary.md`. Números de outras
+GPUs, principalmente NVIDIA e AMD, são muito bem-vindos numa issue.
+
 ## Limitações conhecidas
 
 - Só o QuickSync foi testado. NVENC e AMF estão implementados, mas ainda não
@@ -145,7 +161,8 @@ Intel. Por isso o Ghostclip continua no FFmpeg.
 
 ## Licença
 
-[MIT](LICENSE). O FFmpeg não faz parte deste repositório. Os releases levam uma
+[MIT](LICENSE). As mudanças estão em [CHANGELOG.md](CHANGELOG.md) (em inglês).
+O FFmpeg não faz parte deste repositório. Os releases levam uma
 build LGPL mínima feita por [build/ffmpeg](build/ffmpeg) (sem componentes GPL
 nem nonfree), que o Ghostclip executa como programa separado; para
 desenvolvimento, o `tools\get-tools.ps1` baixa uma build LGPL.

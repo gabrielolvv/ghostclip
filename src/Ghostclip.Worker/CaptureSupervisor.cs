@@ -275,6 +275,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     {
         if (_runner is not null)
         {
+            // The benchmark reads these counts from the log.
+            _log.Information("Recorder stopped after {Uptime:0} s: {Frames} frames, {Dropped} dropped, {Duplicated} duplicated",
+                _runner.Uptime.TotalSeconds, _runner.Frames, _runner.Dropped, _runner.Duplicated);
             await _runner.StopAsync().ConfigureAwait(false);
             _runner.Dispose();
             _runner = null;

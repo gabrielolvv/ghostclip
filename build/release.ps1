@@ -10,7 +10,8 @@ Builds the Ghostclip installer and update packages with Velopack.
    component Ghostclip uses and nothing GPL, plus its license and the notice
    of where its source and build recipe are.
 4. Packs with vpk: Ghostclip-win-Setup.exe (per-user, no admin), the full and
-   delta .nupkg files and the release manifest that updates check against.
+   delta .nupkg files and the release manifest that updates check against,
+   with this version's section of CHANGELOG.md as the release notes.
 
 Signing: when -SignTemplate is given (or the GHOSTCLIP_SIGN_TEMPLATE
 environment variable is set, as the release workflow does for SignPath), vpk
@@ -74,10 +75,23 @@ if ($Stage -eq 'publish') { Write-Host "Published to $publish"; return }
 }
 
 if (-not (Test-Path -LiteralPath (Join-Path $publish 'Ghostclip.exe'))) { throw "Nothing published in $publish. Run with -Stage publish first." }
+
+# This version's section of CHANGELOG.md: the GitHub release text and the update notes.
+$changelog = @(Get-Content -LiteralPath (Join-Path $root 'CHANGELOG.md') -Encoding UTF8)
+$heading = '^## \[?' + [regex]::Escape($Version) + '\]?(\s|$)'
+$start = -1
+for ($i = 0; $i -lt $changelog.Count; $i++) { if ($changelog[$i] -match $heading) { $start = $i; break } }
+if ($start -lt 0) { throw "CHANGELOG.md has no section for $Version." }
+$end = $changelog.Count
+for ($i = $start + 1; $i -lt $changelog.Count; $i++) { if ($changelog[$i] -match '^## ') { $end = $i; break } }
+$notes = Join-Path $root 'artifacts\release-notes.md'
+$text = (($changelog[($start + 1)..($end - 1)]) -join "`n").Trim()
+[IO.File]::WriteAllText($notes, $text + "`n", (New-Object Text.UTF8Encoding $false))
+
 $pack = @(
     'vpk', 'pack', '--packId', 'Ghostclip', '--packVersion', $Version, '--packDir', $publish,
     '--mainExe', 'Ghostclip.exe', '--packTitle', 'Ghostclip', '--packAuthors', 'gabrielolvv',
-    '--icon', (Join-Path $root 'assets\ghostclip.ico'), '--outputDir', $OutDir
+    '--icon', (Join-Path $root 'assets\ghostclip.ico'), '--releaseNotes', $notes, '--outputDir', $OutDir
 )
 if ($SignTemplate) { $pack += @('--signTemplate', $SignTemplate) }
 Invoke-Step 'tool restore' { dotnet tool restore }

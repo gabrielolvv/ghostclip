@@ -87,10 +87,14 @@ function Get-Column([object[]]$Rows, [string]$Name) {
 function Get-ResourceStats([string]$Path) {
     $rows = @()
     if (Test-Path -LiteralPath $Path) { $rows = @(Import-Csv -LiteralPath $Path) }
+    # rec_* adds up every recorder process (host, worker, ffmpeg); older results only have ffmpeg.
+    $prefix = 'ff'
+    if ($rows.Count -gt 0 -and $rows[0].PSObject.Properties.Name -contains 'rec_ws_mb') { $prefix = 'rec' }
     return [pscustomobject]@{
-        Cpu       = Get-Mean (Get-Column $rows 'ff_cpu_pct')
-        WsMean    = Get-Mean (Get-Column $rows 'ff_ws_mb')
-        WsMax     = Get-Max (Get-Column $rows 'ff_ws_mb')
+        Cpu       = Get-Mean (Get-Column $rows "$($prefix)_cpu_pct")
+        WsMean    = Get-Mean (Get-Column $rows "$($prefix)_ws_mb")
+        WsMax     = Get-Max (Get-Column $rows "$($prefix)_ws_mb")
+        FfWsMean  = Get-Mean (Get-Column $rows 'ff_ws_mb')
         Encode    = Get-Mean (Get-Column $rows 'ff_encode_pct')
         VideoProc = Get-Mean (Get-Column $rows 'ff_videoproc_pct')
         Ff3d      = Get-Mean (Get-Column $rows 'ff_3d_pct')
@@ -110,10 +114,12 @@ foreach ($f in Get-ChildItem -LiteralPath $Dir -Filter 'run*-frames.csv' | Sort-
     $metaPath = Join-Path $Dir "$tag.json"
     if (Test-Path -LiteralPath $metaPath) { $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json }
     $saveMs = [double]::NaN
+    $snapshotMs = [double]::NaN
     $drop = [double]::NaN
     $dup = [double]::NaN
     if ($meta) {
         if ($null -ne $meta.saveMs) { $saveMs = [double]$meta.saveMs }
+        if ($meta.PSObject.Properties.Name -contains 'snapshotMs' -and $null -ne $meta.snapshotMs) { $snapshotMs = [double]$meta.snapshotMs }
         if ($meta.recorder) {
             $drop = ConvertTo-Double $meta.recorder.drop_frames
             $dup = ConvertTo-Double $meta.recorder.dup_frames
@@ -121,7 +127,7 @@ foreach ($f in Get-ChildItem -LiteralPath $Dir -Filter 'run*-frames.csv' | Sort-
     }
     $runs += [pscustomobject]@{
         Tag = $tag; Mode = $Matches[2]; Frames = $frames.Frames; AvgFps = $frames.AvgFps; Low1 = $frames.Low1
-        Res = $res; SaveMs = $saveMs; Drop = $drop; Dup = $dup
+        Res = $res; SaveMs = $saveMs; SnapshotMs = $snapshotMs; Drop = $drop; Dup = $dup
     }
 }
 if ($runs.Count -eq 0) { throw "No valid rounds in $Dir" }
@@ -160,6 +166,8 @@ $cpu = Get-ModeValue $on { $_.Res.Cpu }
 $wsMean = Get-ModeValue $on { $_.Res.WsMean }
 $wsMax = Get-Max ([double[]]@($on | ForEach-Object { $_.Res.WsMax }))
 $saveMs = Get-Max ([double[]]@($on | ForEach-Object { $_.SaveMs }))
+$snapshotMs = Get-Max ([double[]]@($on | ForEach-Object { $_.SnapshotMs }))
+$ffWs = Get-ModeValue $on { $_.Res.FfWsMean }
 $drop = Get-Max ([double[]]@($on | ForEach-Object { $_.Drop }))
 $dup = Get-Max ([double[]]@($on | ForEach-Object { $_.Dup }))
 
@@ -170,11 +178,13 @@ $md.Add("| Average FPS | $(Format-MeanSd $off { $_.AvgFps }) | $(Format-MeanSd $
 $md.Add("| 1% low | $(Format-MeanSd $off { $_.Low1 }) | $(Format-MeanSd $on { $_.Low1 }) | $(Format-Value (-$lowDrop) '+0.0;-0.0' '%') | drop ≤ $MaxLowDropPct% | $(Format-Pass $lowDrop $MaxLowDropPct) |")
 $md.Add("| Recorder CPU | – | $(Format-Value $cpu '0.00' '%') | | < $MaxCpuPct% | $(Format-Pass $cpu $MaxCpuPct) |")
 $md.Add("| Recorder RAM (mean / peak) | – | $(Format-Value $wsMean '0') / $(Format-Value $wsMax '0') MB | | < $MaxRamMb MB | $(Format-Pass $wsMean $MaxRamMb) |")
+if (-not [double]::IsNaN($ffWs) -and $ffWs -ne $wsMean) { $md.Add("| RAM of ffmpeg alone (mean) | – | $(Format-Value $ffWs '0') MB | | | |") }
 $md.Add("| Recorder GPU encoding (Video Encode + Video Decode) | – | $(Format-Value (Get-ModeValue $on { $_.Res.Encode }) '0.0' '%') | | | |")
 $md.Add("| Recorder GPU Video Processing | – | $(Format-Value (Get-ModeValue $on { $_.Res.VideoProc }) '0.0' '%') | | | |")
 $md.Add("| Recorder GPU 3D | – | $(Format-Value (Get-ModeValue $on { $_.Res.Ff3d }) '0.0' '%') | | | |")
 $md.Add("| Game GPU 3D | $(Format-Value (Get-ModeValue $off { $_.Res.Game3d }) '0' '%') | $(Format-Value (Get-ModeValue $on { $_.Res.Game3d }) '0' '%') | | | |")
 $md.Add("| Frames dropped / duplicated by the recorder | – | $(Format-Value $drop '0') / $(Format-Value $dup '0') | | | |")
+$md.Add("| Clip safe after the hotkey (worst case) | – | $(Format-Value $snapshotMs '0' ' ms') | | | |")
 $md.Add("| Clip save time (worst case) | – | $(Format-Value $saveMs '0' ' ms') | | < $MaxSaveMs ms | $(Format-Pass $saveMs $MaxSaveMs) |")
 $md.Add('')
 $md.Add('| Round | Average FPS | 1% low | Frames |')

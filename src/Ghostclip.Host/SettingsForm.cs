@@ -16,7 +16,7 @@ internal sealed class SettingsForm : Form
     public SettingsForm(GhostclipConfig config, Action<GhostclipConfig> save)
     {
         _model = SettingsModel.From(config);
-        Text = "Ghostclip settings";
+        Text = $"Ghostclip {typeof(SettingsForm).Assembly.GetName().Version?.ToString(3)} settings";
         Icon = TrayIcons.Recording;
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(520, 600);

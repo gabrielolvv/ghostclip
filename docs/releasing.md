@@ -3,14 +3,16 @@
 ## Cutting a release
 
 1. Update the version in `Directory.Build.props`.
-2. Commit, then tag and push the tag:
+2. Add a `## <version>` section to [CHANGELOG.md](../CHANGELOG.md). It becomes
+   the GitHub release text and the update's notes; packing fails without it.
+3. Commit, then tag and push the tag:
 
    ```powershell
    git tag v0.4.0
    git push origin v0.4.0
    ```
 
-3. The [Release workflow](../.github/workflows/release.yml) builds the minimal
+4. The [Release workflow](../.github/workflows/release.yml) builds the minimal
    FFmpeg, runs the tests, publishes, packs with Velopack and creates the
    GitHub release. Installed copies pick it up within six hours (or two
    minutes after their next start) and offer "Restart to update" in the tray.
