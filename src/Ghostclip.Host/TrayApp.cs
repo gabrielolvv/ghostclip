@@ -16,6 +16,9 @@ internal sealed class TrayApp : ApplicationContext
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _saveItem;
     private readonly ToolStripMenuItem _statusItem = new("Starting...") { Enabled = false };
+    private readonly ToolStripMenuItem _updateItem = new("Restart to update") { Visible = false };
+    private readonly UpdateService _updates = new(Log.ForContext<UpdateService>());
+    private readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 2 * 60 * 1000 };
     private readonly HotkeyWindow _hotkey = new();
     private readonly WorkerSupervisor _worker;
     private readonly ClipSaver _saver;
@@ -27,6 +30,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ConfirmationSound _sound = new();
     private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
     private readonly RegisteredWaitHandle _saveRequestWait;
+    private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
+    private readonly RegisteredWaitHandle _exitRequestWait;
     private GhostclipConfig _config;
     private WorkerStatus _status = new() { State = WorkerState.Starting };
     private SettingsForm? _settings;
@@ -44,6 +49,7 @@ internal sealed class TrayApp : ApplicationContext
         _saveItem = new ToolStripMenuItem("Save clip", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
         var menu = new ContextMenuStrip();
         menu.Items.Add(_statusItem);
+        menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
         menu.Items.Add("Open clips folder", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
@@ -64,12 +70,25 @@ internal sealed class TrayApp : ApplicationContext
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
         _foregroundTimer.Tick += (_, _) => CheckForeground();
         _foregroundTimer.Start();
+
+        // First update check two minutes after start, then every six hours.
+        _updateItem.Click += (_, _) => RestartToUpdate();
+        _updates.UpdateReady += version => _ui.Post(_ => OnUpdateReady(version), null);
+        _updateTimer.Tick += (_, _) =>
+        {
+            _updateTimer.Interval = 6 * 60 * 60 * 1000;
+            _ = Task.Run(_updates.CheckAsync);
+        };
+        if (_updates.IsInstalled) _updateTimer.Start();
+        ApplyAutostart();
         _worker = new WorkerSupervisor(Log.ForContext<WorkerSupervisor>());
         _worker.StatusChanged += s => _ui.Post(_ => OnStatus(s), null);
         _worker.ErrorReported += (message, fatal) => _ui.Post(_ => OnWorkerError(message, fatal), null);
         _hotkey.Pressed += SaveClip;
         _saveRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _saveRequest, (_, _) => _ui.Post(_ => SaveClip(), null), null, Timeout.Infinite, executeOnlyOnce: false);
+        _exitRequestWait = ThreadPool.RegisterWaitForSingleObject(
+            _exitRequest, (_, _) => _ui.Post(_ => Exit(), null), null, Timeout.Infinite, executeOnlyOnce: true);
 
         RegisterHotkey();
         if (configProblem is not null) Notify("Settings reset", configProblem, ToolTipIcon.Warning);
@@ -93,6 +112,34 @@ internal sealed class TrayApp : ApplicationContext
     // Game-only audio follows the game, not whatever is in front: alt-tabbing to
     // Discord or a browser must not start recording their audio. A program counts
     // as the game when it runs fullscreen or borderless, or has a profile.
+    private void ApplyAutostart()
+    {
+        if (!_updates.IsInstalled) return;
+        try
+        {
+            Autostart.Apply(_config.StartWithWindows, Environment.ProcessPath!);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        {
+            _log.Warning("Could not update Start with Windows: {Error}", ex.Message);
+        }
+    }
+
+    private void OnUpdateReady(string version)
+    {
+        _updateItem.Text = $"Restart to update to {version}";
+        _updateItem.Visible = true;
+        Notify("Update ready", $"Ghostclip {version} is downloaded. Restart from the tray menu when you're not playing.", ToolTipIcon.Info);
+    }
+
+    private void RestartToUpdate()
+    {
+        _log.Information("Restarting to apply an update");
+        Shutdown();
+        _updates.ApplyAndRestart();
+        ExitThread();
+    }
+
     private void CheckForeground()
     {
         var front = ForegroundGame.Detect();
@@ -130,6 +177,7 @@ internal sealed class TrayApp : ApplicationContext
             WorkerState.Recording => "Recording",
             WorkerState.Stopped => "Not recording",
             WorkerState.Probing => "Detecting encoder",
+            WorkerState.WaitingForDesktop => "Paused (screen locked)",
             _ => "Starting",
         };
         var audio = _status.AudioRoute is { } route ? $" · audio: {route}" : "";
@@ -241,6 +289,7 @@ internal sealed class TrayApp : ApplicationContext
             WorkerState.Recording => (TrayIcons.Recording, $"Ghostclip: recording ({status.Encoder}, {status.Fps:0} fps{(status.Audio ? ", audio" : "")})"),
             WorkerState.Stopped => (TrayIcons.Stopped, "Ghostclip: not recording"),
             WorkerState.Probing => (TrayIcons.Waiting, "Ghostclip: detecting the encoder"),
+            WorkerState.WaitingForDesktop => (TrayIcons.Waiting, "Ghostclip: paused while the screen is locked"),
             _ => (TrayIcons.Waiting, "Ghostclip: starting"),
         };
         if (_icon.Icon != icon) _icon.Icon = icon;
@@ -285,6 +334,7 @@ internal sealed class TrayApp : ApplicationContext
         ConfigStore.Save(_paths.ConfigFile, config);
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         if (hotkeyChanged) RegisterHotkey();
+        ApplyAutostart();
         _worker.UpdateConfig(config);
         _log.Information("Settings saved");
     }
@@ -308,16 +358,24 @@ internal sealed class TrayApp : ApplicationContext
 
     private void Exit()
     {
+        Shutdown();
+        ExitThread();
+    }
+
+    private void Shutdown()
+    {
         _icon.Visible = false;
         _hotkey.Dispose();
         _foregroundTimer.Dispose();
+        _updateTimer.Dispose();
         _saveRequestWait.Unregister(null);
         _saveRequest.Dispose();
+        _exitRequestWait.Unregister(null);
+        _exitRequest.Dispose();
         _settings?.Close();
         // Give the worker a moment to close its last segment cleanly.
         Task.Run(async () => await _worker.DisposeAsync().ConfigureAwait(false)).Wait(TimeSpan.FromSeconds(8));
         _sound.Dispose();
         _icon.Dispose();
-        ExitThread();
     }
 }

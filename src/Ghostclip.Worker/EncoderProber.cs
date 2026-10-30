@@ -42,6 +42,11 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
             }
         }
 
+        if (EncoderProbe.DesktopUnavailable(results))
+        {
+            // A locked screen: nothing was learned about the encoders, so nothing is cached.
+            throw new DesktopUnavailableException();
+        }
         var cache = new ProbeCache(id, config.Codec, config.Monitor, DateTime.UtcNow, results);
         Save(cache);
         return cache.Choose(config.Encoder, config.Input);
@@ -75,3 +80,6 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
         }
     }
 }
+
+/// <summary>Windows is not letting anyone capture the desktop right now (locked screen, UAC prompt).</summary>
+internal sealed class DesktopUnavailableException() : Exception("The desktop can't be captured right now (locked or secure screen).");

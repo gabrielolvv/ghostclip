@@ -24,7 +24,7 @@ public static class IpcType
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<WorkerState>))]
-public enum WorkerState { Starting, Probing, Recording, Restarting, Stopped }
+public enum WorkerState { Starting, Probing, Recording, Restarting, Stopped, WaitingForDesktop }
 
 public sealed record WorkerStatus
 {

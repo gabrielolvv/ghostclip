@@ -1,0 +1,36 @@
+# FFmpeg configure flags for Ghostclip, one per line. Lines starting with # are ignored.
+# License: LGPL 2.1 or later. Never add --enable-gpl, --enable-nonfree or --enable-version3 here.
+
+--enable-static
+--disable-shared
+--disable-debug
+--disable-doc
+--disable-ffplay
+--disable-network
+--disable-autodetect
+--enable-w32threads
+--disable-everything
+
+# Hardware
+--enable-d3d11va
+--enable-dxva2
+--enable-ffnvcodec
+--enable-nvenc
+--enable-amf
+--enable-libvpl
+
+# Input and output
+--enable-protocol=file,pipe,concat
+# pcm_f32le is the raw float demuxer that reads the audio pipes (format name "f32le").
+--enable-demuxer=concat,mpegts,mov,pcm_f32le,aac,h264,hevc
+--enable-muxer=segment,mpegts,mp4,mov,null
+--enable-parser=h264,hevc,aac
+--enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb,extract_extradata
+
+# Codecs: hardware video encoders only, AAC for audio; decoders for compress and probing
+--enable-encoder=h264_nvenc,hevc_nvenc,h264_amf,hevc_amf,h264_qsv,hevc_qsv,aac,wrapped_avframe,pcm_s16le
+--enable-decoder=h264,hevc,aac,pcm_f32le
+--enable-hwaccel=h264_d3d11va,hevc_d3d11va,h264_d3d11va2,hevc_d3d11va2,h264_dxva2,hevc_dxva2
+
+# Filters: capture and GPU conversion, compress, and the measurement tools in spike/ and bench/
+--enable-filter=ddagrab,hwmap,hwupload,hwdownload,format,vpp_qsv,scale_d3d11,scale,fps,null,anull,amix,aresample,aformat,pan,volumedetect,silencedetect,signalstats,astats,metadata,ametadata,asetnsamples,bandpass,showinfo

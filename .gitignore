@@ -4,6 +4,7 @@ CLAUDE.local.md
 
 # Tools downloaded by tools/get-tools.ps1
 /tools/ffmpeg/
+/tools/ffmpeg-min/
 /tools/presentmon/
 
 # Local benchmark results (the consolidated table goes in the README)

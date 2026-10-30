@@ -1,0 +1,102 @@
+name: Release
+
+# Push a tag like v0.4.0 to build the installer and publish a GitHub release.
+# Installed copies of Ghostclip update from these releases.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  ffmpeg:
+    name: Minimal LGPL FFmpeg
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The build only changes when build/ffmpeg changes.
+      - name: Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: out
+          key: ffmpeg-${{ hashFiles('build/ffmpeg/Dockerfile', 'build/ffmpeg/configure-flags.txt') }}
+
+      - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker build -t ghostclip-ffmpeg build/ffmpeg
+          id=$(docker create ghostclip-ffmpeg)
+          mkdir -p out
+          for f in bin/ffmpeg.exe bin/ffprobe.exe COPYING.LGPLv2.1; do docker cp "$id:/out/$f" out/; done
+          docker rm "$id"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg
+          path: out
+
+  release:
+    needs: ffmpeg
+    runs-on: windows-latest
+    env:
+      # Code signing turns on once the SignPath project exists (see docs/releasing.md).
+      SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg
+          path: tools/ffmpeg-min
+
+      - name: Version from tag
+        shell: pwsh
+        run: echo "VERSION=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_ENV
+
+      - name: Test and publish
+        shell: pwsh
+        run: ./build/release.ps1 -Version $env:VERSION -Stage publish
+
+      - name: Upload binaries for signing
+        if: env.SIGNPATH_ENABLED == 'true'
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: artifacts/publish
+
+      - name: Sign with SignPath
+        if: env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ghostclip
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/publish
+
+      # Earlier releases let vpk build small delta updates.
+      - name: Download previous release
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          dotnet tool restore
+          dotnet vpk download github --repoUrl https://github.com/${{ github.repository }} --outputDir artifacts/release --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack
+        shell: pwsh
+        run: ./build/release.ps1 -Version $env:VERSION -Stage pack
+
+      - name: Publish release
+        shell: pwsh
+        run: dotnet vpk upload github --repoUrl https://github.com/${{ github.repository }} --outputDir artifacts/release --publish --releaseName "Ghostclip ${{ env.VERSION }}" --tag ${{ github.ref_name }} --token ${{ secrets.GITHUB_TOKEN }}

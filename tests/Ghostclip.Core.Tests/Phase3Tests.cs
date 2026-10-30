@@ -117,6 +117,27 @@ public class Phase3ArgsTests
     }
 }
 
+public class DesktopAvailabilityTests
+{
+    private static ProbeResult Fail(EncoderKind e, string error) => new(e, EncoderInput.Direct, false, 1, error);
+
+    [Fact]
+    public void Locked_screen_is_not_a_missing_encoder()
+    {
+        const string denied = "[Parsed_ddagrab_0 @ 000001ee5c5abac0] Desktop duplication access denied";
+        Assert.True(EncoderProbe.DesktopUnavailable([Fail(EncoderKind.Nvenc, denied), Fail(EncoderKind.Qsv, denied),
+            Fail(EncoderKind.Amf, "h264_amf is not in this FFmpeg build")]));
+    }
+
+    [Fact]
+    public void A_real_encoder_failure_is_still_a_failure()
+    {
+        Assert.False(EncoderProbe.DesktopUnavailable([Fail(EncoderKind.Nvenc, "Cannot load nvcuda.dll"),
+            Fail(EncoderKind.Qsv, "Desktop duplication access denied")]));
+        Assert.False(EncoderProbe.DesktopUnavailable([]));
+    }
+}
+
 public class CompressionPlannerTests
 {
     [Fact]

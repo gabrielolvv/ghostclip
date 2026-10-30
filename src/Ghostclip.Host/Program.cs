@@ -11,6 +11,9 @@ internal static class Program
     /// <summary>Set by "Ghostclip.exe --save" to make the running instance save a clip (Stream Deck, macros).</summary>
     public const string SaveEventName = @"Local\Ghostclip.Save";
 
+    /// <summary>Set by the installer before uninstalling or updating: the running instance shuts down cleanly.</summary>
+    public const string ExitEventName = @"Local\Ghostclip.Exit";
+
     /// <summary>
     /// Ghostclip.exe                         tray app
     /// Ghostclip.exe --save                  the running instance saves a clip
@@ -20,6 +23,16 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // Installer hooks run first and exit on their own; normal launches fall through.
+        Velopack.VelopackApp.Build()
+            .OnBeforeUninstallFastCallback(_ =>
+            {
+                StopRunningInstance();
+                Autostart.Remove();
+            })
+            .OnBeforeUpdateFastCallback(_ => StopRunningInstance())
+            .Run();
+
         var command = args.Length > 0 ? args[0].ToLowerInvariant() : null;
         if (command is "--trim" or "--compress")
         {
@@ -90,9 +103,47 @@ internal static class Program
         }
     }
 
+    // Files of a running copy can't be replaced or deleted. Ask it to exit (it
+    // stops the worker, which closes its last segment), then make sure.
+    private static void StopRunningInstance()
+    {
+        if (EventWaitHandle.TryOpenExisting(ExitEventName, out var exit))
+        {
+            using (exit) exit.Set();
+        }
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        foreach (var name in new[] { "Ghostclip", "Ghostclip.Worker", "ffmpeg" })
+        {
+            foreach (var p in System.Diagnostics.Process.GetProcessesByName(name))
+            {
+                using (p)
+                {
+                    if (p.Id == Environment.ProcessId || !IsOurs(p)) continue;
+                    var left = deadline - DateTime.UtcNow;
+                    if (left > TimeSpan.Zero && p.WaitForExit(left)) continue;
+                    try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                }
+            }
+        }
+    }
+
+    // Only processes running from this installation, never another program's ffmpeg.exe.
+    private static bool IsOurs(System.Diagnostics.Process p)
+    {
+        try
+        {
+            return p.MainModule?.FileName?.StartsWith(GhostclipPaths.InstallRoot, StringComparison.OrdinalIgnoreCase) == true;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
+    }
+
     private static (GhostclipPaths, GhostclipConfig, string?, LoggingLevelSwitch) Start(string logName)
     {
         var paths = GhostclipPaths.Default;
+        paths.MigrateConfigFrom(GhostclipPaths.InstallRoot);
         paths.EnsureCreated();
         var config = ConfigStore.Load(paths.ConfigFile, out var problem);
         var level = new LoggingLevelSwitch(ToSerilog(config.LogLevel));

@@ -88,7 +88,16 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 }
 
                 _state = WorkerState.Probing;
-                var choice = await _prober.ChooseAsync(ffmpeg, _config, forceProbe, ct).ConfigureAwait(false);
+                ProbeResult? choice;
+                try
+                {
+                    choice = await _prober.ChooseAsync(ffmpeg, _config, forceProbe, ct).ConfigureAwait(false);
+                }
+                catch (DesktopUnavailableException)
+                {
+                    await WaitForDesktopAsync(ct).ConfigureAwait(false);
+                    continue;
+                }
                 forceProbe = false;
                 if (choice is null)
                 {
@@ -108,9 +117,15 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 }
 
                 // FFmpeg died on its own.
-                _state = WorkerState.Restarting;
                 var uptime = _runner?.Uptime ?? TimeSpan.Zero;
                 var errors = _runner?.LastErrors;
+                if (EncoderProbe.IsDesktopDenied(errors))
+                {
+                    // Screen locked mid-recording: the buffer stays, recording resumes on unlock.
+                    await WaitForDesktopAsync(ct).ConfigureAwait(false);
+                    continue;
+                }
+                _state = WorkerState.Restarting;
                 _log.Warning("Recorder exited after {Uptime:0.0} s; restarting in {Delay} s. Last errors: {Errors}",
                     uptime.TotalSeconds, backoff.TotalSeconds, errors);
                 if (uptime < TimeSpan.FromSeconds(10) && ++quickFailures >= 3)
@@ -226,6 +241,24 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 _runner.Kill();
             }
         }
+    }
+
+    // Quiet wait while Windows refuses the desktop: no FFmpeg runs, no restart
+    // notifications, no backoff growth. A cheap OpenInputDesktop poll says when
+    // the user is back; only then is capture tried again.
+    private async Task WaitForDesktopAsync(CancellationToken ct)
+    {
+        _state = WorkerState.WaitingForDesktop;
+        _log.Information("Desktop unavailable (locked or secure screen); waiting");
+        var waited = Stopwatch.StartNew();
+        do
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+        }
+        while (!InputDesktop.IsAvailable());
+        // Give the unlock animation a moment before Desktop Duplication starts.
+        await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
+        _log.Information("Desktop available again after {Seconds:0} s", waited.Elapsed.TotalSeconds);
     }
 
     private async Task FailAsync(string message, CancellationToken ct)

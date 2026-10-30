@@ -7,6 +7,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <AssemblyName>Ghostclip</AssemblyName>
+    <ApplicationIcon>..\..\assets\ghostclip.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ghostclip.Core\Ghostclip.Core.csproj" />
@@ -16,5 +17,6 @@
   <ItemGroup>
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Velopack" />
   </ItemGroup>
 </Project>

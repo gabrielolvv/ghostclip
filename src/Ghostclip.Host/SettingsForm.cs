@@ -68,6 +68,9 @@ internal sealed class SettingsModel
     [Category("1. Clips"), DisplayName("Confirmation sound"), Description("Plays a short chime when a clip is saved.")]
     public bool ConfirmationSound { get; set; }
 
+    [Category("4. Advanced"), DisplayName("Start with Windows"), Description("Starts Ghostclip in the tray when you sign in. Installed copies only.")]
+    public bool StartWithWindows { get; set; }
+
     [Category("2. Video"), DisplayName("Frame rate"), Description("Capture rate. Capturing below the monitor's refresh rate costs less.")]
     public int Fps { get; set; }
 
@@ -122,6 +125,7 @@ internal sealed class SettingsModel
         ClipSeconds = c.ClipSeconds,
         ClipsFolder = c.ClipsFolder ?? "",
         ConfirmationSound = c.ConfirmationSound,
+        StartWithWindows = c.StartWithWindows,
         Fps = c.Fps,
         BitrateMbps = c.BitrateMbps,
         Codec = c.Codec,
@@ -146,6 +150,7 @@ internal sealed class SettingsModel
         ClipSeconds = ClipSeconds,
         ClipsFolder = string.IsNullOrWhiteSpace(ClipsFolder) ? null : ClipsFolder,
         ConfirmationSound = ConfirmationSound,
+        StartWithWindows = StartWithWindows,
         Fps = Fps,
         BitrateMbps = BitrateMbps,
         Codec = Codec,

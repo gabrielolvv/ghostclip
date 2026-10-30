@@ -100,6 +100,9 @@ public sealed record GhostclipConfig
     public string? FfmpegPath { get; set; }
 
     public bool ConfirmationSound { get; set; } = true;
+
+    /// <summary>Starts Ghostclip at sign-in (installed copies only).</summary>
+    public bool StartWithWindows { get; set; } = true;
     public GhostclipLogLevel LogLevel { get; set; } = GhostclipLogLevel.Information;
 
     public string ResolvedClipsFolder =>

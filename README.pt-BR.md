@@ -1,5 +1,8 @@
 # Ghostclip
 
+[![CI](https://github.com/gabrielolvv/ghostclip/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielolvv/ghostclip/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 [English](README.md)
 
 Gravador de "instant replay" open-source para Windows 10/11. Fica na bandeja,
@@ -26,11 +29,23 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
 
+## Instalar
+
+Baixe o `Ghostclip-win-Setup.exe` do
+[último release](https://github.com/gabrielolvv/ghostclip/releases/latest) e
+execute. Ele instala só para o seu usuário, sem pedir admin, abre na bandeja e
+se atualiza pelo GitHub Releases: quando uma versão nova é baixada, aparece o
+item "Restart to update", sem reiniciar no meio de um jogo. Requer Windows 10
+2004 ou mais novo e uma GPU com NVENC, AMF ou QuickSync. Todo o resto, inclusive
+o .NET e o FFmpeg, vem junto.
+
 ## Estado
 
-**Fase 3.** Funcionam gravação, save, roteamento de áudio, perfis, corte e
-compressão. Ainda falta: números de benchmark em jogo, instalador e um GIF para
-esta página. O plano completo está em [docs/spec.md](docs/spec.md) (em inglês).
+**Fase 4.** Funcionam gravação, save, roteamento de áudio, perfis, corte,
+compressão e o instalador com atualizações. Ainda falta: números de benchmark
+em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
+inglês) e um GIF para esta página. O plano completo está em
+[docs/spec.md](docs/spec.md) (em inglês).
 
 ## Como funciona
 
@@ -60,7 +75,7 @@ Ghostclip.exe (bandeja)           Ghostclip.Worker.exe (sem UI)          ffmpeg.
   FFmpeg começa o relógio do áudio uns 150 ms antes do primeiro frame de vídeo;
   o worker mede essa diferença a cada sessão e o save desloca o áudio de volta.
 
-## Compilar e rodar
+## Compilar do código-fonte
 
 Requer Windows 10 2004+ e o SDK do .NET 10.
 
@@ -70,15 +85,17 @@ dotnet build
 .\artifacts\bin\Debug\Ghostclip.exe
 ```
 
-Testes: `dotnet test --project tests/Ghostclip.Core.Tests`
+Testes: `dotnet test --project tests/Ghostclip.Core.Tests`. Como gerar o
+instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 
 ## Uso
 
 - **Alt+F10** salva em `Vídeos\Ghostclip\<Jogo>\<Jogo>_AAAA-MM-DD_HH-MM-SS.mp4`.
 - O menu da bandeja mostra o que está sendo gravado e tem corte, compressão,
   configurações e pastas. O ponto do ícone fica vermelho enquanto grava.
-- As configurações ficam em `%LOCALAPPDATA%\Ghostclip\config.json` (também
-  editáveis pela bandeja) e os logs em `%LOCALAPPDATA%\Ghostclip\Logs`.
+- As configurações ficam em `%LOCALAPPDATA%\Ghostclip\Data\config.json`
+  (também editáveis pela bandeja) e os logs em
+  `%LOCALAPPDATA%\Ghostclip\Data\Logs`.
 - Linha de comando, para scripts, macros ou Stream Deck:
 
 | Comando | Faz |
@@ -128,6 +145,7 @@ Intel. Por isso o Ghostclip continua no FFmpeg.
 
 ## Licença
 
-[MIT](LICENSE). O FFmpeg não faz parte deste repositório: o
-`tools\get-tools.ps1` baixa uma build LGPL (sem componentes GPL) que o
-Ghostclip executa como programa separado.
+[MIT](LICENSE). O FFmpeg não faz parte deste repositório. Os releases levam uma
+build LGPL mínima feita por [build/ffmpeg](build/ffmpeg) (sem componentes GPL
+nem nonfree), que o Ghostclip executa como programa separado; para
+desenvolvimento, o `tools\get-tools.ps1` baixa uma build LGPL.
