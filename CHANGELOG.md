@@ -3,7 +3,7 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
-## Unreleased
+## 0.5.0
 
 ### Added
 
@@ -12,8 +12,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   snaps to a keyframe, so the cut is exact). Compress for Discord, copy the
   file to paste into Discord, show in folder or send to the Recycle Bin from
   the same window. Double-click the tray icon or click "Clip saved" to open
-  it. It is a separate process that exists only while its window is open.
-
+  it. It is a separate process that exists only while its window is open,
+  and it reopens where you left it.
 - Settings page in the library window, in the same dark design, with a hotkey
   recorder, per-game profiles and the encoders this PC supports marked.
   Changes that restart recording ask once more before saving.
@@ -36,6 +36,12 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Ghostclip no longer closes right after starting when a request to quit was
   left over from before it started, which could happen when it restarted
   after an update.
+- A hotkey another program already uses no longer leaves you without one:
+  the previous hotkey stays and Ghostclip says so. A key on its own (E,
+  Space) can't be the hotkey, since it would stop working everywhere else.
+- Trims of 60 fps clips start exactly at the keyframe the timeline shows.
+- Saving settings waits a moment when another program has `config.json`
+  open, instead of failing.
 
 ## 0.4.1
 

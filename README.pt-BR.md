@@ -45,8 +45,9 @@ o .NET e o FFmpeg, vem junto.
 
 ## Estado
 
-**Fase 4.** Funcionam gravação, save, roteamento de áudio, perfis, corte,
-compressão e o instalador com atualizações. Ainda falta: números de benchmark
+**0.5.** Funcionam gravação, save, roteamento de áudio, perfis, a biblioteca de
+clipes com corte e compressão, a página de configurações e o instalador com
+atualizações. Ainda falta: números de benchmark
 em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
 inglês) e um GIF para esta página (`assets\make-gif.ps1` gera um a partir de
 um clipe). O plano completo está em [docs/spec.md](docs/spec.md) (em inglês).
