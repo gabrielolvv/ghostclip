@@ -64,6 +64,28 @@ public static class ClipMedia
         return result;
     }
 
+    /// <summary>
+    /// The meta to cache for a clip, from its probe results. A keyframe list or
+    /// waveform that failed or timed out (a long clip probed while a game runs)
+    /// throws instead: cached, a partial list would snap trims to the wrong place.
+    /// </summary>
+    public static ClipMeta BuildMeta(double duration, int height, double fps, int audioTracks, string videoCodec,
+        ProcessResult keyframes, ProcessResult? peaks)
+    {
+        if (!keyframes.Succeeded)
+        {
+            throw new InvalidOperationException($"Could not list the clip's keyframes: {(keyframes.TimedOut ? "timed out" : keyframes.FirstError)}");
+        }
+        var keys = ParseKeyframes(keyframes.StdOut);
+        if (keys.Count == 0) throw new InvalidOperationException("The clip has no keyframes to trim from.");
+        if (audioTracks > 0 && peaks is not { Succeeded: true })
+        {
+            throw new InvalidOperationException($"Could not read the clip's audio levels: {(peaks is null ? "not measured" : peaks.TimedOut ? "timed out" : peaks.FirstError)}");
+        }
+        return new ClipMeta(duration, height, Math.Round(fps, 2), audioTracks, videoCodec, keys,
+            peaks is null ? [] : ParsePeaks(peaks.StdErr));
+    }
+
     public static int SamplesPerPeak(double durationSeconds) =>
         Math.Max(1, (int)Math.Ceiling(durationSeconds * PeakSampleRate / PeakCount));
 

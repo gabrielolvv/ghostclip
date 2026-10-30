@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Ghostclip.Core;
-using Microsoft.VisualBasic.FileIO;
 using Microsoft.Web.WebView2.Core;
 using Serilog;
 
@@ -22,7 +21,8 @@ internal sealed class LibraryBridge : IDisposable
     private readonly ClipMetaService _meta;
     private readonly CancellationTokenSource _closing = new();
     private readonly System.Windows.Forms.Timer _changed = new() { Interval = 500 };
-    private readonly FileSystemWatcher _watcher;
+    private readonly FileSystemWatcher? _watcher;
+    private readonly string? _rootError;
     private bool _listed;
 
     public LibraryBridge(LibraryWindow window, GhostclipPaths paths, GhostclipConfig config, ILogger log)
@@ -30,7 +30,8 @@ internal sealed class LibraryBridge : IDisposable
         _window = window;
         _log = log;
         Root = config.ResolvedClipsFolder;
-        Directory.CreateDirectory(Root);
+        // An unplugged drive or a folder without permission: the library opens empty and says why.
+        RootAvailable = ClipLibrary.TryPrepare(Root, out _rootError);
         _tools = new ClipTools(paths, () => config, log);
         _meta = new ClipMetaService(paths, _tools, log);
         Directory.CreateDirectory(ThumbsDir);
@@ -41,13 +42,24 @@ internal sealed class LibraryBridge : IDisposable
             _changed.Stop();
             _window.Post(new LibraryEvent("changed"));
         };
-        _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
-        _watcher.Created += OnFolderChanged;
-        _watcher.Deleted += OnFolderChanged;
-        _watcher.Renamed += OnFolderChanged;
+        if (!RootAvailable) return;
+        try
+        {
+            _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
+            _watcher.Created += OnFolderChanged;
+            _watcher.Deleted += OnFolderChanged;
+            _watcher.Renamed += OnFolderChanged;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or PlatformNotSupportedException)
+        {
+            // Without a watcher the list just doesn't refresh by itself.
+            _log.Warning("Not watching {Root}: {Error}", Root, ex.Message);
+        }
     }
 
     public string Root { get; }
+
+    public bool RootAvailable { get; }
 
     public string ThumbsDir => _meta.ThumbsDir;
 
@@ -63,6 +75,8 @@ internal sealed class LibraryBridge : IDisposable
 
     public void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
+        // Only the app's own page; anything else the WebView might show gets no access to clips.
+        if (!LibraryOrigin.IsApp(e.Source)) return;
         LibraryRequest? request;
         try
         {
@@ -80,6 +94,13 @@ internal sealed class LibraryBridge : IDisposable
     {
         try
         {
+            if (r.Type == "list" && !RootAvailable)
+            {
+                _window.Post(new LibraryEvent("clips", Clips: [], Root: Root));
+                _window.Post(new LibraryEvent("error", Op: "list", Message: $"Your clips folder isn't available: {_rootError}"));
+                _listed = true;
+                return;
+            }
             if (r.Type == "list")
             {
                 var clips = await Task.Run(() => ClipLibrary.Scan(Root)).ConfigureAwait(true);
@@ -127,7 +148,7 @@ internal sealed class LibraryBridge : IDisposable
                     Process.Start("explorer.exe", $"/select,\"{path}\"");
                     break;
                 case "delete":
-                    FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                    RecycleBin.Send(path, _window.Handle);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));
                     break;
                 default:
@@ -135,8 +156,9 @@ internal sealed class LibraryBridge : IDisposable
                     break;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
-            or OperationCanceledException or System.Runtime.InteropServices.ExternalException or System.ComponentModel.Win32Exception)
+        // The page waits for an answer to every action (its buttons stay busy until then), so
+        // whatever goes wrong here goes back to it as a message.
+        catch (Exception ex)
         {
             if (_closing.IsCancellationRequested) return;
             _log.Warning("Library {Op} failed for {Path}: {Error}", r.Type, r.Path, ex.Message);
@@ -157,7 +179,7 @@ internal sealed class LibraryBridge : IDisposable
     public void Dispose()
     {
         _closing.Cancel();
-        _watcher.Dispose();
+        _watcher?.Dispose();
         _changed.Dispose();
         _closing.Dispose();
     }

@@ -10,13 +10,28 @@ namespace Ghostclip.Core;
 /// </summary>
 public sealed record LibraryRequest(string Type, string? Path = null, double Start = 0, double End = 0);
 
-/// <summary>A clip as the page sees it. Url plays it through the library's virtual host.</summary>
-public sealed record ClipDto(string Path, string Url, string Game, string Saved, long Bytes, bool Derived)
+/// <summary>
+/// A clip as the page sees it. Url plays it through the library's virtual host.
+/// Version changes when the file does: a trim deleted and made again reuses the
+/// name, and the page must not show the old one's details for it.
+/// </summary>
+public sealed record ClipDto(string Path, string Url, string Game, string Saved, long Bytes, bool Derived, string Version)
 {
     public const string ClipsHost = "https://clips.ghostclip/";
 
     public static ClipDto From(ClipEntry e) => new(e.Path, ClipsHost + e.RelativeUrl, e.Game,
-        e.SavedLocal.ToString("s", CultureInfo.InvariantCulture), e.Bytes, e.Derived);
+        e.SavedLocal.ToString("s", CultureInfo.InvariantCulture), e.Bytes, e.Derived,
+        string.Create(CultureInfo.InvariantCulture, $"{e.Bytes}-{e.LastWriteUtc.Ticks}"));
+}
+
+/// <summary>The library page's own origin: the only one the bridge answers or the window navigates to.</summary>
+public static class LibraryOrigin
+{
+    public const string AppHost = "app.ghostclip";
+
+    public static bool IsApp(string? uri) =>
+        Uri.TryCreate(uri, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps &&
+        string.Equals(u.Host, AppHost, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>

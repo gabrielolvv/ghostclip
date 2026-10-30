@@ -14,7 +14,7 @@ namespace Ghostclip.Host.Library;
 /// </summary>
 internal sealed partial class LibraryWindow : Form
 {
-    public const string AppHost = "app.ghostclip";
+    public const string AppHost = LibraryOrigin.AppHost;
     public const string ClipsHost = "clips.ghostclip";
     public const string CacheHost = "cache.ghostclip";
 
@@ -90,8 +90,16 @@ internal sealed partial class LibraryWindow : Form
             core.Settings.AreDevToolsEnabled = false;
             core.Settings.AreBrowserAcceleratorKeysEnabled = false;
 #endif
+            // The window only ever shows the library page: a file dropped on it, a link or a
+            // window.open would otherwise replace the page and leave no way back.
+            _web.AllowExternalDrop = false;
+            core.NavigationStarting += (_, args) => { if (!LibraryOrigin.IsApp(args.Uri)) args.Cancel = true; };
+            core.NewWindowRequested += (_, args) => args.Handled = true;
             core.SetVirtualHostNameToFolderMapping(AppHost, Path.Combine(AppContext.BaseDirectory, "Library", "wwwroot"), CoreWebView2HostResourceAccessKind.Allow);
-            core.SetVirtualHostNameToFolderMapping(ClipsHost, _bridge.Root, CoreWebView2HostResourceAccessKind.Allow);
+            if (_bridge.RootAvailable)
+            {
+                core.SetVirtualHostNameToFolderMapping(ClipsHost, _bridge.Root, CoreWebView2HostResourceAccessKind.Allow);
+            }
             core.SetVirtualHostNameToFolderMapping(CacheHost, _bridge.ThumbsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += _bridge.OnMessage;
             core.Navigate($"https://{AppHost}/index.html");

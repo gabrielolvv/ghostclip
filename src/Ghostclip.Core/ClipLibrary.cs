@@ -6,7 +6,8 @@ namespace Ghostclip.Core;
 /// <summary>One saved clip as the library shows it.</summary>
 /// <param name="RelativeUrl">Path under the clips folder, escaped per segment, for the library's virtual host.</param>
 /// <param name="Derived">A _trim or _discord copy of another clip.</param>
-public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived);
+/// <param name="LastWriteUtc">With <paramref name="Bytes"/>, tells a replaced file from the one it replaced.</param>
+public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived, DateTime LastWriteUtc);
 
 /// <summary>
 /// The clips folder is the library: one folder per game, as saving lays it
@@ -39,12 +40,31 @@ public static partial class ClipLibrary
             var separator = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
             var game = separator > 0 ? relative[..separator] : ClipNaming.FallbackGame;
             var name = info.Name;
-            clips.Add(new ClipEntry(path, ToRelativeUrl(root, path), game, TimeFromName(name) ?? info.LastWriteTime, info.Length, IsDerived(name)));
+            clips.Add(new ClipEntry(path, ToRelativeUrl(root, path), game, TimeFromName(name) ?? info.LastWriteTime, info.Length, IsDerived(name), info.LastWriteTimeUtc));
         }
         clips.Sort((a, b) => b.SavedLocal != a.SavedLocal
             ? b.SavedLocal.CompareTo(a.SavedLocal)
             : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase));
         return clips;
+    }
+
+    /// <summary>
+    /// Creates the clips folder if needed. False, with the reason, when it can't
+    /// be used: a drive that isn't plugged in, a path without permission.
+    /// </summary>
+    public static bool TryPrepare(string root, out string? error)
+    {
+        try
+        {
+            Directory.CreateDirectory(root);
+            error = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     /// <summary>The save time in Game_YYYY-MM-DD_HH-MM-SS[_n][_trim|_discord[_n]].mp4, or null.</summary>

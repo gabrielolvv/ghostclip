@@ -22,31 +22,42 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
         var key = ClipMedia.CacheKey(clip, info.Length, info.LastWriteTimeUtc);
         var metaFile = Path.Combine(ThumbsDir, key + ".json");
         var thumb = Path.Combine(ThumbsDir, key + ".jpg");
-        if (ReadCached(metaFile) is { } cached) return (cached, File.Exists(thumb) ? thumb : null);
+        var meta = ReadCached(metaFile);
+        if (meta is not null && File.Exists(thumb)) return (meta, thumb);
 
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             Directory.CreateDirectory(ThumbsDir);
-            var probe = await tools.ProbeAsync(clip).ConfigureAwait(false);
-            var keyframes = await ProcessRunner.RunAsync(tools.Ffprobe(), FfmpegArgs.Keyframes(clip),
-                TimeSpan.FromSeconds(60), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-            IReadOnlyList<float> peaks = [];
-            if (probe.AudioTracks > 0)
+            if (meta is null)
             {
-                // astats prints at info level, to stderr.
-                var r = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.AudioPeaks(clip, ClipMedia.SamplesPerPeak(probe.Duration)),
+                var probe = await tools.ProbeAsync(clip).ConfigureAwait(false);
+                var keyframes = await ProcessRunner.RunAsync(tools.Ffprobe(), FfmpegArgs.Keyframes(clip),
                     TimeSpan.FromSeconds(60), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-                peaks = ClipMedia.ParsePeaks(r.StdErr);
+                ProcessResult? peaks = null;
+                if (probe.AudioTracks > 0)
+                {
+                    // astats prints at info level, to stderr.
+                    peaks = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.AudioPeaks(clip, ClipMedia.SamplesPerPeak(probe.Duration)),
+                        TimeSpan.FromSeconds(60), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+                }
+                // Throws on a failed or timed-out probe, so nothing partial is cached.
+                meta = ClipMedia.BuildMeta(probe.Duration, probe.Height, probe.Fps, probe.AudioTracks, probe.VideoCodec, keyframes, peaks);
+                await WriteAtomicallyAsync(metaFile, JsonSerializer.Serialize(meta, LibraryJson.Default.ClipMeta), ct).ConfigureAwait(false);
             }
-            var shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, thumb, probe.Duration / 3),
-                TimeSpan.FromSeconds(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-            if (!shot.Succeeded) log.Warning("No thumbnail for {Clip}: {Error}", clip, shot.FirstError);
 
-            var meta = new ClipMeta(probe.Duration, probe.Height, Math.Round(probe.Fps, 2), probe.AudioTracks, probe.VideoCodec,
-                ClipMedia.ParseKeyframes(keyframes.StdOut), peaks);
-            await File.WriteAllTextAsync(metaFile, JsonSerializer.Serialize(meta, LibraryJson.Default.ClipMeta), ct).ConfigureAwait(false);
-            return (meta, shot.Succeeded && File.Exists(thumb) ? thumb : null);
+            // A clip works without a thumbnail; a failed one is tried again the next time it is asked for.
+            var part = $"{thumb}.{Guid.NewGuid():N}.part";
+            var shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, part, meta.Duration / 3),
+                TimeSpan.FromSeconds(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+            if (!shot.Succeeded || !File.Exists(part))
+            {
+                log.Warning("No thumbnail for {Clip}: {Error}", clip, shot.TimedOut ? "timed out" : shot.FirstError);
+                TryDelete(part);
+                return (meta, null);
+            }
+            File.Move(part, thumb, overwrite: true);
+            return (meta, thumb);
         }
         finally
         {
@@ -64,5 +75,18 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
         {
             return null;
         }
+    }
+
+    // Two requests for the same clip can race; each writes its own temporary file and the last move wins.
+    private static async Task WriteAtomicallyAsync(string path, string text, CancellationToken ct)
+    {
+        var temp = $"{path}.{Environment.ProcessId}.{Environment.CurrentManagedThreadId}.tmp";
+        await File.WriteAllTextAsync(temp, text, ct).ConfigureAwait(false);
+        File.Move(temp, path, overwrite: true);
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 }

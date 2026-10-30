@@ -50,13 +50,14 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<string> TrimAsync(string clip, double start, double end)
     {
         var output = ClipNaming.DerivedPath(clip, "trim", File.Exists);
-        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Trim(clip, output, start, end),
+        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Trim(clip, PartFile.For(output), start, end),
             TimeSpan.FromMinutes(2), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
         if (!r.Succeeded)
         {
-            TryDelete(output);
+            PartFile.Discard(output);
             throw new InvalidOperationException($"Could not trim the clip: {r.FirstError}");
         }
+        PartFile.Commit(output);
         log.Information("Trimmed {Clip} to {Start:0.0}-{End:0.0} s: {Output}", clip, start, end, output);
         return output;
     }
@@ -91,20 +92,22 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
                 size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks).ConfigureAwait(false);
             }
         }
+        PartFile.Commit(output);
         log.Information("Compressed {Clip} to {Output} ({Size} bytes, {Kbps} kbps, {Height}p)", clip, output, size, plan.VideoKbps, plan.Height);
         return (output, size);
     }
 
+    // Writes the .part file; the caller moves it into place once the size is right.
     private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks)
     {
-        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, output, plan, encoder, audioTracks),
+        var r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks),
             TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
         if (!r.Succeeded)
         {
-            TryDelete(output);
+            PartFile.Discard(output);
             throw new InvalidOperationException($"Could not compress the clip: {r.FirstError}");
         }
-        return new FileInfo(output).Length;
+        return new FileInfo(PartFile.For(output)).Length;
     }
 
     // The encoder the recorder probed as working. Never a CPU encoder.
@@ -128,10 +131,5 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     {
         var probe = Path.Combine(Path.GetDirectoryName(Ffmpeg())!, "ffprobe.exe");
         return File.Exists(probe) ? probe : throw new InvalidOperationException("ffprobe.exe was not found next to FFmpeg.");
-    }
-
-    private static void TryDelete(string path)
-    {
-        try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 }

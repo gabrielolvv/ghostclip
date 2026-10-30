@@ -11,6 +11,7 @@ const state = {
   clips: [],
   meta: new Map(),       // path -> { meta, thumb }
   requested: new Set(),  // paths whose meta was asked for
+  versions: new Map(),   // path -> version: a replaced file (same name, new trim) must not keep the old details
   game: null,            // null = all clips
   query: '',
   pendingOpen: null,
@@ -229,7 +230,8 @@ function openClip(path) {
   $('confirm').hidden = true;
   $('clip-game').textContent = clip.game;
   $('no-video').hidden = true;
-  video.src = clip.url;
+  // The version keeps WebView2 from serving a cached copy of a file that was replaced under the same name.
+  video.src = `${clip.url}?v=${encodeURIComponent(clip.version)}`;
   state.start = 0;
   state.end = 0;
   showView('clip');
@@ -513,8 +515,17 @@ function openWhenListed(path) {
 
 function onMessage(message) {
   switch (message.type) {
-    case 'clips':
+    case 'clips': {
       state.clips = message.clips || [];
+      const listed = new Map(state.clips.map(c => [c.path, c.version]));
+      let reopen = null;
+      for (const [path, version] of state.versions) {
+        if (listed.get(path) === version) continue;
+        state.meta.delete(path);
+        state.requested.delete(path);
+        if (state.current && state.current.path === path && listed.has(path)) reopen = path;
+      }
+      state.versions = listed;
       $('total').title = message.root || '';
       renderSidebar();
       renderGrid();
@@ -523,8 +534,11 @@ function onMessage(message) {
         const path = state.pendingOpen;
         state.pendingOpen = null;
         if (state.clips.some(c => c.path.toLowerCase() === path.toLowerCase())) openClip(path);
+      } else if (reopen) {
+        openClip(reopen);
       }
       break;
+    }
     case 'meta': {
       state.meta.set(message.path, { meta: message.meta, thumb: message.thumb });
       const card = [...document.querySelectorAll('.card')].find(c => c.dataset.path === message.path);
@@ -541,7 +555,9 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
-      // A clip whose details can't be read keeps its plain tile; only say so when it's open.
+      // A clip whose details can't be read keeps its plain tile and is asked for again when the list next
+      // changes (a clip still being copied in, say); only say so when it's open.
+      if (message.op === 'meta') state.requested.delete(message.path);
       if (message.op === 'meta' && !(state.current && state.current.path === message.path)) break;
       toast(message.message || 'Something went wrong.', true);
       break;

@@ -35,7 +35,7 @@ public class LibraryMessagesTests
     [Fact]
     public void Clip_list_carries_urls_for_the_page()
     {
-        var entry = new ClipEntry(@"C:\c\G\a b.mp4", "G/a%20b.mp4", "G", new DateTime(2026, 10, 30, 21, 14, 2), 10, false);
+        var entry = new ClipEntry(@"C:\c\G\a b.mp4", "G/a%20b.mp4", "G", new DateTime(2026, 10, 30, 21, 14, 2), 10, false, DateTime.UnixEpoch);
         var dto = ClipDto.From(entry);
         Assert.Equal("https://clips.ghostclip/G/a%20b.mp4", dto.Url);
         Assert.Equal("2026-10-30T21:14:02", dto.Saved);

@@ -84,16 +84,15 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
 
             // Written under a temporary name, so the library never lists a half-written clip.
-            var part = output + ".part";
-            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), part, snapshot.AudioLeadMs, snapshot.AudioTitles),
+            var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), PartFile.For(output), snapshot.AudioLeadMs, snapshot.AudioTitles),
                 TimeSpan.FromSeconds(120), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
             if (!result.Succeeded)
             {
-                TryDelete(part);
+                PartFile.Discard(output);
                 // The snapshot stays in Pending and is retried on the next start.
                 throw new InvalidOperationException($"Could not write the clip: {result.FirstError}");
             }
-            File.Move(part, output);
+            PartFile.Commit(output);
             Directory.Delete(snapshot.Dir, recursive: true);
             log.Information("Clip saved: {Path} (remux {Ms} ms)", output, (long)result.Elapsed.TotalMilliseconds);
             return output;
@@ -169,10 +168,5 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             log.Debug("Skipping current segment {Segment}: {Error}", source, ex.Message);
             return false;
         }
-    }
-
-    private static void TryDelete(string path)
-    {
-        try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 }
