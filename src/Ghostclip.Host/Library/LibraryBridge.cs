@@ -19,21 +19,25 @@ internal sealed class LibraryBridge : IDisposable
     private readonly ILogger _log;
     private readonly ClipTools _tools;
     private readonly ClipMetaService _meta;
+    private readonly SettingsService _settings;
+    private readonly StatusWatcher _status;
     private readonly CancellationTokenSource _closing = new();
     private readonly System.Windows.Forms.Timer _changed = new() { Interval = 500 };
-    private readonly FileSystemWatcher? _watcher;
-    private readonly string? _rootError;
+    private GhostclipConfig _config;
+    private FileSystemWatcher? _watcher;
+    private string? _rootError;
     private bool _listed;
 
     public LibraryBridge(LibraryWindow window, GhostclipPaths paths, GhostclipConfig config, ILogger log)
     {
         _window = window;
         _log = log;
+        _config = config;
         Root = config.ResolvedClipsFolder;
-        // An unplugged drive or a folder without permission: the library opens empty and says why.
-        RootAvailable = ClipLibrary.TryPrepare(Root, out _rootError);
-        _tools = new ClipTools(paths, () => config, log);
+        _tools = new ClipTools(paths, () => _config, log);
         _meta = new ClipMetaService(paths, _tools, log);
+        _status = new StatusWatcher(window, paths);
+        _settings = new SettingsService(window, paths, () => _config, () => Root, OnSettingsSaved, _status);
         Directory.CreateDirectory(ThumbsDir);
 
         // Folder changes arrive in bursts (a save is create, then rename); one "changed" per quiet half second.
@@ -42,36 +46,27 @@ internal sealed class LibraryBridge : IDisposable
             _changed.Stop();
             _window.Post(new LibraryEvent("changed"));
         };
-        if (!RootAvailable) return;
-        try
-        {
-            _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
-            _watcher.Created += OnFolderChanged;
-            _watcher.Deleted += OnFolderChanged;
-            _watcher.Renamed += OnFolderChanged;
-        }
-        catch (Exception ex) when (ex is IOException or ArgumentException or PlatformNotSupportedException)
-        {
-            // Without a watcher the list just doesn't refresh by itself.
-            _log.Warning("Not watching {Root}: {Error}", Root, ex.Message);
-        }
+        UseRoot();
     }
 
-    public string Root { get; }
+    public string Root { get; private set; }
 
-    public bool RootAvailable { get; }
+    public bool RootAvailable { get; private set; }
 
     public string ThumbsDir => _meta.ThumbsDir;
 
-    /// <summary>A clip to show once the page has its list.</summary>
+    /// <summary>A clip (or <see cref="LibraryProgram.SettingsArgument"/>) to show once the page has its list.</summary>
     public string? PendingClip { get; set; }
 
     public void Open(string? clip)
     {
         if (clip is null) return;
-        if (_listed) _window.Post(new LibraryEvent("open", Path: clip));
+        if (_listed) PostOpen(clip);
         else PendingClip = clip;
     }
+
+    private void PostOpen(string clip) =>
+        _window.Post(clip == LibraryProgram.SettingsArgument ? new LibraryEvent("showSettings") : new LibraryEvent("open", Path: clip));
 
     public void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
@@ -94,23 +89,19 @@ internal sealed class LibraryBridge : IDisposable
     {
         try
         {
-            if (r.Type == "list" && !RootAvailable)
+            if (SettingsService.Handles(r.Type))
             {
-                _window.Post(new LibraryEvent("clips", Clips: [], Root: Root));
-                _window.Post(new LibraryEvent("error", Op: "list", Message: $"Your clips folder isn't available: {_rootError}"));
-                _listed = true;
+                await _settings.HandleAsync(r).ConfigureAwait(true);
+                return;
+            }
+            if (r.Type == "status")
+            {
+                _status.Push(always: true);
                 return;
             }
             if (r.Type == "list")
             {
-                var clips = await Task.Run(() => ClipLibrary.Scan(Root)).ConfigureAwait(true);
-                _window.Post(new LibraryEvent("clips", Clips: clips.Select(ClipDto.From).ToList(), Root: Root));
-                _listed = true;
-                if (PendingClip is { } pending)
-                {
-                    PendingClip = null;
-                    _window.Post(new LibraryEvent("open", Path: pending));
-                }
+                await ListAsync().ConfigureAwait(true);
                 return;
             }
             if (r.Type == "openFolder")
@@ -118,7 +109,7 @@ internal sealed class LibraryBridge : IDisposable
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
                 return;
             }
-            if (r.Path is not { } path || !ClipLibrary.IsInside(Root, path))
+            if (r.Path is not { } path || !RootAvailable || !ClipLibrary.IsInside(Root, path))
             {
                 _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path, Message: "That file isn't in your clips folder."));
                 return;
@@ -166,6 +157,61 @@ internal sealed class LibraryBridge : IDisposable
         }
     }
 
+    private async Task ListAsync()
+    {
+        if (RootAvailable)
+        {
+            var root = Root;
+            var clips = await Task.Run(() => ClipLibrary.Scan(root)).ConfigureAwait(true);
+            _window.Post(new LibraryEvent("clips", Clips: clips.Select(ClipDto.From).ToList(), Root: root));
+        }
+        else
+        {
+            _window.Post(new LibraryEvent("clips", Clips: [], Root: Root));
+            _window.Post(new LibraryEvent("error", Op: "list", Message: $"Your clips folder isn't available: {_rootError}"));
+        }
+        if (!_listed) _status.Push(always: true);
+        _listed = true;
+        if (PendingClip is { } pending)
+        {
+            PendingClip = null;
+            PostOpen(pending);
+        }
+    }
+
+    // A new clips folder from the settings page shows up in this window right away.
+    private void OnSettingsSaved(GhostclipConfig config)
+    {
+        var root = config.ResolvedClipsFolder;
+        _config = config;
+        if (string.Equals(Path.GetFullPath(root), Path.GetFullPath(Root), StringComparison.OrdinalIgnoreCase)) return;
+        Root = root;
+        UseRoot();
+        _window.MapClips();
+        _window.Post(new LibraryEvent("changed"));
+    }
+
+    // An unplugged drive or a folder without permission: the library shows it empty and says why.
+    private void UseRoot()
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+        RootAvailable = ClipLibrary.TryPrepare(Root, out _rootError);
+        if (!RootAvailable) return;
+        try
+        {
+            _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
+            _watcher.Created += OnFolderChanged;
+            _watcher.Deleted += OnFolderChanged;
+            _watcher.Renamed += OnFolderChanged;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or PlatformNotSupportedException)
+        {
+            // Without a watcher the list just doesn't refresh by itself.
+            _log.Warning("Not watching {Root}: {Error}", Root, ex.Message);
+        }
+    }
+
     private void OnFolderChanged(object sender, FileSystemEventArgs e)
     {
         if (_window.IsDisposed || !_window.IsHandleCreated) return;
@@ -180,6 +226,7 @@ internal sealed class LibraryBridge : IDisposable
     {
         _closing.Cancel();
         _watcher?.Dispose();
+        _status.Dispose();
         _changed.Dispose();
         _closing.Dispose();
     }

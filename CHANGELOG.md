@@ -14,8 +14,18 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the same window. Double-click the tray icon or click "Clip saved" to open
   it. It is a separate process that exists only while its window is open.
 
+- Settings page in the library window, in the same dark design, with a hotkey
+  recorder, per-game profiles and the encoders this PC supports marked.
+  Changes that restart recording ask once more before saving.
+- A badge in the library shows what the recorder is doing: REC · QSV · 60 FPS,
+  paused while the screen is locked, or not running.
+
 ### Changed
 
+- Settings apply as soon as they're saved, and `config.json` edited by hand
+  applies too; a file caught half-edited is reported and the current settings
+  stay. The property grid window is gone, and double-clicking the tray icon
+  opens the library instead of the settings.
 - The tray's trim dialog and its "Trim a clip" and "Compress a clip for
   Discord" items are gone; the library does both. `--trim` and `--compress`
   still work from the command line.

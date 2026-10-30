@@ -12,8 +12,12 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11a7 7 0 0 1 14 0v7l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L5 18z"/><path d="M10 10h.01M14 10h.01"/></svg>
       <span>GHOSTCLIP</span>
     </div>
+    <div id="badge" class="badge mono" title="What the recorder is doing"><span class="dot"></span><span id="badge-text">CHECKING</span></div>
     <nav id="games" aria-label="Games"></nav>
     <div class="side-foot">
+      <button id="nav-settings" class="game" type="button">
+        <span class="name with-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</span>
+      </button>
       <div id="total" class="mono muted"></div>
       <button id="open-folder" class="link mono" type="button">Open folder</button>
     </div>
@@ -32,6 +36,18 @@
         <button id="empty-folder" class="act" type="button">Open folder</button>
       </div>
       <p id="no-match" class="muted no-match" hidden>No clips match.</p>
+    </section>
+
+    <section id="settings" class="view" hidden>
+      <header class="bar">
+        <h1 class="view-title">Settings</h1>
+      </header>
+      <div id="settings-form" class="settings"></div>
+      <div id="savebar" class="savebar" hidden>
+        <span id="savebar-text">Unsaved changes</span>
+        <button id="s-discard" class="act" type="button">Discard</button>
+        <button id="s-save" class="act primary" type="button">Save</button>
+      </div>
     </section>
 
     <section id="clip" class="view" hidden>
@@ -94,5 +110,7 @@
 </div>
 
 <script src="app.js"></script>
+<script src="settings.js"></script>
+<script>start();</script>
 </body>
 </html>

@@ -115,7 +115,13 @@ function renderSidebar() {
     const b = el('button', 'game' + (state.game === game ? ' on' : ''));
     b.type = 'button';
     b.append(el('span', 'name', label), el('span', 'mono', String(count)));
-    b.addEventListener('click', () => { state.game = game; renderSidebar(); renderGrid(); });
+    b.addEventListener('click', () => {
+      state.game = game;
+      if (state.current) closeClip();
+      showView('library');
+      renderSidebar();
+      renderGrid();
+    });
     nav.append(b);
   };
   row('All clips', state.clips.length, null);
@@ -218,6 +224,10 @@ let frame = 0;
 function showView(name) {
   $('library').hidden = name !== 'library';
   $('clip').hidden = name !== 'clip';
+  $('settings').hidden = name !== 'settings';
+  // The sidebar marks where you are: a game, or Settings.
+  document.body.classList.toggle('settings-open', name === 'settings');
+  $('nav-settings').classList.toggle('on', name === 'settings');
 }
 
 function openClip(path) {
@@ -458,6 +468,7 @@ $('search').addEventListener('input', e => { state.query = e.target.value; rende
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
   if (e.key === 'Escape' && state.current) closeClip();
+  else if (e.key === 'Escape' && Settings.isOpen()) showView('library');
   if (e.key === ' ' && state.current && !(e.target instanceof HTMLButtonElement)) {
     e.preventDefault();
     togglePlay();
@@ -514,6 +525,7 @@ function openWhenListed(path) {
 }
 
 function onMessage(message) {
+  if (Settings.onMessage(message)) return;
   switch (message.type) {
     case 'clips': {
       state.clips = message.clips || [];
@@ -567,7 +579,8 @@ function onMessage(message) {
   }
 }
 
-if (host) {
+function start() {
+  if (!host) return;
   host.addEventListener('message', e => onMessage(JSON.parse(e.data)));
   post({ type: 'list' });
 }

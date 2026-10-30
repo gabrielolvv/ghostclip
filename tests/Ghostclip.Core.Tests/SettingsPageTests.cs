@@ -15,9 +15,11 @@ public sealed class SettingsPageTests : IDisposable
     [Fact]
     public void Status_keeps_only_what_the_badge_shows()
     {
-        Assert.Equal(new RecorderStatus(42, WorkerState.Recording, "QSV", 60, true), RecorderStatus.From(42, Recording(59.94)));
-        // Frame counts and jitter around 60 fps are not a change worth writing to disk.
-        Assert.Equal(RecorderStatus.From(42, Recording(59.94)), RecorderStatus.From(42, Recording(60.04) with { Frames = 99999 }));
+        Assert.Equal(new RecorderStatus(42, WorkerState.Recording, "QSV", 60, true), RecorderStatus.From(42, Recording(59.94), 60));
+        // The measured rate wanders (57, 58, 59 on a still desktop) and frames count up: neither is worth a write.
+        Assert.Equal(RecorderStatus.From(42, Recording(57.2), 60), RecorderStatus.From(42, Recording(59.9) with { Frames = 99999 }, 60));
+        // The capture rate is what the badge shows, and only while recording.
+        Assert.Equal(0, RecorderStatus.From(42, new WorkerStatus { State = WorkerState.Probing }, 60).Fps);
     }
 
     [Theory]
@@ -27,7 +29,7 @@ public sealed class SettingsPageTests : IDisposable
     [InlineData(null, null)]
     public void Encoder_is_named_by_its_family(string? encoder, string? family)
     {
-        Assert.Equal(family, RecorderStatus.From(1, Recording(60, encoder!)).Encoder);
+        Assert.Equal(family, RecorderStatus.From(1, Recording(60, encoder!), 60).Encoder);
     }
 
     [Fact]

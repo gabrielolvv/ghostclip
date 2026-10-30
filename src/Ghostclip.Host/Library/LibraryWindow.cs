@@ -59,6 +59,17 @@ internal sealed partial class LibraryWindow : Form
         _bridge.Open(clip);
     }
 
+    /// <summary>Points the clips virtual host at the bridge's clips folder, again after it changes.</summary>
+    internal void MapClips()
+    {
+        if (_web.CoreWebView2 is not { } core) return;
+        core.ClearVirtualHostNameToFolderMapping(ClipsHost);
+        if (_bridge.RootAvailable)
+        {
+            core.SetVirtualHostNameToFolderMapping(ClipsHost, _bridge.Root, CoreWebView2HostResourceAccessKind.Allow);
+        }
+    }
+
     internal void Post(LibraryEvent message)
     {
         if (_web.CoreWebView2 is null || IsDisposed) return;
@@ -96,10 +107,7 @@ internal sealed partial class LibraryWindow : Form
             core.NavigationStarting += (_, args) => { if (!LibraryOrigin.IsApp(args.Uri)) args.Cancel = true; };
             core.NewWindowRequested += (_, args) => args.Handled = true;
             core.SetVirtualHostNameToFolderMapping(AppHost, Path.Combine(AppContext.BaseDirectory, "Library", "wwwroot"), CoreWebView2HostResourceAccessKind.Allow);
-            if (_bridge.RootAvailable)
-            {
-                core.SetVirtualHostNameToFolderMapping(ClipsHost, _bridge.Root, CoreWebView2HostResourceAccessKind.Allow);
-            }
+            MapClips();
             core.SetVirtualHostNameToFolderMapping(CacheHost, _bridge.ThumbsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += _bridge.OnMessage;
             core.Navigate($"https://{AppHost}/index.html");

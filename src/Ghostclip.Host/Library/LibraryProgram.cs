@@ -14,6 +14,9 @@ internal static class LibraryProgram
     public const string MutexName = @"Local\Ghostclip.Library";
     public const string PipeName = "Ghostclip.Library";
 
+    /// <summary>Opens the library on its settings page: "Ghostclip.exe --library --settings".</summary>
+    public const string SettingsArgument = "--settings";
+
     public static int Run(string? clip)
     {
         using var single = new Mutex(initiallyOwned: true, MutexName, out var first);

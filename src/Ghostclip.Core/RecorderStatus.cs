@@ -11,8 +11,9 @@ namespace Ghostclip.Core;
 /// <param name="Encoder">The encoder family (QSV, NVENC, AMF), or null before one is chosen.</param>
 public sealed record RecorderStatus(int ProcessId, WorkerState State, string? Encoder, int Fps, bool Audio)
 {
-    public static RecorderStatus From(int processId, WorkerStatus s) =>
-        new(processId, s.State, Family(s.Encoder), (int)Math.Round(s.Fps), s.Audio);
+    /// <param name="captureFps">The configured rate: the measured one wanders and would mean a write every few seconds.</param>
+    public static RecorderStatus From(int processId, WorkerStatus s, int captureFps) =>
+        new(processId, s.State, Family(s.Encoder), s.State == WorkerState.Recording ? captureFps : 0, s.Audio);
 
     // "h264_qsv (direct)" -> "QSV".
     private static string? Family(string? encoder)

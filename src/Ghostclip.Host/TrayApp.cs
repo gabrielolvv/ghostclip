@@ -34,7 +34,12 @@ internal sealed class TrayApp : ApplicationContext
     private bool _shuttingDown;
     private GhostclipConfig _config;
     private WorkerStatus _status = new() { State = WorkerState.Starting };
-    private SettingsForm? _settings;
+    // The settings page (in the library) writes config.json; this applies it, and hand edits too.
+    private readonly FileSystemWatcher _configWatcher;
+    private readonly System.Windows.Forms.Timer _configReload = new() { Interval = 300 };
+    private int _configRetries;
+    private string? _configError;
+    private RecorderStatus? _published;
     private string? _lastClip;
     private DateTime _lastWarningUtc;
 
@@ -55,7 +60,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add("Open library", null, (_, _) => OpenLibrary());
         menu.Items.Add("Open clips folder", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Settings...", null, (_, _) => ShowSettings());
+        menu.Items.Add("Settings...", null, (_, _) => OpenLibrary(settings: true));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Open logs folder", null, (_, _) => OpenFolder(_paths.LogsDir));
         menu.Items.Add("Exit", null, (_, _) => Exit());
@@ -94,7 +99,69 @@ internal sealed class TrayApp : ApplicationContext
         RegisterHotkey();
         if (configProblem is not null) Notify("Settings reset", configProblem, ToolTipIcon.Warning);
         _worker.Start(_config);
+        PublishStatus(_status);
         _ = RecoverPendingAsync();
+
+        // A save is a write to config.json.tmp and a rename, so it arrives as a burst of events.
+        _configReload.Tick += (_, _) => ReloadConfig();
+        _configWatcher = new FileSystemWatcher(_paths.DataDir, Path.GetFileName(_paths.ConfigFile))
+        {
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+            EnableRaisingEvents = true,
+        };
+        _configWatcher.Changed += (_, _) => _ui.Post(_ => QueueReload(), null);
+        _configWatcher.Created += (_, _) => _ui.Post(_ => QueueReload(), null);
+        _configWatcher.Renamed += (_, _) => _ui.Post(_ => QueueReload(), null);
+    }
+
+    private void QueueReload()
+    {
+        if (_shuttingDown) return;
+        _configRetries = 0;
+        _configReload.Stop();
+        _configReload.Start();
+    }
+
+    private void ReloadConfig()
+    {
+        _configReload.Stop();
+        if (_shuttingDown) return;
+        if (!ConfigStore.TryRead(_paths.ConfigFile, out var config, out var error))
+        {
+            // Caught mid-write (the file is replaced atomically, but can be busy for a moment): try again shortly.
+            if (++_configRetries <= 3)
+            {
+                _configReload.Start();
+                return;
+            }
+            if (error != _configError)
+            {
+                _configError = error;
+                _log.Warning("config.json can't be read; keeping the current settings: {Error}", error);
+                Notify("Settings not applied", $"config.json can't be read ({error}). Ghostclip keeps the current settings.", ToolTipIcon.Warning);
+            }
+            return;
+        }
+        _configError = null;
+        var fresh = config!;
+        if (fresh == _config) return;
+        ApplyConfig(fresh);
+    }
+
+    // Only when the badge would change: a recording session writes a handful of times, not every second.
+    private void PublishStatus(WorkerStatus status)
+    {
+        var published = RecorderStatus.From(Environment.ProcessId, status, _config.Fps);
+        if (published == _published) return;
+        try
+        {
+            StatusFile.Write(_paths.StatusFile, published);
+            _published = published;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Debug("Could not write the status file: {Error}", ex.Message);
+        }
     }
 
     private void RegisterHotkey()
@@ -250,6 +317,7 @@ internal sealed class TrayApp : ApplicationContext
         // NotifyIcon.Text is capped at 127 characters.
         _icon.Text = text.Length > 127 ? text[..127] : text;
         UpdateStatusItem();
+        PublishStatus(status);
     }
 
     private void OnWorkerError(string message, bool fatal)
@@ -265,32 +333,16 @@ internal sealed class TrayApp : ApplicationContext
         Notify("Recording interrupted", "Ghostclip is restarting the recorder. The buffer is kept.", ToolTipIcon.Warning);
     }
 
-    private void ShowSettings()
-    {
-        if (_settings is not null)
-        {
-            _settings.Activate();
-            return;
-        }
-        _settings = new SettingsForm(_config, ApplyConfig);
-        _settings.FormClosed += (_, _) =>
-        {
-            _settings.Dispose();
-            _settings = null;
-        };
-        _settings.Show();
-    }
-
+    // The worker restarts recording only when the capture settings changed (GhostclipConfig.SameCaptureAs).
     private void ApplyConfig(GhostclipConfig config)
     {
         var hotkeyChanged = config.Hotkey != _config.Hotkey;
         _config = config;
-        ConfigStore.Save(_paths.ConfigFile, config);
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         if (hotkeyChanged) RegisterHotkey();
         ApplyAutostart();
         _worker.UpdateConfig(config);
-        _log.Information("Settings saved");
+        _log.Information("Settings applied");
     }
 
     private void Notify(string title, string text, ToolTipIcon icon)
@@ -299,11 +351,12 @@ internal sealed class TrayApp : ApplicationContext
     }
 
     // The library is its own process: nothing of it stays in the tray once its window closes.
-    private void OpenLibrary(string? clip = null)
+    private void OpenLibrary(string? clip = null, bool settings = false)
     {
         var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
         info.ArgumentList.Add("--library");
-        if (clip is not null) info.ArgumentList.Add(clip);
+        if (settings) info.ArgumentList.Add(Library.LibraryProgram.SettingsArgument);
+        else if (clip is not null) info.ArgumentList.Add(clip);
         try
         {
             using var _ = Process.Start(info);
@@ -337,7 +390,9 @@ internal sealed class TrayApp : ApplicationContext
         _saveRequest.Dispose();
         _exitRequestWait.Unregister(null);
         _exitRequest.Dispose();
-        _settings?.Close();
+        _configWatcher.Dispose();
+        _configReload.Dispose();
+        StatusFile.Delete(_paths.StatusFile);
         // Give the worker a moment to close its last segment cleanly.
         Task.Run(async () => await _worker.DisposeAsync().ConfigureAwait(false)).Wait(TimeSpan.FromSeconds(8));
         _sound.Dispose();
