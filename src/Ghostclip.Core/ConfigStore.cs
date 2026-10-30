@@ -35,6 +35,29 @@ public static class ConfigStore
         }
     }
 
+    /// <summary>
+    /// Reads the file as it is now, for applying changes live. Unlike <see cref="Load"/>
+    /// it never writes: a file caught half-way through a hand edit is reported and
+    /// left alone, and the settings in use stay as they are.
+    /// </summary>
+    public static bool TryRead(string path, out GhostclipConfig? config, out string? error)
+    {
+        config = null;
+        try
+        {
+            using var stream = File.OpenRead(path);
+            config = (JsonSerializer.Deserialize(stream, CoreJson.Default.GhostclipConfig)
+                ?? throw new JsonException("The file is empty.")).Normalize();
+            error = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     /// <summary>Writes atomically: a crash mid-write leaves the previous file intact.</summary>
     public static void Save(string path, GhostclipConfig config)
     {

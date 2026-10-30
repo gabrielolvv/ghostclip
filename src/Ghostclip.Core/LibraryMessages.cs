@@ -6,9 +6,13 @@ namespace Ghostclip.Core;
 
 /// <summary>
 /// What the library page asks for: list, meta, trim, compress, copy, reveal,
-/// delete or openFolder. Path is a clip's full path as the page received it.
+/// delete or openFolder for clips (Path is a clip's full path as the page
+/// received it); settings, saveSettings (Config, Confirmed once the page has
+/// warned that saving restarts recording), pickFolder and pickFfmpeg for the
+/// settings page.
 /// </summary>
-public sealed record LibraryRequest(string Type, string? Path = null, double Start = 0, double End = 0);
+public sealed record LibraryRequest(string Type, string? Path = null, double Start = 0, double End = 0,
+    GhostclipConfig? Config = null, bool Confirmed = false);
 
 /// <summary>
 /// A clip as the page sees it. Url plays it through the library's virtual host.
@@ -36,11 +40,16 @@ public static class LibraryOrigin
 
 /// <summary>
 /// What the app tells the page: clips (the list), meta (one clip's details and
-/// thumbnail), open (show this clip), done and error (an action's result) and
-/// changed (the clips folder changed).
+/// thumbnail), open (show this clip), done and error (an action's result),
+/// changed (the clips folder changed), settings (Config, Encoders this PC
+/// supports, Games for profile names), confirm (saving restarts recording:
+/// Message says what it clears), picked (a chosen Path for Op), status (the
+/// recorder badge, Status null when the tray isn't running) and showSettings.
 /// </summary>
 public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = null, string? Root = null, string? Path = null,
-    ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null);
+    ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null,
+    GhostclipConfig? Config = null, IReadOnlyList<string>? Encoders = null, IReadOnlyList<string>? Games = null,
+    RecorderStatus? Status = null);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -50,4 +59,14 @@ public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = n
 [JsonSerializable(typeof(LibraryRequest))]
 [JsonSerializable(typeof(LibraryEvent))]
 [JsonSerializable(typeof(ClipMeta))]
-public sealed partial class LibraryJson : JsonSerializerContext;
+[JsonSerializable(typeof(RecorderStatus))]
+public sealed partial class LibraryJson : JsonSerializerContext
+{
+    /// <summary>Same contract, indented: for files people may open.</summary>
+    public static LibraryJson Indented { get; } = new(new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true,
+    });
+}
