@@ -41,6 +41,11 @@ internal static class Program
         {
             return RunTool(command, args);
         }
+        if (command == "--library")
+        {
+            // Its own process, alive only while the window is open: the tray stays as light as it is.
+            return Library.LibraryProgram.Run(args.Length > 1 ? args[1] : null);
+        }
 
         // One host per user session. A second launch only forwards --save.
         using var single = new Mutex(initiallyOwned: true, @"Local\Ghostclip.Host", out var first);
@@ -143,7 +148,7 @@ internal static class Program
         }
     }
 
-    private static (GhostclipPaths, GhostclipConfig, string?, LoggingLevelSwitch) Start(string logName)
+    internal static (GhostclipPaths, GhostclipConfig, string?, LoggingLevelSwitch) Start(string logName)
     {
         var paths = GhostclipPaths.Default;
         string? migrationError = null;

@@ -8,6 +8,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Per-user install and updates from GitHub Releases (host only; the worker has no network). -->
     <PackageVersion Include="Velopack" Version="1.2.161" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <!-- Native capture (Phase 2): D3D11, DXGI Desktop Duplication, Media Foundation encoders. -->
     <PackageVersion Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />

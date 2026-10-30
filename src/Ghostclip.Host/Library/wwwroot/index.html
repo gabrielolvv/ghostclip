@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Ghostclip</title>
+<body style="background:#0B0D10;color:#E8EAED;font:13px Consolas,monospace">
+<pre id="out">waiting</pre>
+<script>
+const out = document.getElementById('out');
+chrome.webview.addEventListener('message', e => { out.textContent += '\n' + e.data.slice(0, 600); });
+chrome.webview.postMessage(JSON.stringify({ type: 'list' }));
+</script>
+</body>
+</html>

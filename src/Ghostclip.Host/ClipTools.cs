@@ -6,7 +6,7 @@ using Serilog;
 
 namespace Ghostclip.Host;
 
-internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks);
+internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec);
 
 /// <summary>
 /// Trimming and "compress for Discord". Both run at below-normal priority, so a
@@ -17,7 +17,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<ClipInfo> ProbeAsync(string clip)
     {
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
-            "-v", "error", "-show_entries", "format=duration:stream=codec_type,height,r_frame_rate", "-of", "json", clip,
+            "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20)).ConfigureAwait(false);
         if (!r.Succeeded) throw new InvalidOperationException($"Could not read the clip: {r.FirstError}");
 
@@ -25,6 +25,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var duration = double.Parse(json.RootElement.GetProperty("format").GetProperty("duration").GetString()!, CultureInfo.InvariantCulture);
         int height = 0, audio = 0;
         double fps = 0;
+        var codec = "";
         foreach (var s in json.RootElement.GetProperty("streams").EnumerateArray())
         {
             var type = s.GetProperty("codec_type").GetString();
@@ -32,6 +33,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             if (type == "video" && height == 0)
             {
                 height = s.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
+                codec = s.TryGetProperty("codec_name", out var c) ? c.GetString() ?? "" : "";
                 var rate = s.TryGetProperty("r_frame_rate", out var f) ? f.GetString() ?? "" : "";
                 var parts = rate.Split('/');
                 if (parts.Length == 2 && double.TryParse(parts[0], CultureInfo.InvariantCulture, out var n) &&
@@ -41,7 +43,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
                 }
             }
         }
-        return new ClipInfo(duration, height, fps, audio);
+        return new ClipInfo(duration, height, fps, audio, codec);
     }
 
     /// <summary>Cuts by stream copy into Game_..._trim.mp4. Takes about as long as copying the file.</summary>
@@ -119,10 +121,10 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return CaptureSettings.From(cfg with { Codec = VideoCodec.H264 }, choice.Encoder, choice.Input).EncoderName;
     }
 
-    private string Ffmpeg() => FfmpegLocator.Find(config().FfmpegPath, AppContext.BaseDirectory)
+    internal string Ffmpeg() => FfmpegLocator.Find(config().FfmpegPath, AppContext.BaseDirectory)
         ?? throw new InvalidOperationException("FFmpeg was not found.");
 
-    private string Ffprobe()
+    internal string Ffprobe()
     {
         var probe = Path.Combine(Path.GetDirectoryName(Ffmpeg())!, "ffprobe.exe");
         return File.Exists(probe) ? probe : throw new InvalidOperationException("ffprobe.exe was not found next to FFmpeg.");
