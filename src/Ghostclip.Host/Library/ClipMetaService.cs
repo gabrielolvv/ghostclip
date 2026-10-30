@@ -37,7 +37,7 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
             Directory.CreateDirectory(ThumbsDir);
             if (meta is null)
             {
-                var probe = await tools.ProbeAsync(clip).ConfigureAwait(false);
+                var probe = await tools.ProbeAsync(clip, ct).ConfigureAwait(false);
                 var keyframes = await ProcessRunner.RunAsync(tools.Ffprobe(), FfmpegArgs.Keyframes(clip),
                     TimeSpan.FromSeconds(60), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
                 ProcessResult? peaks = null;

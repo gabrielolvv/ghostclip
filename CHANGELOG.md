@@ -8,11 +8,13 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 ### Fixed
 
 - Closing the library while a trim or compression runs stops it and leaves
-  no half-written file; leftovers of work cut off earlier are cleaned up.
+  no half-written file; Ghostclip's own leftovers of work cut off earlier are
+  cleaned up (other programs' .part files in the clips folder are left alone).
 - Updating or uninstalling with the library open closes it properly instead
   of waiting 15 s to end it.
-- The hotkey recorder takes the letter your keyboard layout prints (AZERTY
-  included), punctuation keys and the numpad's operators.
+- The hotkey recorder records the key Windows will match on your keyboard
+  layout (AZERTY, QWERTZ, ABNT2), including punctuation and the numpad's
+  operators.
 - Thumbnails of clips deleted long ago are removed from the cache after 90
   days, and the clip list refreshes itself if the folder watcher misses
   changes.

@@ -34,6 +34,25 @@ public sealed class CleanupTests : IDisposable
         Assert.Equal(0, PartFile.CleanAbandoned(Path.Combine(_dir, "missing"), TimeSpan.FromHours(1), now));
     }
 
+    // The clips folder can be Downloads or Videos: a paused download of someone else's (yt-dlp, a browser)
+    // named like a .part must survive, and so must anything outside the per-game folders.
+    [Fact]
+    public void Only_ghostclips_own_part_files_are_touched()
+    {
+        var now = new DateTime(2026, 10, 30, 21, 0, 0, DateTimeKind.Utc);
+        var download = Make(@"some video.mp4.part", now.AddDays(-5));
+        var nested = Make(@"Downloads\Series\G_2026-10-01_10-00-00.mp4.part", now.AddDays(-5));
+        var foreign = Make(@"G\trailer.mp4.part", now.AddDays(-5));
+        var ours = Make(@"G\G_2026-10-01_10-00-00_discord_2.mp4.part", now.AddDays(-5));
+
+        Assert.Equal(1, PartFile.CleanAbandoned(_dir, TimeSpan.FromHours(1), now));
+
+        Assert.True(File.Exists(download));
+        Assert.True(File.Exists(nested));
+        Assert.True(File.Exists(foreign));
+        Assert.False(File.Exists(ours));
+    }
+
     // Right after FFmpeg is stopped, the file can still be held for a moment (its handle closing, antivirus).
     [Fact]
     public async Task Discarding_waits_out_a_brief_lock()

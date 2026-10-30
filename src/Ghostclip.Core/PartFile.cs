@@ -12,16 +12,21 @@ public static class PartFile
     public static void Commit(string output) => File.Move(For(output), output, overwrite: false);
 
     /// <summary>
-    /// Deletes .part files under <paramref name="root"/> older than <paramref name="age"/>:
-    /// a save, trim or compress that was cut off and will never be finished. Returns how many.
+    /// Deletes Ghostclip's own .part files older than <paramref name="age"/>: a save, trim or
+    /// compress that was cut off and will never be finished. Only where Ghostclip writes them
+    /// (one folder per game under <paramref name="root"/>) and only with its file names, since
+    /// the clips folder can be Downloads or Videos, where other programs keep their own
+    /// .part files (a paused download). Returns how many.
     /// </summary>
     public static int CleanAbandoned(string root, TimeSpan age, DateTime nowUtc)
     {
         if (!Directory.Exists(root)) return 0;
         var removed = 0;
-        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
-        foreach (var part in Directory.EnumerateFiles(root, "*.mp4.part", options))
+        var options = new EnumerationOptions { IgnoreInaccessible = true };
+        foreach (var part in Directory.EnumerateDirectories(root, "*", options)
+            .SelectMany(game => Directory.EnumerateFiles(game, "*.mp4.part", options)))
         {
+            if (ClipLibrary.TimeFromName(Path.GetFileNameWithoutExtension(part)) is null) continue;
             try
             {
                 if (nowUtc - File.GetLastWriteTimeUtc(part) < age) continue;

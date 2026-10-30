@@ -138,6 +138,8 @@ internal sealed partial class LibraryWindow : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        // Gone from the screen right away, while the bridge waits for FFmpeg runs to stop.
+        Hide();
         _bridge.Dispose();
         base.OnFormClosed(e);
     }

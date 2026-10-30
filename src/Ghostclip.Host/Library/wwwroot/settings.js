@@ -205,20 +205,20 @@ const Settings = (() => {
   // Mirrors HotkeyRules.AllowedWithoutModifier: a key alone would stop working in every other program.
   const ALONE = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scroll|NumPad[0-9])$/;
 
-  // Punctuation and numpad keys by position, under the names Windows' key list uses (WinForms Keys).
-  const CODE_NAMES = { Backquote: 'Oemtilde', Minus: 'OemMinus', Equal: 'Oemplus', BracketLeft: 'OemOpenBrackets',
-    BracketRight: 'OemCloseBrackets', Backslash: 'OemPipe', IntlBackslash: 'OemBackslash', Semicolon: 'OemSemicolon',
-    Quote: 'OemQuotes', Comma: 'Oemcomma', Period: 'OemPeriod', Slash: 'OemQuestion',
-    NumpadAdd: 'Add', NumpadSubtract: 'Subtract', NumpadMultiply: 'Multiply', NumpadDivide: 'Divide', NumpadDecimal: 'Decimal' };
+  // The hotkey is registered by virtual-key code, which follows the keyboard layout: in WebView2,
+  // keyCode is that code, so a key records as the key Windows will match on any layout (AZERTY,
+  // QWERTZ, ABNT2). Punctuation and numpad codes get the names of Windows' key list (WinForms Keys).
+  const VK_NAMES = { 106: 'Multiply', 107: 'Add', 108: 'Separator', 109: 'Subtract', 110: 'Decimal', 111: 'Divide',
+    186: 'OemSemicolon', 187: 'Oemplus', 188: 'Oemcomma', 189: 'OemMinus', 190: 'OemPeriod', 191: 'OemQuestion',
+    192: 'Oemtilde', 219: 'OemOpenBrackets', 220: 'OemPipe', 221: 'OemCloseBrackets', 222: 'OemQuotes', 226: 'OemBackslash' };
 
   function keyName(e) {
     if (/^F([1-9]|1[0-9]|2[0-4])$/.test(e.key)) return e.key;
-    // A letter as your layout prints it (A on an AZERTY keyboard is A), which is the key Windows registers.
-    if (/^[a-z]$/i.test(e.key)) return e.key.toUpperCase();
-    if (/^Key[A-Z]$/.test(e.code)) return e.code.slice(3);
-    if (/^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
-    if (/^Numpad[0-9]$/.test(e.code)) return 'NumPad' + e.code.slice(6);
-    return KEY_NAMES[e.key] || CODE_NAMES[e.code] || null;
+    const vk = e.keyCode;
+    if (vk >= 65 && vk <= 90) return String.fromCharCode(vk);
+    if (vk >= 48 && vk <= 57) return String.fromCharCode(vk);
+    if (vk >= 96 && vk <= 105) return 'NumPad' + (vk - 96);
+    return VK_NAMES[vk] || KEY_NAMES[e.key] || null;
   }
 
   function listen(button, key) {

@@ -14,11 +14,11 @@ internal sealed record ClipInfo(double Duration, int Height, double Fps, int Aud
 /// </summary>
 internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> config, ILogger log)
 {
-    public async Task<ClipInfo> ProbeAsync(string clip)
+    public async Task<ClipInfo> ProbeAsync(string clip, CancellationToken ct = default)
     {
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
             "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate", "-of", "json", clip,
-        ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal).ConfigureAwait(false);
+        ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         if (!r.Succeeded) throw new InvalidOperationException($"Could not read the clip: {r.FirstError}");
 
         using var json = JsonDocument.Parse(r.StdOut);
@@ -80,7 +80,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<(string Path, long Bytes)> CompressAsync(string clip, CancellationToken ct = default)
     {
         var cfg = config();
-        var info = await ProbeAsync(clip).ConfigureAwait(false);
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var limit = cfg.DiscordLimitMB;
         var plan = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit);
         if (plan is null)

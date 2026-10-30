@@ -22,6 +22,8 @@ public static class ProcessRunner
         ProcessPriorityClass priority = ProcessPriorityClass.Normal,
         CancellationToken ct = default)
     {
+        // Cancelled between two steps (probe, then encode): don't start a process only to kill it.
+        ct.ThrowIfCancellationRequested();
         var psi = new ProcessStartInfo(exe)
         {
             UseShellExecute = false,
