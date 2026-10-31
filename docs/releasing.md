@@ -19,6 +19,11 @@
    from the tray, at the next start (sign-in included), or from "Update now"
    in the library or "Restart to update" in the tray.
 
+5. If the repository has a `WINGET_TOKEN` secret (a classic personal access
+   token with the `public_repo` scope), the workflow's last job opens the pull
+   request that brings the version to winget, `winget install ghostclip`. The
+   first version was submitted by hand; without the secret the job does nothing.
+
 ## Building locally
 
 ```powershell

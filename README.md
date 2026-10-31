@@ -10,6 +10,8 @@ keeps the last minute of your screen, game audio and microphone, and saves a
 clip when you press the hotkey. Goal number one is taking as few FPS from the
 game as possible.
 
+![The Ghostclip library: clips and screenshots by day, with thumbnails, durations, starred favorites and a session with bookmarks](site/img/library.png)
+
 Nothing runs inside the game: no DLL injection, no render hooks, no memory
 reads and no global keyboard hook. Capture uses Desktop Duplication, the
 hotkey uses `RegisterHotKey`, game-only audio uses Windows' own process
@@ -37,6 +39,10 @@ QuickSync). There is no CPU encoder fallback.
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
   (10 MB by default), mixing game and mic into one track.
+- **Space limit** (optional): past it, the oldest clips and screenshots make
+  room for new ones. Favorites, clips you renamed and anything Ghostclip
+  didn't make are never touched.
+- **English or Portuguese,** or whatever Windows uses, switched live.
 
 ## Install
 
@@ -52,10 +58,11 @@ QuickSync. Everything else, including .NET and FFmpeg, comes with it.
 
 ## Status
 
-**0.6.** Recording on NVIDIA, AMD and Intel, saving, audio routing (with
+**0.8.** Recording on NVIDIA, AMD and Intel, saving, audio routing (with
 Discord on its own track), profiles, screenshots, session recording with
 bookmarks, the clip library with favorites, trimming and compression, the
-settings page in English and Portuguese, and the installer with updates work.
+space limit, the settings page in English and Portuguese, and the installer
+with updates work.
 Not done yet: game benchmark numbers,
 code signing (see [docs/releasing.md](docs/releasing.md)) and a GIF for this
 page (`assets\make-gif.ps1` makes one from a clip). The full plan is in
