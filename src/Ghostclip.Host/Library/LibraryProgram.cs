@@ -17,6 +17,14 @@ internal static partial class LibraryProgram
     /// <summary>Opens the library on its settings page: "Ghostclip.exe --library --settings".</summary>
     public const string SettingsArgument = "--settings";
 
+    /// <summary>True while a library window is open in this session.</summary>
+    public static bool IsOpen()
+    {
+        if (!Mutex.TryOpenExisting(MutexName, out var mutex)) return false;
+        mutex.Dispose();
+        return true;
+    }
+
     public static int Run(string? clip)
     {
         using var single = new Mutex(initiallyOwned: true, MutexName, out var first);

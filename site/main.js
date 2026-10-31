@@ -36,7 +36,7 @@ const pt = {
   'points.1': '<strong>Sem injeção.</strong> Nenhuma DLL no jogo, nenhum hook de renderização, nenhuma leitura de memória, nenhum hook global de teclado. A captura usa o Desktop Duplication do próprio Windows.',
   'points.2': '<strong>Só GPU.</strong> NVENC, AMF ou QuickSync fazem a codificação. Não existe encoder de CPU como alternativa.',
   'points.3': '<strong>Pequeno de propósito.</strong> Um build mínimo e LGPL do FFmpeg, só com as partes que o Ghostclip usa: 10 MB em vez de 180.',
-  'points.4': '<strong>Atualizações sob seu controle.</strong> Versões novas baixam em silêncio e esperam você escolher "Restart to update", nunca no meio do jogo.',
+  'points.4': '<strong>Atualizações que esperam você.</strong> Versões novas baixam em silêncio e instalam quando o Ghostclip fecha ou o PC reinicia, nunca no meio do jogo.',
   'numbers.label': 'MEDIDO',
   'numbers.1': 'até o clipe estar seguro depois da hotkey',
   'numbers.2v': '~1,3 s',

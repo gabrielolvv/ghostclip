@@ -76,7 +76,7 @@ internal sealed class TrayApp : ApplicationContext
         _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
         _logsItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_paths.LogsDir));
-        _exitItem = new ToolStripMenuItem("", null, (_, _) => Exit());
+        _exitItem = new ToolStripMenuItem("", null, (_, _) => ExitFromMenu());
         var menu = new ContextMenuStrip();
         TrayMenuStyle.Apply(menu);
         _updateItem.Name = TrayMenuStyle.UpdateItemName;
@@ -290,8 +290,8 @@ internal sealed class TrayApp : ApplicationContext
         // The library offers it too, with a button.
         PublishStatus(_status);
         Notify(L("Update ready", "Atualização pronta"),
-            L($"Ghostclip {version} is downloaded. Update from the library or the tray menu when you're not playing.",
-                $"O Ghostclip {version} foi baixado. Atualize pela biblioteca ou pelo menu da bandeja quando não estiver jogando."), ToolTipIcon.Info);
+            L($"Ghostclip {version} installs the next time Ghostclip closes or your PC restarts. To install it now, use the library or the tray menu.",
+                $"O Ghostclip {version} será instalado quando o Ghostclip fechar ou o PC reiniciar. Para instalar agora, use a biblioteca ou o menu da bandeja."), ToolTipIcon.Info);
     }
 
     private void RestartToUpdate()
@@ -588,6 +588,15 @@ internal sealed class TrayApp : ApplicationContext
     private void Exit()
     {
         Shutdown();
+        ExitThread();
+    }
+
+    // Only the user's own Exit installs a downloaded update; the installer's
+    // shutdown request (uninstall, update) goes through Exit above.
+    private void ExitFromMenu()
+    {
+        Shutdown();
+        if (UpdatePolicy.ApplyOnExit(_updates.IsReady, Library.LibraryProgram.IsOpen())) _updates.ApplyOnExit();
         ExitThread();
     }
 

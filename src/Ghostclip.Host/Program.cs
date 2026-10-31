@@ -28,6 +28,7 @@ internal static class Program
     {
         // Installer hooks run first and exit on their own; normal launches fall through.
         Velopack.VelopackApp.Build()
+            .SetAutoApplyOnStartup(UpdatePolicy.ApplyOnStartup(args))
             .OnBeforeUninstallFastCallback(_ =>
             {
                 StopRunningInstance();

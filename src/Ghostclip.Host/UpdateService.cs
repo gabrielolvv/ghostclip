@@ -1,3 +1,4 @@
+using Ghostclip.Core;
 using Serilog;
 using Velopack;
 using Velopack.Sources;
@@ -6,8 +7,10 @@ namespace Ghostclip.Host;
 
 /// <summary>
 /// Updates from GitHub Releases through Velopack. Checks a couple of minutes
-/// after start and then every few hours, downloads in the background, and only
-/// applies when the user picks "Restart to update": never in the middle of a game.
+/// after start and then every few hours and downloads in the background. A
+/// downloaded update installs when Ghostclip exits from the tray, at the next
+/// tray start (sign-in included), or right away from "Update now" or "Restart
+/// to update": never in the middle of a game. See <see cref="UpdatePolicy"/>.
 /// Velopack checks every package against the SHA-256 in the release manifest.
 /// </summary>
 internal sealed class UpdateService(ILogger log)
@@ -42,6 +45,27 @@ internal sealed class UpdateService(ILogger log)
         {
             // Offline or GitHub unreachable: try again at the next check.
             log.Information("Update check failed: {Error}", ex.Message);
+        }
+    }
+
+    public bool IsReady => _ready is not null;
+
+    /// <summary>
+    /// Starts the installer, which waits for this process to exit, installs the
+    /// downloaded update silently and does not reopen Ghostclip.
+    /// </summary>
+    public void ApplyOnExit()
+    {
+        if (_ready is null) return;
+        try
+        {
+            _manager.WaitExitThenApplyUpdates(_ready.TargetFullRelease, silent: true, restart: false);
+            log.Information("Installing {Version} once Ghostclip has exited", _ready.TargetFullRelease.Version);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // The next tray start installs it instead.
+            log.Warning("Could not start the update on exit: {Error}", ex.Message);
         }
     }
 

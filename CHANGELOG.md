@@ -5,8 +5,30 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ## Unreleased
 
+### Changed
+
+- A downloaded update installs on its own: when you exit Ghostclip from the
+  tray, or at its next start, including when Windows signs you in. "Update
+  now" in the library and "Restart to update" in the tray still install it
+  right away. Exiting with the library open leaves it for the next start.
+
 ### Fixed
 
+- The space limit no longer counts or deletes another program's files that
+  have a date in their name, such as Telegram's downloads when the clips
+  folder is Downloads: only files Ghostclip named, in their game's folder.
+  Clips you renamed don't count toward the limit either.
+- The space limit judges age by when a file was written, so a session saved
+  just now (named after its start) and a trim made today of an old clip
+  (named after that clip) are no longer deleted as the oldest.
+- When the favorites file can't be read, the space limit deletes nothing
+  instead of treating favorites as none, and favorites can't be changed
+  until it reads again, so it is never overwritten empty.
+- Opening the library, or running --trim, --compress or --save, while an
+  update was waiting no longer installs it: the installer stopped the
+  recording and only that window came back, leaving no tray until the next
+  sign-in.
+- A session whose bookmarks can't be written is still reported as saved.
 - Saving settings, favorites or a session's bookmarks waits up to about a
   second for a program holding the file (antivirus, the library reading it)
   instead of half that, and favorites and bookmarks no longer fail on the

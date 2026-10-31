@@ -15,7 +15,9 @@
 4. The [Release workflow](../.github/workflows/release.yml) builds the minimal
    FFmpeg, runs the tests, publishes, packs with Velopack and creates the
    GitHub release. Installed copies pick it up within six hours (or two
-   minutes after their next start) and offer "Restart to update" in the tray.
+   minutes after their next start). The update installs when Ghostclip exits
+   from the tray, at the next start (sign-in included), or from "Update now"
+   in the library or "Restart to update" in the tray.
 
 ## Building locally
 
