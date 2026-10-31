@@ -4,6 +4,22 @@ namespace Ghostclip.Core.Tests;
 
 public class HotkeyAndStatusTests
 {
+    // Someone whose clip hotkey was Alt+F11 before screenshots existed got the screenshot default on the same
+    // key: a warning at every start, and a settings page that refused to save.
+    [Theory]
+    [InlineData("Alt+F11", "Alt+F11", "Alt+F9", "Alt+F12", "Alt+F9")]
+    [InlineData("Alt+F9", "Alt+F11", "Alt+F9", "Alt+F11", "Alt+F12")]
+    [InlineData("alt+f9", "Alt+F11", "Alt+F9", "Alt+F11", "Alt+F12")]
+    [InlineData("Alt+F10", "Alt+F9", "Alt+F9", "Alt+F9", "Alt+F11")]
+    [InlineData("Alt+F10", "Alt+F11", "Alt+F9", "Alt+F11", "Alt+F9")]
+    public void Screenshot_and_session_hotkeys_move_off_a_key_already_taken(string clip, string screenshot, string session,
+        string expectedScreenshot, string expectedSession)
+    {
+        var config = new GhostclipConfig { Hotkey = clip, ScreenshotHotkey = screenshot, SessionHotkey = session }.Normalize();
+        Assert.Equal(expectedScreenshot, config.ScreenshotHotkey);
+        Assert.Equal(expectedSession, config.SessionHotkey);
+    }
+
     // As the clip hotkey, Ctrl+C stopped copying in every program on one person's PC.
     [Theory]
     [InlineData("Ctrl+C", true)]

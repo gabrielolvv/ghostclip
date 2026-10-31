@@ -34,7 +34,7 @@ public static class ProcessRunner
         foreach (var arg in args) psi.ArgumentList.Add(arg);
 
         var sw = Stopwatch.StartNew();
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException($"Could not start {exe}.");
+        using var process = Process.Start(psi) ?? throw new InvalidOperationException(UiText.L($"Could not start {exe}.", $"Não foi possível iniciar {exe}."));
         if (priority != ProcessPriorityClass.Normal)
         {
             try { process.PriorityClass = priority; } catch (InvalidOperationException) { /* already exited */ }

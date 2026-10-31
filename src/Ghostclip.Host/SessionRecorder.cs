@@ -15,6 +15,11 @@ namespace Ghostclip.Host;
 /// The pending folder is a snapshot from the first second: list, details and
 /// bookmarks are kept up to date in it, so a crash or an exit mid-session is
 /// finished into an MP4 on the next start, like any other pending clip.
+///
+/// When the recorder stops mid-session (a crash, a locked screen), the part so
+/// far is handed over to be saved and the session goes on in a new part once
+/// recording resumes (<see cref="SessionPlan"/>): segments of two runs may not
+/// join, and the gap would throw every later bookmark off.
 /// </summary>
 internal sealed class SessionRecorder : IDisposable
 {
@@ -24,10 +29,13 @@ internal sealed class SessionRecorder : IDisposable
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
     private readonly SortedSet<long> _linked = [];
     private readonly List<double> _bookmarks = [];
+    private bool _running;
     private string? _dir;
     private string _game = ClipNaming.FallbackGame;
     private long _from;
+    private DateTime? _resumedAfterUtc;
     private DateTime _startedLocal;
+    private DateTime _partStartedLocal;
     private DateTime? _originUtc;
     private RecordingSession? _audio;
 
@@ -43,11 +51,14 @@ internal sealed class SessionRecorder : IDisposable
         };
     }
 
-    public bool Running => _dir is not null;
+    public bool Running => _running;
 
     public string Game => _game;
 
     public TimeSpan Elapsed => Running ? DateTime.Now - _startedLocal : TimeSpan.Zero;
+
+    /// <summary>Parts already handed over this session: the recorder stopped in between.</summary>
+    public int SavedParts { get; private set; }
 
     /// <summary>Once a second while a session runs, on the UI thread: for the tray's running time.</summary>
     public event Action? Ticked;
@@ -55,18 +66,15 @@ internal sealed class SessionRecorder : IDisposable
     public void Start(string game)
     {
         if (Running) return;
-        // From the segment being written now: the session starts at most 2 s early, never late.
-        var segments = SegmentRing.Scan(_paths.BufferDir);
-        _from = segments.Count > 0 ? segments[^1].Sequence : 0;
+        _running = true;
         _game = game;
         _startedLocal = DateTime.Now;
+        SavedParts = 0;
+        // From the segment being written now: the session starts at most 2 s early, never late.
+        var segments = SegmentRing.Scan(_paths.BufferDir);
+        BeginPart(segments.Count > 0 ? segments[^1].Sequence : 0, resumedAfterUtc: null);
         // The joined file starts where that segment does: bookmarks count from there.
         _originUtc = segments.Count > 0 ? File.GetCreationTimeUtc(segments[^1].Path) : null;
-        _audio = null;
-        _linked.Clear();
-        _bookmarks.Clear();
-        _dir = Path.Combine(_paths.PendingDir, _startedLocal.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "-session");
-        Directory.CreateDirectory(_dir);
         _timer.Start();
         _log.Information("Session recording started for {Game} from segment {From}", game, _from);
     }
@@ -74,62 +82,134 @@ internal sealed class SessionRecorder : IDisposable
     /// <summary>Marks this moment; the library shows it on the session's timeline.</summary>
     public void AddBookmark()
     {
-        if (_dir is null) return;
+        if (_dir is not { } dir) return;
         Collect();
+        // Only segments of this part's run are in it, back to back, so time since its first one is time in the file.
         var at = _originUtc is { } origin ? Math.Max(0, (DateTime.UtcNow - origin).TotalSeconds) : 0;
         _bookmarks.Add(Math.Round(at, 1));
-        File.WriteAllLines(Path.Combine(_dir, ClipSaver.BookmarksFile), _bookmarks.Select(b => b.ToString(CultureInfo.InvariantCulture)));
+        // A full disk must not cost the clip being saved along with the bookmark.
+        TryWrite(() => File.WriteAllLines(Path.Combine(dir, ClipSaver.BookmarksFile), _bookmarks.Select(b => b.ToString(CultureInfo.InvariantCulture))));
         _log.Information("Bookmark at {Seconds:0.0} s", at);
     }
 
-    /// <summary>Stops collecting and hands the session over to be joined; null when nothing was recorded.</summary>
+    /// <summary>
+    /// The recorder stopped: hands over the part so far to be saved, null when it holds nothing.
+    /// The session goes on, waiting for <see cref="RecorderResumed"/>.
+    /// </summary>
+    public ClipSnapshot? RecorderStopped()
+    {
+        if (!Running || _dir is null) return null;
+        var part = EndPart();
+        _resumedAfterUtc = DateTime.UtcNow;
+        _log.Information("Recorder stopped mid-session; the session continues in a new part when recording resumes");
+        if (part is not null) SavedParts++;
+        return part;
+    }
+
+    /// <summary>Recording is back: a new part takes the segments written from now on.</summary>
+    public void RecorderResumed()
+    {
+        if (!Running || _dir is not null || _resumedAfterUtc is not { } after) return;
+        BeginPart(from: -1, resumedAfterUtc: after);
+        _log.Information("Session continues in a new part");
+    }
+
+    /// <summary>Stops collecting and hands the session (its last part) over to be joined; null when nothing was recorded.</summary>
     public ClipSnapshot? Stop()
     {
-        if (_dir is not { } dir) return null;
+        if (!Running) return null;
         _timer.Stop();
+        var part = _dir is null ? null : EndPart();
+        _running = false;
+        var took = DateTime.Now - _startedLocal;
+        _log.Information("Session recording stopped after {Minutes:0.0} min ({Parts} earlier parts)", took.TotalMinutes, SavedParts);
+        return part;
+    }
+
+    private void BeginPart(long from, DateTime? resumedAfterUtc)
+    {
+        _from = from;
+        _resumedAfterUtc = resumedAfterUtc;
+        _partStartedLocal = DateTime.Now;
+        _originUtc = null;
+        _audio = null;
+        _linked.Clear();
+        _bookmarks.Clear();
+        _dir = Path.Combine(_paths.PendingDir, _partStartedLocal.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "-session");
+        Directory.CreateDirectory(_dir);
+    }
+
+    private ClipSnapshot? EndPart()
+    {
+        var dir = _dir!;
         Collect(final: true);
         _dir = null;
-        var took = DateTime.Now - _startedLocal;
-        _log.Information("Session recording stopped after {Minutes:0.0} min: {Segments} segments, {Bookmarks} bookmarks",
+        var took = DateTime.Now - _partStartedLocal;
+        _log.Information("Session part ended after {Minutes:0.0} min: {Segments} segments, {Bookmarks} bookmarks",
             took.TotalMinutes, _linked.Count, _bookmarks.Count);
         if (_linked.Count == 0)
         {
-            Directory.Delete(dir, recursive: true);
+            try { Directory.Delete(dir, recursive: true); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.Debug("Could not remove {Dir}: {Error}", dir, ex.Message); }
             return null;
         }
-        return new ClipSnapshot(dir, _game, _startedLocal, _linked.Count, _linked.Count * GhostclipConfig.SegmentSeconds,
+        return new ClipSnapshot(dir, _game, _partStartedLocal, _linked.Count, _linked.Count * GhostclipConfig.SegmentSeconds,
             _audio?.AudioLeadMs ?? 0, _audio?.AudioTitles, took, _bookmarks.ToList());
     }
 
-    // Links every closed segment of the session and rewrites the list and details to match. The one
-    // being written waits until it closes (a copy of it now would stay cut short), except at the end,
-    // where up to the last moment is what's wanted.
+    // Links every closed segment of this part and rewrites the list and details to match. The one being
+    // written waits until it closes (a link to it now would be a file the recorder still holds), except at
+    // the end, where it is copied as far as it goes.
     private void Collect(bool final = false)
     {
         if (_dir is not { } dir) return;
-        var added = false;
         var segments = SegmentRing.Scan(_paths.BufferDir);
-        var writing = segments.Count > 0 ? segments[^1].Sequence : -1;
-        foreach (var segment in segments)
+        if (_from < 0)
         {
-            if (segment.Sequence < _from || _linked.Contains(segment.Sequence)) continue;
-            if (segment.Sequence == writing && !final) continue;
-            var name = Path.GetFileName(segment.Path);
-            if (!_saver.LinkOrCopy(segment.Path, Path.Combine(dir, name))) continue;
-            _linked.Add(segment.Sequence);
+            // A part after a restart: its run's segments are the ones created since, whatever their numbers.
+            if (_resumedAfterUtc is not { } after) return;
+            var first = SessionPlan.FirstAfter(segments.Select(s => (s.Sequence, File.GetCreationTimeUtc(s.Path))), after);
+            if (first is null) return;
+            _from = first.Value;
+        }
+        var writing = segments.Count > 0 ? segments[^1].Sequence : -1;
+        var added = false;
+        foreach (var sequence in SessionPlan.ToLink(segments.Select(s => s.Sequence).ToList(), _from, _linked, final))
+        {
+            var segment = segments.First(s => s.Sequence == sequence);
+            var target = Path.Combine(dir, Path.GetFileName(segment.Path));
+            var ok = sequence == writing ? _saver.CopyGrowing(segment.Path, target) : _saver.LinkOrCopy(segment.Path, target);
+            if (!ok) continue;
+            _linked.Add(sequence);
             _originUtc ??= File.GetCreationTimeUtc(segment.Path);
             added = true;
         }
         // The audio shift is measured a moment after recording starts; read it while the buffer still has it.
         _audio ??= AudioSync.ForSequence(AudioSync.Scan(_paths.BufferDir), _from);
         if (!added) return;
-        File.WriteAllText(Path.Combine(dir, ClipSaver.ListFile),
-            FfmpegArgs.ConcatList(_linked.Select(SegmentRing.FileName)));
-        File.WriteAllLines(Path.Combine(dir, ClipSaver.MetaFile),
-        [
-            _game, _startedLocal.ToString("o", CultureInfo.InvariantCulture),
-            (_audio?.AudioLeadMs ?? 0).ToString(CultureInfo.InvariantCulture), string.Join('|', _audio?.AudioTitles ?? []),
-        ]);
+        TryWrite(() =>
+        {
+            File.WriteAllText(Path.Combine(dir, ClipSaver.ListFile), FfmpegArgs.ConcatList(_linked.Select(SegmentRing.FileName)));
+            File.WriteAllLines(Path.Combine(dir, ClipSaver.MetaFile),
+            [
+                _game, _partStartedLocal.ToString("o", CultureInfo.InvariantCulture),
+                (_audio?.AudioLeadMs ?? 0).ToString(CultureInfo.InvariantCulture), string.Join('|', _audio?.AudioTitles ?? []),
+            ]);
+        });
+    }
+
+    // The details are rewritten every second: a write that fails (a full disk) is logged and tried again
+    // with the next segment, never thrown at the tray, where it would stop an exit half way.
+    private void TryWrite(Action write)
+    {
+        try
+        {
+            write();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warning("Could not update the session's details: {Error}", ex.Message);
+        }
     }
 
     public void Dispose() => _timer.Dispose();

@@ -139,7 +139,22 @@ public sealed record GhostclipConfig
         string.IsNullOrWhiteSpace(ClipsFolder) ? GhostclipPaths.DefaultClipsRoot : ClipsFolder;
 
     /// <summary>Clamps every value into a range the recorder can actually run with.</summary>
-    public GhostclipConfig Normalize() => this with
+    public GhostclipConfig Normalize() => Clamped().WithDistinctHotkeys();
+
+    private static readonly string[] SpareHotkeys = ["Alt+F11", "Alt+F9", "Alt+F12", "Alt+F8", "Ctrl+Alt+F11", "Ctrl+Alt+F9", "Ctrl+Alt+F12"];
+
+    // A clip hotkey picked before screenshots and sessions existed can be one of their defaults (Alt+F9,
+    // Alt+F11). The clip hotkey keeps its key; the other moves to the first spare nothing else uses.
+    private GhostclipConfig WithDistinctHotkeys()
+    {
+        static bool Same(string a, string b) => string.Equals(a.Replace(" ", ""), b.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
+        string Spare(params string[] taken) => SpareHotkeys.FirstOrDefault(s => !taken.Any(t => Same(s, t))) ?? "Ctrl+Alt+F8";
+        var screenshot = Same(ScreenshotHotkey, Hotkey) ? Spare(Hotkey, SessionHotkey) : ScreenshotHotkey;
+        var session = Same(SessionHotkey, Hotkey) || Same(SessionHotkey, screenshot) ? Spare(Hotkey, screenshot) : SessionHotkey;
+        return this with { ScreenshotHotkey = screenshot, SessionHotkey = session };
+    }
+
+    private GhostclipConfig Clamped() => this with
     {
         // A common shortcut (Ctrl+C) saved before they were refused goes back to the default: it broke copying everywhere.
         Hotkey = string.IsNullOrWhiteSpace(Hotkey) || HotkeyRules.TakesCommonShortcut(Hotkey) ? "Alt+F10" : Hotkey.Trim(),

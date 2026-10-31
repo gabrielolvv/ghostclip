@@ -32,6 +32,29 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   recording and only that window came back, leaving no tray until the next
   sign-in.
 - A session whose bookmarks can't be written is still reported as saved.
+- A session recording survives the recorder stopping mid-way (a crash, a
+  locked screen): the part so far is saved, and the session goes on in a new
+  file once recording is back. Before, it could join segments that don't fit
+  together, collect nothing more after a long lock, or put every later
+  bookmark late by the length of the pause.
+- A short session no longer shows "Clip not saved" and comes back as a second
+  copy at the next start: its last segment is copied instead of linked while
+  the recorder still writes it, and a saved clip's leftover folder is never
+  saved again.
+- Saving a session checks for free space first and says how much it needs,
+  instead of failing with FFmpeg's write error.
+- A full disk during a session no longer stops Ghostclip from exiting (it
+  could stay running with no tray icon) or loses the clip saved with a
+  bookmark.
+- Two screenshots taken in the same second are both kept.
+- A clip hotkey chosen before screenshots and sessions existed (Alt+F9 or
+  Alt+F11) no longer clashes with their defaults: the new one moves to a free
+  key, so the settings page saves again and the tray stops warning at start.
+- The library's favorite star goes back to how it really is when saving it
+  fails, and a delete or rename that worked is no longer reported as failed
+  because the favorites file was busy.
+- The remaining error messages in English (deleting a clip, reading a clip's
+  keyframes or sound) are translated.
 - Saving settings, favorites or a session's bookmarks waits up to about a
   second for a program holding the file (antivirus, the library reading it)
   instead of half that, and favorites and bookmarks no longer fail on the
