@@ -43,6 +43,15 @@ public sealed record WorkerStatus
 
     /// <summary>Discord is running and recorded on its own track.</summary>
     public bool Discord { get; set; }
+
+    /// <summary>
+    /// Names the recorder run (FFmpeg start) the segments come from: it changes on every restart, even one
+    /// too quick for a status in between to say so. Null from a worker older than this field.
+    /// </summary>
+    public string? RunId { get; set; }
+
+    /// <summary>The first segment number of that run.</summary>
+    public long RunStart { get; set; }
 }
 
 public sealed record IpcMessage

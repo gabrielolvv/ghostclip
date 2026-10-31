@@ -508,18 +508,22 @@ internal sealed class TrayApp : ApplicationContext
     {
         // A status posted just before shutdown arrives after the icon is gone.
         if (_shuttingDown) return;
-        var previous = _status.State;
+        var previous = _status;
         _status = status;
         // A session can't join segments across a recorder restart: the part so far is saved, and the
-        // session goes on in a new file once recording is back.
-        if (_session.Running && previous == WorkerState.Recording && status.State != WorkerState.Recording
-            && _session.RecorderStopped() is { } part)
+        // session goes on in a new file once recording is back. A restart too quick for a status in
+        // between still shows as a new run.
+        var wasRecording = previous.State == WorkerState.Recording;
+        var recording = status.State == WorkerState.Recording;
+        var newRun = wasRecording && recording && previous.RunId is { } before && status.RunId is { } now && before != now;
+        if (_session.Running && (newRun || (wasRecording && !recording))
+            && _session.RecorderStopped(newRun ? status.RunStart : null) is { } part)
         {
             _ = FinishAsync(part, session: true);
         }
-        else if (_session.Running && previous != WorkerState.Recording && status.State == WorkerState.Recording)
+        if (_session.Running && recording && (newRun || !wasRecording))
         {
-            _session.RecorderResumed();
+            _session.RecorderResumed(status.RunId is null ? null : status.RunStart);
         }
         // Probing again (a settings change) or recording: whatever stopped it is over.
         if (status.State != WorkerState.Stopped) _problem = null;

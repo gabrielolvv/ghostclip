@@ -22,6 +22,14 @@ public class SessionPlanTests
     }
 
     [Fact]
+    public void A_part_cut_at_a_quick_restart_stops_before_the_new_run()
+    {
+        // The recorder restarted within a second: the new run started at 13 and its first segment is being written.
+        var link = SessionPlan.ToLink([10, 11, 12, 13], from: 10, linked: new HashSet<long> { 10 }, final: true, before: 13);
+        Assert.Equal([11, 12], link);
+    }
+
+    [Fact]
     public void A_part_after_a_restart_starts_at_the_first_segment_created_since()
     {
         var segments = new[] { (500L, T0.AddSeconds(-4)), (501L, T0.AddSeconds(-2)), (502L, T0.AddSeconds(3)), (503L, T0.AddSeconds(5)) };
@@ -34,6 +42,19 @@ public class SessionPlanTests
         // The screen was locked long enough for the recorder to clear the buffer: numbering starts over.
         var segments = new[] { (0L, T0.AddMinutes(10)), (1L, T0.AddMinutes(10).AddSeconds(2)) };
         Assert.Equal(0, SessionPlan.FirstAfter(segments, T0));
+    }
+
+    // A bookmark's place in the joined file counts segments, not file times: Windows hands a new segment the
+    // creation time of a deleted one with the same name (file system tunneling), ten minutes off in one test.
+    [Fact]
+    public void A_bookmark_lands_where_the_segments_put_it()
+    {
+        // From segment 4; segment 9 is being written, begun when 8 was last written, 1.5 s ago.
+        Assert.Equal(11.5, SessionPlan.OffsetAt(from: 4, writing: 9, previousClosedUtc: T0, nowUtc: T0.AddSeconds(1.5), segmentSeconds: 2));
+        // Never past the segment being written, whatever the clocks say.
+        Assert.Equal(12, SessionPlan.OffsetAt(from: 4, writing: 9, previousClosedUtc: T0.AddMinutes(-10), nowUtc: T0, segmentSeconds: 2));
+        // The part's very first segment, with nothing before it in the buffer.
+        Assert.Equal(0, SessionPlan.OffsetAt(from: 4, writing: 4, previousClosedUtc: null, nowUtc: T0, segmentSeconds: 2));
     }
 
     [Fact]

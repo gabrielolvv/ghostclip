@@ -34,17 +34,26 @@ internal sealed class StorageKeeper(GhostclipPaths paths, Func<GhostclipConfig> 
         });
     }
 
+    // The folder is scanned first, outside any lock: it can be large or on a slow drive, and the library
+    // window waits on the lock to star a clip. From reading favorites to forgetting the deleted, the pass
+    // holds the library file's lock, so a star set meanwhile waits for it instead of losing its clip to it.
+    // A clip saved after the scan is left for the next pass; the newest is always kept anyway.
     private void Run()
     {
         var cfg = config();
         var root = cfg.ResolvedClipsFolder;
+        var clips = ClipLibrary.Scan(root);
+        LibraryStore.Locked(() => Apply(cfg, root, clips), paths.LibraryFile);
+    }
+
+    private void Apply(GhostclipConfig cfg, string root, IReadOnlyList<ClipEntry> clips)
+    {
         // Unknown favorites are not "no favorites": nothing goes until the file reads again.
         if (!LibraryStore.TryRead(paths.LibraryFile, out var state))
         {
             log.Warning("Storage limit paused: {File} can't be read, so favorites are unknown", paths.LibraryFile);
             return;
         }
-        var clips = ClipLibrary.Scan(root);
         var victims = StorageLimit.SelectForDeletion(root, clips, state, cfg.StorageLimitGB * StorageLimit.BytesPerGB);
         if (victims.Count == 0) return;
 

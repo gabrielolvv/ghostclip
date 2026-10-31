@@ -43,6 +43,8 @@ public sealed class CleanupTests : IDisposable
         var download = Make(@"some video.mp4.part", now.AddDays(-5));
         var nested = Make(@"Downloads\Series\G_2026-10-01_10-00-00.mp4.part", now.AddDays(-5));
         var foreign = Make(@"G\trailer.mp4.part", now.AddDays(-5));
+        // A browser's paused download in a folder of its own, with a date in the name.
+        var dated = Make(@"Telegram Desktop\video_2026-10-01_10-00-00.mp4.part", now.AddDays(-5));
         var ours = Make(@"G\G_2026-10-01_10-00-00_discord_2.mp4.part", now.AddDays(-5));
 
         Assert.Equal(1, PartFile.CleanAbandoned(_dir, TimeSpan.FromHours(1), now));
@@ -50,6 +52,7 @@ public sealed class CleanupTests : IDisposable
         Assert.True(File.Exists(download));
         Assert.True(File.Exists(nested));
         Assert.True(File.Exists(foreign));
+        Assert.True(File.Exists(dated));
         Assert.False(File.Exists(ours));
     }
 

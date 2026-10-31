@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace Ghostclip.Core;
 
 /// <summary>
@@ -24,10 +22,7 @@ public static class StorageLimit
     public static bool Counts(string root, ClipEntry clip)
     {
         var parts = Path.GetRelativePath(root, clip.Path).Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
-        // Game_<time>, then a number when two saves shared a second, then any _trim/_discord copies of copies.
-        return parts.Length == 2 && Regex.IsMatch(Path.GetFileNameWithoutExtension(parts[1]),
-            "^" + Regex.Escape(parts[0]) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord)(_\d+)?)*$",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return parts.Length == 2 && ClipLibrary.IsGhostclipName(parts[0], Path.GetFileNameWithoutExtension(parts[1]));
     }
 
     /// <summary>What the clips counted toward the limit take now.</summary>
