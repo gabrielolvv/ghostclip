@@ -58,6 +58,18 @@ public class FfmpegArgsTests
         Assert.DoesNotContain("hwmap", FfmpegArgs.Video(nvenc with { Input = EncoderInput.Direct }).Filter);
     }
 
+    // A Radeon RX 6600's AMF refused ddagrab's texture (SubmitInput error 18) and scale_d3d11's NV12 one
+    // couldn't even be created, while BGRA from system memory encoded fine.
+    [Fact]
+    public void Memory_input_copies_frames_down_and_keeps_bgra()
+    {
+        var amf = Qsv(EncoderInput.Memory) with { Encoder = EncoderKind.Amf };
+        Assert.Equal("ddagrab=output_idx=0:framerate=60,hwdownload,format=bgra", FfmpegArgs.Video(amf).Filter);
+        Assert.Equal("ddagrab=output_idx=0:framerate=60,hwdownload,format=bgra,scale=-2:720", FfmpegArgs.Video(amf with { OutputHeight = 720 }).Filter);
+        Assert.Equal("h264_amf", ValueAfter(FfmpegArgs.Probe(amf, 30), "-c:v"));
+        Assert.Equal("h264_amf (memory)", amf.Describe());
+    }
+
     [Theory]
     [InlineData(EncoderKind.Nvenc, VideoCodec.H264, "h264_nvenc")]
     [InlineData(EncoderKind.Amf, VideoCodec.Hevc, "hevc_amf")]
