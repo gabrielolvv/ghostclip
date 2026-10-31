@@ -26,9 +26,11 @@ public static class PartFile
         foreach (var part in Directory.EnumerateDirectories(root, "*", options)
             .SelectMany(game => Directory.EnumerateFiles(game, "*.part", options)))
         {
-            // Clips and screenshots: Game_..._time.mp4.part, Game_..._time.jpg.part.
+            // Clips and screenshots: Game_<time>.mp4.part, Game_<time>.jpg.part, named after their game's folder.
             var name = Path.GetFileNameWithoutExtension(part);
-            if (Path.GetExtension(name).ToLowerInvariant() is not (".mp4" or ".jpg") || ClipLibrary.TimeFromName(name) is null) continue;
+            var folder = Path.GetFileName(Path.GetDirectoryName(part)) ?? "";
+            if (Path.GetExtension(name).ToLowerInvariant() is not (".mp4" or ".jpg")
+                || !ClipLibrary.IsGhostclipName(folder, Path.GetFileNameWithoutExtension(name))) continue;
             try
             {
                 if (nowUtc - File.GetLastWriteTimeUtc(part) < age) continue;

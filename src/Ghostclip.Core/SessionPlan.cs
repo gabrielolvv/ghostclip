@@ -9,13 +9,15 @@ namespace Ghostclip.Core;
 public static class SessionPlan
 {
     /// <summary>
-    /// Segments to link now, oldest first: from <paramref name="from"/> on, not linked yet. The one
+    /// Segments to link now, oldest first: from <paramref name="from"/> on, not linked yet, and below
+    /// <paramref name="before"/> (where the next run starts, when a part ends at a restart). The one
     /// being written (the newest) waits until it closes, except at the end of a part.
     /// </summary>
-    public static IReadOnlyList<long> ToLink(IReadOnlyList<long> sequencesAscending, long from, IReadOnlySet<long> linked, bool final)
+    public static IReadOnlyList<long> ToLink(IReadOnlyList<long> sequencesAscending, long from, IReadOnlySet<long> linked, bool final,
+        long before = long.MaxValue)
     {
         var writing = sequencesAscending.Count > 0 ? sequencesAscending[^1] : -1;
-        return sequencesAscending.Where(s => s >= from && !linked.Contains(s) && (final || s != writing)).ToList();
+        return sequencesAscending.Where(s => s >= from && s < before && !linked.Contains(s) && (final || s != writing)).ToList();
     }
 
     /// <summary>

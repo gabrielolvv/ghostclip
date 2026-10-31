@@ -22,6 +22,14 @@ public class SessionPlanTests
     }
 
     [Fact]
+    public void A_part_cut_at_a_quick_restart_stops_before_the_new_run()
+    {
+        // The recorder restarted within a second: the new run started at 13 and its first segment is being written.
+        var link = SessionPlan.ToLink([10, 11, 12, 13], from: 10, linked: new HashSet<long> { 10 }, final: true, before: 13);
+        Assert.Equal([11, 12], link);
+    }
+
+    [Fact]
     public void A_part_after_a_restart_starts_at_the_first_segment_created_since()
     {
         var segments = new[] { (500L, T0.AddSeconds(-4)), (501L, T0.AddSeconds(-2)), (502L, T0.AddSeconds(3)), (503L, T0.AddSeconds(5)) };

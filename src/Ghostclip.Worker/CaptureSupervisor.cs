@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Diagnostics;
 using System.Threading.Channels;
 using Ghostclip.Core;
@@ -34,6 +35,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private FfmpegRunner? _runner;
     private GhostclipConfig _config = new();
     private volatile WorkerState _state = WorkerState.Starting;
+    private volatile string? _runId;
+    private long _runStart;
+    private int _runs;
     private string? _encoder;
     private string? _game;
     private uint _gamePid;
@@ -226,6 +230,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         ApplyAudioRouting();
 
         var start = SegmentRing.NextStartNumber(SegmentRing.Scan(_paths.BufferDir));
+        _runStart = start;
+        _runId = string.Create(CultureInfo.InvariantCulture, $"{Environment.ProcessId}:{++_runs}");
         var args = FfmpegArgs.Record(settings, _paths.BufferDir, start, pipes, _config.AudioOffsetMs);
         _runner?.Dispose();
         _runner = FfmpegRunner.Start(ffmpeg, args, _job, _log);
@@ -347,6 +353,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 AudioRoute = _audio?.Route,
                 Microphone = _mic is { Muted: false },
                 Discord = _discord is not null && _discordPid != 0,
+                RunId = _runId,
+                RunStart = _runStart,
             };
             await SendAsync(new IpcMessage { Type = IpcType.Status, Status = status }, ct).ConfigureAwait(false);
         }

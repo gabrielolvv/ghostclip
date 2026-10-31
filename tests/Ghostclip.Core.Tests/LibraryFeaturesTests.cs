@@ -152,6 +152,54 @@ public sealed class LibraryFeaturesTests : IDisposable
         Assert.Equal("{ broken", File.ReadAllText(file));
     }
 
+    // Moving the clips folder (D: to E:, or another folder in Settings) keeps each clip's game folder and name.
+    [Fact]
+    public void Favorites_and_bookmarks_follow_clips_to_a_moved_clips_folder()
+    {
+        var state = new LibraryState();
+        state.SetFavorite(@"D:\Clips\G\G_2026-10-01_12-00-00.mp4", true);
+        state.SetBookmarks(@"D:\Clips\G\G_2026-10-02_12-00-00.mp4", [12.5]);
+
+        Assert.True(state.IsFavorite(@"E:\Videos\Ghostclip\G\G_2026-10-01_12-00-00.mp4"));
+        Assert.False(state.IsFavorite(@"E:\Videos\Ghostclip\H\G_2026-10-01_12-00-00.mp4"));
+        Assert.Equal([12.5], state.BookmarksFor(@"E:\Videos\Ghostclip\G\G_2026-10-02_12-00-00.mp4"));
+
+        var moved = new ClipEntry(@"E:\Videos\Ghostclip\G\G_2026-10-01_12-00-00.mp4", "G/G_2026-10-01_12-00-00.mp4", "G",
+            new DateTime(2026, 10, 1), 900 * 1024 * 1024, false, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
+        var newer = moved with { Path = @"E:\Videos\Ghostclip\G\G_2026-10-03_12-00-00.mp4", LastWriteUtc = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc) };
+        Assert.Empty(StorageLimit.SelectForDeletion(@"E:\Videos\Ghostclip", [moved, newer], state, 1024L * 1024 * 1024));
+
+        // Unstarring it in its new place takes the old entry away too.
+        state.SetFavorite(@"E:\Videos\Ghostclip\G\G_2026-10-01_12-00-00.mp4", false);
+        Assert.Empty(state.Favorites);
+    }
+
+    // The space limit reads favorites, then deletes: a star set in between must wait for the pass, not be lost to it.
+    [Fact]
+    public void A_favorite_set_during_a_locked_pass_waits_for_it()
+    {
+        var file = Path.Combine(_dir, "library.json");
+        var order = new List<string>();
+        var holding = new ManualResetEventSlim();
+        var pass = new Thread(() => LibraryStore.Locked(() =>
+        {
+            holding.Set();
+            Thread.Sleep(300);
+            lock (order) order.Add("pass");
+            // A write from inside the pass takes the same lock again.
+            LibraryStore.Update(file, s => s.Forget(@"C:\Clips\G\gone.mp4"));
+        }));
+        pass.Start();
+        holding.Wait(TestContext.Current.CancellationToken);
+
+        LibraryStore.Update(file, s => s.SetFavorite(@"C:\Clips\G\a.mp4", true));
+        lock (order) order.Add("favorite");
+        pass.Join();
+
+        Assert.Equal(["pass", "favorite"], order);
+        Assert.True(LibraryStore.Read(file).IsFavorite(@"C:\Clips\G\a.mp4"));
+    }
+
     // An antivirus or the indexer holding the file for a moment is not a broken file.
     [Fact]
     public void Reading_the_library_file_waits_out_a_moment_s_lock()

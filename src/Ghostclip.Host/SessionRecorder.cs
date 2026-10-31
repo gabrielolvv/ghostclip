@@ -94,23 +94,27 @@ internal sealed class SessionRecorder : IDisposable
 
     /// <summary>
     /// The recorder stopped: hands over the part so far to be saved, null when it holds nothing.
-    /// The session goes on, waiting for <see cref="RecorderResumed"/>.
+    /// The session goes on, waiting for <see cref="RecorderResumed"/>. <paramref name="nextRunStart"/>,
+    /// when the next run is already recording, is where this part ends.
     /// </summary>
-    public ClipSnapshot? RecorderStopped()
+    public ClipSnapshot? RecorderStopped(long? nextRunStart = null)
     {
         if (!Running || _dir is null) return null;
-        var part = EndPart();
+        var part = EndPart(nextRunStart ?? long.MaxValue);
         _resumedAfterUtc = DateTime.UtcNow;
         _log.Information("Recorder stopped mid-session; the session continues in a new part when recording resumes");
         if (part is not null) SavedParts++;
         return part;
     }
 
-    /// <summary>Recording is back: a new part takes the segments written from now on.</summary>
-    public void RecorderResumed()
+    /// <summary>
+    /// Recording is back: a new part takes the segments of the new run, from <paramref name="runStart"/>
+    /// when the recorder says where it started, or else the ones created since it stopped.
+    /// </summary>
+    public void RecorderResumed(long? runStart = null)
     {
         if (!Running || _dir is not null || _resumedAfterUtc is not { } after) return;
-        BeginPart(from: -1, resumedAfterUtc: after);
+        BeginPart(from: runStart ?? -1, resumedAfterUtc: after);
         _log.Information("Session continues in a new part");
     }
 
@@ -119,7 +123,7 @@ internal sealed class SessionRecorder : IDisposable
     {
         if (!Running) return null;
         _timer.Stop();
-        var part = _dir is null ? null : EndPart();
+        var part = _dir is null ? null : EndPart(long.MaxValue);
         _running = false;
         var took = DateTime.Now - _startedLocal;
         _log.Information("Session recording stopped after {Minutes:0.0} min ({Parts} earlier parts)", took.TotalMinutes, SavedParts);
@@ -139,10 +143,10 @@ internal sealed class SessionRecorder : IDisposable
         Directory.CreateDirectory(_dir);
     }
 
-    private ClipSnapshot? EndPart()
+    private ClipSnapshot? EndPart(long before)
     {
         var dir = _dir!;
-        Collect(final: true);
+        Collect(final: true, before);
         _dir = null;
         var took = DateTime.Now - _partStartedLocal;
         _log.Information("Session part ended after {Minutes:0.0} min: {Segments} segments, {Bookmarks} bookmarks",
@@ -160,7 +164,7 @@ internal sealed class SessionRecorder : IDisposable
     // Links every closed segment of this part and rewrites the list and details to match. The one being
     // written waits until it closes (a link to it now would be a file the recorder still holds), except at
     // the end, where it is copied as far as it goes.
-    private void Collect(bool final = false)
+    private void Collect(bool final = false, long before = long.MaxValue)
     {
         if (_dir is not { } dir) return;
         var segments = SegmentRing.Scan(_paths.BufferDir);
@@ -174,7 +178,7 @@ internal sealed class SessionRecorder : IDisposable
         }
         var writing = segments.Count > 0 ? segments[^1].Sequence : -1;
         var added = false;
-        foreach (var sequence in SessionPlan.ToLink(segments.Select(s => s.Sequence).ToList(), _from, _linked, final))
+        foreach (var sequence in SessionPlan.ToLink(segments.Select(s => s.Sequence).ToList(), _from, _linked, final, before))
         {
             var segment = segments.First(s => s.Sequence == sequence);
             var target = Path.Combine(dir, Path.GetFileName(segment.Path));

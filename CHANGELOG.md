@@ -3,6 +3,23 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- A session also splits at a recorder restart too quick for the tray to see
+  it stop (under a second): each recorder run is now named, and a new one
+  ends the part right before its first segment.
+- Starring a clip while the space limit is making room waits for that pass,
+  so the clip can't be deleted a moment after it was starred.
+- Favorites and a session's bookmarks follow clips to a moved clips folder
+  (another drive, or another folder in Settings): a clip is also recognized
+  by its game folder and name. Before, they were lost and favorites stopped
+  protecting clips from the space limit.
+- Cleaning up cut-off saves follows the space limit's rule: only a .part file
+  named after its game's folder is Ghostclip's, so a browser's paused
+  download with a date in its name is left alone.
+
 ## 0.8.1
 
 ### Changed

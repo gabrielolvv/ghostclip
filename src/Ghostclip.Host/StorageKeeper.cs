@@ -34,7 +34,11 @@ internal sealed class StorageKeeper(GhostclipPaths paths, Func<GhostclipConfig> 
         });
     }
 
-    private void Run()
+    // Under the library file's lock from reading favorites to forgetting the deleted: a star set while
+    // the pass runs waits for it instead of protecting a clip already chosen for deletion.
+    private void Run() => LibraryStore.Locked(RunLocked, paths.LibraryFile);
+
+    private void RunLocked()
     {
         var cfg = config();
         var root = cfg.ResolvedClipsFolder;
