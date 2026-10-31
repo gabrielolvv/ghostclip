@@ -47,16 +47,19 @@ public sealed class PolishTests : IDisposable
         var path = Path.Combine(_dir, "config.json");
         ConfigStore.Save(path, new GhostclipConfig());
         var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var release = Task.Run(async () =>
+        // A thread of its own lets go of the file: a pool task's delay could run late on a busy
+        // runner, past Save's retries, which then failed the release build.
+        var release = new Thread(() =>
         {
-            await Task.Delay(150, TestContext.Current.CancellationToken);
-            await reader.DisposeAsync();
-        }, TestContext.Current.CancellationToken);
+            Thread.Sleep(150);
+            reader.Dispose();
+        });
+        release.Start();
 
         // On another thread, so the reader can let go while Save is retrying.
         await Task.Run(() => ConfigStore.Save(path, new GhostclipConfig { ClipSeconds = 45 }), TestContext.Current.CancellationToken);
 
-        await release;
+        release.Join();
         Assert.True(ConfigStore.TryRead(path, out var config, out _));
         Assert.Equal(45, config!.ClipSeconds);
         Assert.False(File.Exists(path + ".tmp"));

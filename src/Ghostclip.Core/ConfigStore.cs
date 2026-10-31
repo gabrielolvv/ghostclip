@@ -71,6 +71,7 @@ public static class ConfigStore
             JsonSerializer.Serialize(stream, config, CoreJson.Indented.GhostclipConfig);
         }
         // A reader (the tray applying the last save, an editor, antivirus) can hold the file for a moment.
+        // About a second: half that ran out on a busy CI runner, and antivirus scans can take as long.
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -78,7 +79,7 @@ public static class ConfigStore
                 File.Move(temp, path, overwrite: true);
                 return;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 10)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
             {
                 Thread.Sleep(50);
             }

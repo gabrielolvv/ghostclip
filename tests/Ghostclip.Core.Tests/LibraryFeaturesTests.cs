@@ -132,6 +132,27 @@ public sealed class LibraryFeaturesTests : IDisposable
         Assert.Empty(LibraryStore.Read(file).Favorites);
     }
 
+    // The library window reading the file while the tray writes a session's bookmarks must not lose the write.
+    [Fact]
+    public void Writing_the_library_file_waits_out_a_reader()
+    {
+        var file = Path.Combine(_dir, "library.json");
+        LibraryStore.Update(file, s => s.SetFavorite(@"C:\Clips\G\a.mp4", true));
+        var reader = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var release = new Thread(() =>
+        {
+            Thread.Sleep(150);
+            reader.Dispose();
+        });
+        release.Start();
+
+        LibraryStore.Update(file, s => s.SetBookmarks(@"C:\Clips\G\s.mp4", [9]));
+
+        release.Join();
+        Assert.Equal([9.0], LibraryStore.Read(file).BookmarksFor(@"C:\Clips\G\s.mp4"));
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+    }
+
     [Fact]
     public void The_page_gets_favorite_image_and_bookmarks()
     {
