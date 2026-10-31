@@ -24,10 +24,17 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   Discord, sem música. Ele segue o jogo que você está jogando, não qualquer
   janela em primeiro plano.
 - **Microfone em faixa separada,** para silenciar ou rebalancear depois.
+- **Discord em faixa própria** (opcional): o som do app do Discord sai da
+  faixa principal e é gravado à parte, para dar para silenciar a call depois.
+- **Prints** no Alt+F11, salvos em JPEG junto dos clipes.
+- **Gravação da sessão** no Alt+F9: guarda tudo do começo ao fim, e a hotkey
+  de clipe adiciona marcadores para pular até o momento. Ela aproveita o
+  buffer de replay em vez de rodar um segundo encoder, então o jogo não paga
+  nada a mais.
 - **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo.
-- **Biblioteca de clipes.** Todos os clipes por jogo, com miniaturas, player
-  e linha do tempo sobre a forma de onda do áudio. Só roda enquanto a janela
-  está aberta.
+- **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
+  player e linha do tempo sobre a forma de onda do áudio; favoritos e
+  renomear. Só roda enquanto a janela está aberta.
 - **Corte** arrastando duas alças, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload

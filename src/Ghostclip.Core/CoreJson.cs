@@ -13,6 +13,7 @@ namespace Ghostclip.Core;
 [JsonSerializable(typeof(IpcMessage))]
 [JsonSerializable(typeof(ProbeCache))]
 [JsonSerializable(typeof(RecordingSession))]
+[JsonSerializable(typeof(LibraryState))]
 public sealed partial class CoreJson : JsonSerializerContext
 {
     /// <summary>Same contract, indented: for files people may open and edit.</summary>

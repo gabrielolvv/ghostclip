@@ -146,6 +146,9 @@ internal sealed class LibraryBridge : IDisposable
 
             switch (r.Type)
             {
+                case "meta" when ClipLibrary.IsImage(path):
+                    // A screenshot is its own thumbnail and has nothing to probe.
+                    break;
                 case "meta":
                     var (meta, thumb) = await Track(_meta.GetAsync(path, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("meta", Path: path, Meta: meta,
@@ -169,7 +172,23 @@ internal sealed class LibraryBridge : IDisposable
                     break;
                 case "delete":
                     RecycleBin.Send(path, _window.Handle);
+                    LibraryStore.Update(_paths.LibraryFile, s => s.Forget(path));
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));
+                    break;
+                case "favorite":
+                    LibraryStore.Update(_paths.LibraryFile, s => s.SetFavorite(path, r.Favorite));
+                    await ListAsync().ConfigureAwait(true);
+                    break;
+                case "rename":
+                    // Same folder, same extension: only the name people see changes.
+                    var renamed = ClipNaming.RenamedPath(path, r.Name ?? "", File.Exists);
+                    if (renamed is not null)
+                    {
+                        File.Move(path, renamed);
+                        LibraryStore.Update(_paths.LibraryFile, s => s.Move(path, renamed));
+                    }
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: renamed ?? path));
+                    await ListAsync().ConfigureAwait(true);
                     break;
                 default:
                     _log.Warning("Unknown library request {Type}", r.Type);
@@ -211,8 +230,13 @@ internal sealed class LibraryBridge : IDisposable
         if (RootAvailable)
         {
             var root = Root;
-            var clips = await Task.Run(() => ClipLibrary.Scan(root)).ConfigureAwait(true);
-            _window.Post(new LibraryEvent("clips", Clips: clips.Select(ClipDto.From).ToList(), Root: root));
+            var library = _paths.LibraryFile;
+            var clips = await Task.Run(() =>
+            {
+                var state = LibraryStore.Read(library);
+                return ClipLibrary.Scan(root).Select(c => ClipDto.From(c, state)).ToList();
+            }).ConfigureAwait(true);
+            _window.Post(new LibraryEvent("clips", Clips: clips, Root: root));
         }
         else
         {
@@ -278,7 +302,10 @@ internal sealed class LibraryBridge : IDisposable
         });
         try
         {
-            _watcher = new FileSystemWatcher(Root, "*.mp4") { IncludeSubdirectories = true, EnableRaisingEvents = true };
+            _watcher = new FileSystemWatcher(Root) { IncludeSubdirectories = true };
+            // Clips and screenshots.
+            foreach (var filter in new[] { "*.mp4", "*.jpg", "*.png" }) _watcher.Filters.Add(filter);
+            _watcher.EnableRaisingEvents = true;
             _watcher.Created += OnFolderChanged;
             _watcher.Deleted += OnFolderChanged;
             _watcher.Renamed += OnFolderChanged;

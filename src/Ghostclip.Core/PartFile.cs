@@ -24,9 +24,11 @@ public static class PartFile
         var removed = 0;
         var options = new EnumerationOptions { IgnoreInaccessible = true };
         foreach (var part in Directory.EnumerateDirectories(root, "*", options)
-            .SelectMany(game => Directory.EnumerateFiles(game, "*.mp4.part", options)))
+            .SelectMany(game => Directory.EnumerateFiles(game, "*.part", options)))
         {
-            if (ClipLibrary.TimeFromName(Path.GetFileNameWithoutExtension(part)) is null) continue;
+            // Clips and screenshots: Game_..._time.mp4.part, Game_..._time.jpg.part.
+            var name = Path.GetFileNameWithoutExtension(part);
+            if (Path.GetExtension(name).ToLowerInvariant() is not (".mp4" or ".jpg") || ClipLibrary.TimeFromName(name) is null) continue;
             try
             {
                 if (nowUtc - File.GetLastWriteTimeUtc(part) < age) continue;

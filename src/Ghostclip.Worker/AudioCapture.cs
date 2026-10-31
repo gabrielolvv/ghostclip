@@ -7,6 +7,9 @@ using Serilog;
 
 namespace Ghostclip.Worker;
 
+/// <summary>Which track an <see cref="AudioCapture"/> records.</summary>
+internal enum AudioTrack { Main, Microphone, Discord }
+
 /// <summary>
 /// One audio track: WASAPI capture fed to FFmpeg as raw 48 kHz float stereo
 /// over a named pipe.
@@ -14,8 +17,10 @@ namespace Ghostclip.Worker;
 /// The main track records either the whole playback mix (loopback) or just the
 /// game's process tree (process loopback); <see cref="SetTargetProcess"/>
 /// switches between them live, on the same pipe, so changing games never
-/// restarts the recorder. The microphone track records the default capture
-/// device and can be muted per game, which records silence instead.
+/// restarts the recorder. With a Discord track, the mix leaves Discord out
+/// (<see cref="SetExcludedProcess"/>) and the Discord track records only it,
+/// silence while it isn't running. The microphone track records the default
+/// capture device and can be muted per game, which records silence instead.
 ///
 /// Loopback delivers nothing while nothing plays. A raw PCM input that stops
 /// would stall FFmpeg's muxer and with it the video, so gaps are filled with
@@ -30,6 +35,7 @@ internal sealed class AudioCapture : IDisposable
     private const int MaxSilenceGapFrames = SampleRate * 30 / 1000;
 
     private readonly ILogger _log;
+    private readonly AudioTrack _track;
     private readonly bool _microphone;
     private readonly string _name;
     private readonly Thread _thread;
@@ -48,15 +54,17 @@ internal sealed class AudioCapture : IDisposable
     private volatile bool _stop;
     private volatile bool _muted;
     private volatile uint _targetPid;
+    private volatile uint _excludedPid;
     private volatile string _route = "starting";
     private PipeSession? _session;
     private string? _lastError;
 
-    public AudioCapture(ILogger log, bool microphone)
+    public AudioCapture(ILogger log, AudioTrack track)
     {
         _log = log;
-        _microphone = microphone;
-        _name = microphone ? "microphone" : "audio";
+        _track = track;
+        _microphone = track == AudioTrack.Microphone;
+        _name = track switch { AudioTrack.Microphone => "microphone", AudioTrack.Discord => "discord", _ => "audio" };
         _thread = new Thread(Run) { IsBackground = true, Name = $"capture-{_name}", Priority = ThreadPriority.AboveNormal };
         _thread.Start();
     }
@@ -67,8 +75,14 @@ internal sealed class AudioCapture : IDisposable
     /// <summary>QPC ticks of the first sample FFmpeg read in this session; 0 until then.</summary>
     public long StreamStartTicks => Volatile.Read(ref _streamStartTicks);
 
-    /// <summary>Game-only audio: capture this process tree. 0 goes back to the whole system mix.</summary>
+    /// <summary>
+    /// Main track: game-only audio, capture this process tree; 0 goes back to the whole
+    /// system mix. Discord track: Discord's process tree; 0 records silence.
+    /// </summary>
     public void SetTargetProcess(uint processId) => _targetPid = processId;
+
+    /// <summary>Main track: the system mix without this process tree (Discord, on its own track). 0 leaves nothing out.</summary>
+    public void SetExcludedProcess(uint processId) => _excludedPid = processId;
 
     /// <summary>Records silence instead of the device, keeping the track's timeline intact.</summary>
     public bool Muted
@@ -210,8 +224,9 @@ internal sealed class AudioCapture : IDisposable
         }
     }
 
-    // What the capture thread should have open: a device id, or a process id for game-only audio.
-    private readonly record struct Source(string? DeviceId, uint ProcessId);
+    // What the capture thread should have open: a device id, or a process tree to include or leave out.
+    // All empty is the Discord track while Discord isn't running: nothing open, silence.
+    private readonly record struct Source(string? DeviceId, uint ProcessId, bool Exclude = false);
 
     private void Run()
     {
@@ -223,6 +238,7 @@ internal sealed class AudioCapture : IDisposable
         long retryAt = 0;
         long nextCheck = 0;
         uint failedPid = 0;
+        var idle = false;
 
         while (!_stop)
         {
@@ -231,37 +247,60 @@ internal sealed class AudioCapture : IDisposable
             {
                 enumerator ??= Wasapi.CreateEnumerator();
                 var pid = _microphone ? 0 : _targetPid;
+                var excluded = _track == AudioTrack.Main && pid == 0 ? _excludedPid : 0;
                 if (pid == failedPid && pid != 0) pid = 0; // game-only failed for this game: use the system mix
+                if (excluded == failedPid && excluded != 0) excluded = 0; // and leaving Discord out failed: the whole mix
+                var none = _track == AudioTrack.Discord && pid == 0;
 
                 // Re-check once a second what should be open: cheaper and simpler than COM callbacks.
-                if (client is not null && now >= nextCheck)
+                if ((client is not null || idle) && now >= nextCheck)
                 {
                     nextCheck = now + Stopwatch.Frequency;
-                    var wanted = pid != 0 ? new Source(null, pid) : new Source(DefaultDeviceId(enumerator), 0);
+                    var wanted = none ? default
+                        : pid != 0 ? new Source(null, pid)
+                        : excluded != 0 ? new Source(null, excluded, Exclude: true)
+                        : new Source(DefaultDeviceId(enumerator), 0);
                     if (wanted != open)
                     {
                         _log.Information("{Track}: switching source", _name);
                         Close(ref client, ref capture);
+                        open = default;
+                        idle = false;
                     }
                 }
-                if (client is null && now >= retryAt)
+                if (client is null && !idle && now >= retryAt)
                 {
-                    try
+                    if (none)
                     {
-                        (client, capture, open) = pid != 0 ? OpenProcess(pid) : OpenDevice(enumerator);
+                        idle = true;
+                        _route = "silence";
+                        _log.Information("{Track}: not running, recording silence", _name);
                     }
-                    catch (Exception ex) when (pid != 0 && ex is COMException or TimeoutException or InvalidCastException)
+                    else
                     {
-                        // Older Windows or a protected process: fall back rather than record nothing.
-                        _log.Warning("Game-only audio unavailable for pid {Pid} ({Error}); recording system audio", pid, ex.Message);
-                        failedPid = pid;
-                        continue;
+                        var target = pid != 0 ? pid : excluded;
+                        try
+                        {
+                            (client, capture, open) = target != 0 ? OpenProcess(target, exclude: pid == 0) : OpenDevice(enumerator);
+                        }
+                        catch (Exception ex) when (target != 0 && ex is COMException or TimeoutException or InvalidCastException)
+                        {
+                            // Older Windows or a protected process: fall back rather than record nothing.
+                            _log.Warning("Process audio unavailable for pid {Pid} ({Error}); recording the system mix", target, ex.Message);
+                            failedPid = target;
+                            continue;
+                        }
+                        _route = open switch
+                        {
+                            { ProcessId: not 0, Exclude: true } => "system without discord",
+                            { ProcessId: not 0 } => _track == AudioTrack.Discord ? "discord" : $"game (pid {open.ProcessId})",
+                            _ => _microphone ? "microphone" : "system",
+                        };
+                        _lastError = null;
+                        _log.Information("{Track}: capturing {Route}", _name, _route);
                     }
-                    _route = open.ProcessId != 0 ? $"game (pid {open.ProcessId})" : _microphone ? "microphone" : "system";
-                    _lastError = null;
-                    _log.Information("{Track}: capturing {Route}", _name, _route);
                 }
-                if (_targetPid != failedPid) failedPid = 0;
+                if (_targetPid != failedPid && _excludedPid != failedPid) failedPid = 0;
 
                 var got = capture is not null && Drain(capture);
                 PadToClock(got);
@@ -315,14 +354,14 @@ internal sealed class AudioCapture : IDisposable
         }
     }
 
-    private (IAudioClient, IAudioCaptureClient, Source) OpenProcess(uint pid)
+    private (IAudioClient, IAudioCaptureClient, Source) OpenProcess(uint pid, bool exclude)
     {
-        var client = Wasapi.ActivateProcessLoopback(pid);
+        var client = Wasapi.ActivateProcessLoopback(pid, exclude);
         // Process loopback is event-driven only; the event is signalled but the
         // 10 ms poll does the reading, same as the other sources.
         var capture = Start(client, Wasapi.AUDCLNT_STREAMFLAGS_LOOPBACK | Wasapi.AUDCLNT_STREAMFLAGS_EVENTCALLBACK |
             Wasapi.AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | Wasapi.AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY);
-        return (client, capture, new Source(null, pid));
+        return (client, capture, new Source(null, pid, exclude));
     }
 
     private IAudioCaptureClient Start(IAudioClient client, uint flags)

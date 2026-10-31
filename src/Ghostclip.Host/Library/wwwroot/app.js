@@ -47,6 +47,7 @@ const state = {
   requested: new Set(),  // paths whose meta was asked for
   versions: new Map(),   // path -> version: a replaced file (same name, new trim) must not keep the old details
   game: null,            // null = all clips
+  favorites: false,      // only favorites, across games
   query: '',
   pendingOpen: null,
   current: null,         // clip shown in the clip view
@@ -92,11 +93,19 @@ function clockLabel(date) { return `${pad(date.getHours())}:${pad(date.getMinute
 
 function fileName(path) { return path.slice(path.lastIndexOf('\\') + 1); }
 
+function stem(path) { return fileName(path).replace(/\.(mp4|jpg|png)$/i, ''); }
+
+function extension(path) { const m = /\.[^.\\]+$/.exec(path); return m ? m[0] : ''; }
+
 function codecLabel(codec) {
   return { h264: 'H.264', hevc: 'HEVC' }[codec] || (codec || '').toUpperCase();
 }
 
-function tracksLabel(count) {
+// Track names as saving wrote them; clips cached before names were read only know how many there are.
+function tracksLabel(meta) {
+  const names = { Game: L('GAME', 'JOGO'), Microphone: 'MIC', Discord: 'DISCORD' };
+  if (meta.audioTitles && meta.audioTitles.length) return meta.audioTitles.map(t => names[t] || t.toUpperCase()).join(' + ');
+  const count = meta.audioTracks;
   return count >= 2 ? L('GAME + MIC', 'JOGO + MIC') : count === 1 ? L('GAME', 'JOGO') : L('NO AUDIO', 'SEM ÁUDIO');
 }
 
@@ -117,6 +126,7 @@ function icon(paths) {
 
 const ICON_COPY = '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>';
 const ICON_FOLDER = '<path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>';
+const ICON_STAR = '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>';
 
 // Same rule as ClipMedia.SnapStart: a stream-copy trim starts at the keyframe at or before the asked time.
 function snapStart(keyframes, seconds) {
@@ -133,7 +143,7 @@ function snapStart(keyframes, seconds) {
 function visibleClips() {
   const q = state.query.trim().toLowerCase();
   return state.clips.filter(c =>
-    (state.game === null || c.game === state.game) &&
+    (state.game === null || c.game === state.game) && (!state.favorites || c.favorite) &&
     (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)));
 }
 
@@ -145,12 +155,13 @@ function renderSidebar() {
 
   const nav = $('games');
   nav.replaceChildren();
-  const row = (label, count, game) => {
-    const b = el('button', 'game' + (state.game === game ? ' on' : ''));
+  const row = (label, count, game, favorites = false) => {
+    const b = el('button', 'game' + (state.game === game && state.favorites === favorites ? ' on' : ''));
     b.type = 'button';
     b.append(el('span', 'name', label), el('span', 'mono', String(count)));
     b.addEventListener('click', () => {
       state.game = game;
+      state.favorites = favorites;
       if (state.current) closeClip();
       showView('library');
       renderSidebar();
@@ -159,6 +170,7 @@ function renderSidebar() {
     nav.append(b);
   };
   row(L('All clips', 'Todos os clipes'), state.clips.length, null);
+  row(L('★ Favorites', '★ Favoritos'), state.clips.filter(c => c.favorite).length, null, true);
   for (const [game, count] of games) row(game, count, game);
 
   const bytes = state.clips.reduce((sum, c) => sum + c.bytes, 0);
@@ -185,33 +197,48 @@ function renderCard(clip) {
   card.dataset.path = clip.path;
   const thumb = el('div', 'thumb');
   card.append(thumb);
-  if (clip.derived) {
+  if (clip.image) {
+    // A screenshot is its own thumbnail.
+    thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT')));
+    thumb.style.backgroundImage = `url("${clip.url}?v=${encodeURIComponent(clip.version)}")`;
+  } else if (clip.derived) {
     const name = fileName(clip.path);
     thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : L('TRIM', 'CORTE')));
+  } else if (clip.bookmarks) {
+    thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`)));
+  }
+  if (clip.favorite) {
+    const star = el('span', 'star');
+    star.append(icon(ICON_STAR));
+    thumb.append(star);
   }
   const quick = el('div', 'quick');
-  const quickButton = (paths, label, type) => {
-    const b = el('button');
+  const quickButton = (paths, label, message, className) => {
+    const b = el('button', className);
     b.type = 'button';
     b.setAttribute('aria-label', label);
     b.append(icon(paths));
-    b.addEventListener('click', e => { e.stopPropagation(); post({ type, path: clip.path }); });
+    b.addEventListener('click', e => { e.stopPropagation(); post({ ...message, path: clip.path }); });
     quick.append(b);
   };
-  quickButton(ICON_COPY, L('Copy file', 'Copiar arquivo'), 'copy');
-  quickButton(ICON_FOLDER, L('Show in folder', 'Mostrar na pasta'), 'reveal');
+  quickButton(ICON_STAR, clip.favorite ? L('Remove from favorites', 'Tirar dos favoritos') : L('Add to favorites', 'Adicionar aos favoritos'),
+    { type: 'favorite', favorite: !clip.favorite }, clip.favorite ? 'fav' : '');
+  quickButton(ICON_COPY, L('Copy file', 'Copiar arquivo'), { type: 'copy' });
+  quickButton(ICON_FOLDER, L('Show in folder', 'Mostrar na pasta'), { type: 'reveal' });
   thumb.append(quick);
 
   const text = el('div', 'card-text');
   const date = savedDate(clip);
-  text.append(el('div', 'card-title', state.game === null ? clip.game : fileName(clip.path).replace(/\.mp4$/i, '')),
+  text.append(el('div', 'card-title', state.game === null ? clip.game : stem(clip.path)),
     el('div', 'card-sub', `${clockLabel(date)} · ${fmtSize(clip.bytes)}`));
   card.append(text);
 
   card.addEventListener('click', () => openClip(clip.path));
   card.addEventListener('keydown', e => { if (e.key === 'Enter') openClip(clip.path); });
-  applyMeta(card, clip.path);
-  if (!state.meta.has(clip.path)) observer.observe(card);
+  if (!clip.image) {
+    applyMeta(card, clip.path);
+    if (!state.meta.has(clip.path)) observer.observe(card);
+  }
   return card;
 }
 
@@ -274,15 +301,38 @@ function openClip(path) {
   }
   state.current = clip;
   $('confirm').hidden = true;
-  $('clip-game').textContent = clip.game;
+  $('rename').hidden = true;
+  $('clip-game').textContent = `${clip.game} · ${stem(clip.path)}`;
   $('no-video').hidden = true;
+  // The list leaves image out for videos: undefined would make toggle flip the class instead of removing it.
+  $('clip').classList.toggle('is-image', !!clip.image);
+  showFavorite();
   // The version keeps WebView2 from serving a cached copy of a file that was replaced under the same name.
-  video.src = `${clip.url}?v=${encodeURIComponent(clip.version)}`;
+  const url = `${clip.url}?v=${encodeURIComponent(clip.version)}`;
+  const image = $('image');
+  image.hidden = !clip.image;
+  video.hidden = !!clip.image;
+  if (clip.image) {
+    releaseVideo();
+    image.src = url;
+  } else {
+    image.removeAttribute('src');
+    video.src = url;
+  }
   state.start = 0;
   state.end = 0;
   showView('clip');
+  if (clip.image) {
+    $('clip-info').textContent = fmtSize(clip.bytes);
+    return;
+  }
   requestMeta(clip.path);
   setupTimeline();
+}
+
+function showFavorite() {
+  const on = !!(state.current && state.current.favorite);
+  $('a-favorite').setAttribute('aria-pressed', String(on));
 }
 
 function closeClip() {
@@ -319,9 +369,30 @@ function setupTimeline() {
     state.end = meta.duration;
   }
   $('clip-info').textContent = [`${meta.height}P${Math.round(meta.fps)}`, codecLabel(meta.videoCodec),
-    tracksLabel(meta.audioTracks), fmtSize(clip.bytes)].join(' · ');
+    tracksLabel(meta), fmtSize(clip.bytes)].join(' · ');
   $('t-end').textContent = fmtTime(meta.duration);
+  placeBookmarks();
   layoutRange();
+}
+
+// A session's bookmarks on the timeline; a click jumps there.
+function placeBookmarks() {
+  for (const old of document.querySelectorAll('.bookmark')) old.remove();
+  const meta = currentMeta();
+  const clip = state.current;
+  if (!meta || !clip || !clip.bookmarks) return;
+  for (const [i, at] of clip.bookmarks.entries()) {
+    if (at > meta.duration) continue;
+    const mark = el('div', 'bookmark');
+    mark.style.left = `${(at / meta.duration) * 100}%`;
+    mark.title = L(`Bookmark ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`);
+    mark.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      video.currentTime = at;
+      placePlayhead();
+    });
+    $('timeline').append(mark);
+  }
 }
 
 function layoutRange() {
@@ -386,7 +457,7 @@ function tick() {
 }
 
 function togglePlay() {
-  if (!state.current) return;
+  if (!state.current || state.current.image) return;
   if (video.paused) {
     if (video.currentTime < state.start || video.currentTime >= state.end) video.currentTime = state.start;
     video.play().catch(err => {
@@ -496,7 +567,36 @@ $('a-discord').addEventListener('click', () => {
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
-$('a-delete').addEventListener('click', () => { $('confirm').hidden = false; });
+$('a-favorite').addEventListener('click', () => {
+  if (!state.current) return;
+  // Shown at once; the list that follows confirms it.
+  state.current.favorite = !state.current.favorite;
+  showFavorite();
+  post({ type: 'favorite', path: state.current.path, favorite: state.current.favorite });
+});
+$('a-rename').addEventListener('click', () => {
+  if (!state.current) return;
+  $('confirm').hidden = true;
+  $('rename').hidden = false;
+  $('rename-ext').textContent = extension(state.current.path);
+  const input = $('rename-name');
+  input.value = stem(state.current.path);
+  input.focus();
+  input.select();
+});
+$('r-no').addEventListener('click', () => { $('rename').hidden = true; });
+$('rename-name').addEventListener('keydown', e => { if (e.key === 'Escape') $('rename').hidden = true; });
+$('rename').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!state.current) return;
+  const name = $('rename-name').value.trim();
+  if (!name || name === stem(state.current.path)) { $('rename').hidden = true; return; }
+  $('rename').hidden = true;
+  // The player holds the file open, and Windows can't rename an open file.
+  releaseVideo();
+  post({ type: 'rename', path: state.current.path, name });
+});
+$('a-delete').addEventListener('click', () => { $('rename').hidden = true; $('confirm').hidden = false; });
 $('c-no').addEventListener('click', () => { $('confirm').hidden = true; });
 $('c-yes').addEventListener('click', () => {
   if (!state.current) return;
@@ -557,6 +657,11 @@ function onDone(message) {
         showView('library');
       }
       break;
+    case 'rename':
+      toast(L('Renamed', 'Renomeado'));
+      // The list with the new name follows; the clip opens again under it.
+      if (state.current && state.current.path === message.path) state.pendingOpen = message.output;
+      break;
   }
 }
 
@@ -587,6 +692,11 @@ function onMessage(message) {
       renderSidebar();
       renderGrid();
       if (state.current && !state.clips.some(c => c.path === state.current.path)) closeClip();
+      // The open clip keeps its place but takes the new favorite and bookmarks.
+      if (state.current) {
+        state.current = state.clips.find(c => c.path === state.current.path) || state.current;
+        showFavorite();
+      }
       if (state.pendingOpen) {
         const path = state.pendingOpen;
         state.pendingOpen = null;
@@ -612,7 +722,8 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
-      if (message.op === 'delete' && state.current && state.current.path === message.path) {
+      // Not deleted or not renamed: the player had let go of the file, so it takes it back.
+      if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;
       }
       // A clip whose details can't be read keeps its plain tile and is asked for again when the list next

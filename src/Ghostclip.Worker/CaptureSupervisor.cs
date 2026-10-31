@@ -29,6 +29,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private readonly Channel<GhostclipConfig> _configs = Channel.CreateUnbounded<GhostclipConfig>();
     private AudioCapture? _audio;
     private AudioCapture? _mic;
+    private AudioCapture? _discord;
+    private volatile uint _discordPid;
     private FfmpegRunner? _runner;
     private GhostclipConfig _config = new();
     private volatile WorkerState _state = WorkerState.Starting;
@@ -60,13 +62,27 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         ApplyAudioRouting();
     }
 
-    // Game-only audio and per-game mic mute switch live: no restart, buffer kept.
+    // Game-only audio, per-game mic mute and Discord coming and going switch live: no restart, buffer kept.
     private void ApplyAudioRouting()
     {
         var config = _config;
         var gameOnly = config.AudioSourceFor(_game) == AudioSourceMode.GameOnly && _gamePid != 0;
         _audio?.SetTargetProcess(gameOnly ? _gamePid : 0);
+        // On its own track, Discord is left out of the system one, so a call isn't recorded twice.
+        _audio?.SetExcludedProcess(_discord is not null ? _discordPid : 0);
+        _discord?.SetTargetProcess(_discordPid);
         if (_mic is not null) _mic.Muted = config.MicrophoneMutedFor(_game);
+    }
+
+    // Two process lookups every couple of seconds, only while there is a Discord track.
+    private void FindDiscord()
+    {
+        if (_discord is null) return;
+        var pid = DiscordProcess.Find();
+        if (pid == _discordPid) return;
+        _log.Information(pid != 0 ? "Discord found (pid {Pid})" : "Discord closed", pid);
+        _discordPid = pid;
+        ApplyAudioRouting();
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -171,7 +187,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         AudioCapture? first = null;
         if (_config.SystemAudio)
         {
-            _audio ??= new AudioCapture(_log, microphone: false);
+            _audio ??= new AudioCapture(_log, AudioTrack.Main);
             pipes.Add(_audio.BeginSession());
             titles.Add("Game");
             first = _audio;
@@ -183,7 +199,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
         if (_config.Microphone)
         {
-            _mic ??= new AudioCapture(_log, microphone: true);
+            _mic ??= new AudioCapture(_log, AudioTrack.Microphone);
             pipes.Add(_mic.BeginSession());
             titles.Add("Microphone");
             first ??= _mic;
@@ -192,6 +208,20 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             _mic?.Dispose();
             _mic = null;
+        }
+        if (_config.DiscordTrack)
+        {
+            _discord ??= new AudioCapture(_log, AudioTrack.Discord);
+            pipes.Add(_discord.BeginSession());
+            titles.Add("Discord");
+            first ??= _discord;
+            _discordPid = DiscordProcess.Find();
+        }
+        else
+        {
+            _discord?.Dispose();
+            _discord = null;
+            _discordPid = 0;
         }
         ApplyAudioRouting();
 
@@ -222,6 +252,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             {
                 _audio?.EndSession();
                 _mic?.EndSession();
+                _discord?.EndSession();
                 return Outcome.Exited;
             }
 
@@ -293,13 +324,16 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
         _audio?.EndSession();
         _mic?.EndSession();
+        _discord?.EndSession();
     }
 
     private async Task HeartbeatAsync(CancellationToken ct)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        var beat = 0;
         while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
         {
+            if (++beat % 2 == 0) FindDiscord();
             var r = _runner;
             var status = new WorkerStatus
             {
@@ -312,6 +346,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 Audio = _audio is not null,
                 AudioRoute = _audio?.Route,
                 Microphone = _mic is { Muted: false },
+                Discord = _discord is not null && _discordPid != 0,
             };
             await SendAsync(new IpcMessage { Type = IpcType.Status, Status = status }, ct).ConfigureAwait(false);
         }
@@ -387,6 +422,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         await StopRecorderAsync().ConfigureAwait(false);
         _audio?.Dispose();
         _mic?.Dispose();
+        _discord?.Dispose();
         _job.Dispose();
     }
 }

@@ -148,16 +148,17 @@ internal static partial class Wasapi
     public static readonly StrategyBasedComWrappers ComWrappers = new();
 
     /// <summary>
-    /// An IAudioClient that captures only what one process tree plays (Windows 10 2004+).
-    /// Nothing is injected into the game: Windows routes the audio itself.
+    /// An IAudioClient that captures only what one process tree plays, or with
+    /// <paramref name="exclude"/> everything but it (Windows 10 2004+). Nothing is
+    /// injected into the game: Windows routes the audio itself.
     /// </summary>
-    public static unsafe IAudioClient ActivateProcessLoopback(uint processId)
+    public static unsafe IAudioClient ActivateProcessLoopback(uint processId, bool exclude = false)
     {
-        // AUDIOCLIENT_ACTIVATION_PARAMS { PROCESS_LOOPBACK, { pid, INCLUDE_TARGET_PROCESS_TREE } }
+        // AUDIOCLIENT_ACTIVATION_PARAMS { PROCESS_LOOPBACK, { pid, INCLUDE_ or EXCLUDE_TARGET_PROCESS_TREE } }
         var parameters = stackalloc int[3];
         parameters[0] = 1;
         parameters[1] = (int)processId;
-        parameters[2] = 0;
+        parameters[2] = exclude ? 1 : 0;
         // PROPVARIANT holding a VT_BLOB that points at the parameters.
         var variant = stackalloc byte[24];
         new Span<byte>(variant, 24).Clear();

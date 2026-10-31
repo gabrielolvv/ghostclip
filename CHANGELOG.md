@@ -3,6 +3,23 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Screenshots: Alt+F11 saves a JPEG of the recorded monitor next to the
+  clips, and the library shows them with the clips.
+- Session recording: Alt+F9 starts and stops it. It keeps the replay buffer
+  from start to stop instead of running a second encoder, so it costs the game
+  nothing extra (it does take disk: about 9 GB an hour at 20 Mbps). During a
+  session the clip hotkey also adds a bookmark, shown on the timeline. A
+  session cut off by a crash or an exit is finished on the next start.
+- Discord on its own track (Settings > Audio): the Discord app's sound is left
+  out of the main track and recorded on a third one, so a call can be muted or
+  turned down later. The library names each clip's tracks.
+- Favorites and renaming in the library, with a Favorites list in the sidebar.
+- Hotkeys for screenshots and sessions in Settings; two actions can't share one.
+
 ## 0.6.1
 
 ### Fixed

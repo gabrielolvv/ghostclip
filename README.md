@@ -23,9 +23,16 @@ QuickSync). There is no CPU encoder fallback.
 - **Game-only audio.** Optionally records just the game: no Discord call, no
   music. It follows the game you're playing, not whatever window is in front.
 - **Microphone on its own track,** so you can mute or rebalance it later.
+- **Discord on its own track** (optional): the Discord app's sound is left out
+  of the main track and recorded apart, so a call can be muted after the fact.
+- **Screenshots** on Alt+F11, saved as JPEG next to the clips.
+- **Session recording** on Alt+F9: keeps everything from start to stop, and
+  the clip hotkey adds bookmarks you can jump to. It keeps the replay buffer
+  instead of running a second encoder, so the game pays nothing extra.
 - **Per-game profiles** for clip length, audio source and microphone mute.
-- **Clip library.** Every clip by game, with thumbnails, a player and a
-  timeline over the audio waveform. It runs only while its window is open.
+- **Clip library.** Every clip and screenshot by game, with thumbnails, a
+  player and a timeline over the audio waveform; favorites and renaming. It
+  runs only while its window is open.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit

@@ -212,6 +212,20 @@ public static class FfmpegArgs
         "-f", "mp4", output,
     ];
 
+    /// <summary>
+    /// One frame of the monitor as a JPEG. Its own Desktop Duplication, beside the
+    /// recorder's (Windows allows several), so the picture is the screen itself rather
+    /// than a frame of the encoded clip. 4:4:4 at quality 2: small text stays sharp.
+    /// The minimal FFmpeg has no PNG encoder.
+    /// </summary>
+    public static IReadOnlyList<string> Screenshot(int monitor, string output) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error",
+        "-init_hw_device", "d3d11va=gc", "-filter_hw_device", "gc",
+        "-filter_complex", Inv($"ddagrab=output_idx={monitor}:framerate=30,hwdownload,format=bgra,format=yuvj444p"),
+        "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "2", "-f", "image2", "-update", "1", "-y", output,
+    ];
+
     /// <summary>One frame as a small JPEG for the library. Seeking before the input decodes from the nearest keyframe only.</summary>
     public static IReadOnlyList<string> Thumbnail(string input, string output, double atSeconds) =>
     [

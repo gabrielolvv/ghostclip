@@ -40,6 +40,9 @@ public sealed record WorkerStatus
     public string? AudioRoute { get; set; }
 
     public bool Microphone { get; set; }
+
+    /// <summary>Discord is running and recorded on its own track.</summary>
+    public bool Discord { get; set; }
 }
 
 public sealed record IpcMessage

@@ -22,7 +22,10 @@ const Settings = (() => {
         options: [['Auto', L('Same as Windows', 'Igual ao Windows')], ['English', 'English'], ['Portuguese', 'Português']] },
     ] },
     { title: L('CLIPS', 'CLIPES'), fields: [
-      { key: 'hotkey', label: L('Save a clip', 'Salvar um clipe'), hint: L('Click, then press the keys.', 'Clique e aperte as teclas.'), type: 'hotkey' },
+      { key: 'hotkey', label: L('Save a clip', 'Salvar um clipe'), hint: L('Click, then press the keys. During a session it also adds a bookmark.', 'Clique e aperte as teclas. Durante uma sessão, também marca o momento.'), type: 'hotkey' },
+      { key: 'screenshotHotkey', label: L('Take a screenshot', 'Tirar print'), hint: L('Saved as a JPEG next to the clips.', 'Salvo em JPEG junto dos clipes.'), type: 'hotkey' },
+      { key: 'sessionHotkey', label: L('Record a session', 'Gravar sessão'),
+        hint: L('Press to start and again to stop. Keeps everything in between: about 9 GB an hour at 20 Mbps.', 'Aperte para começar e de novo para parar. Guarda tudo entre os dois: uns 9 GB por hora a 20 Mbps.'), type: 'hotkey' },
       { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
       { key: 'clipsFolder', label: L('Clips folder', 'Pasta de clipes'), hint: L('A folder per game goes inside.', 'Dentro dela fica uma pasta por jogo.'),
@@ -56,6 +59,9 @@ const Settings = (() => {
       { key: 'audioSource', label: L('Sound to record', 'Som a gravar'),
         hint: L('Game only leaves Discord and music out. Switches without a restart.', 'Só o jogo deixa Discord e música de fora. Troca sem reiniciar.'), type: 'segmented',
         options: [['System', L('Everything', 'Tudo')], ['GameOnly', L('Game only', 'Só o jogo')]] },
+      { key: 'discordTrack', label: L('Discord on its own track', 'Discord em faixa própria'),
+        hint: L('The Discord app goes to a separate track and out of the main one, so a call can be muted later. Turning it on or off restarts recording.',
+          'O app do Discord vai para uma faixa separada e sai da principal, para dar para silenciar a call depois. Ligar ou desligar reinicia a gravação.'), type: 'switch' },
       { key: 'microphone', label: L('Microphone', 'Microfone'), hint: L('On its own track. Turning it on or off restarts recording.', 'Numa faixa separada. Ligar ou desligar reinicia a gravação.'),
         type: 'switch' },
       { key: 'audioOffsetMs', label: L('Audio offset', 'Atraso do áudio'), hint: L('Positive delays the sound. For a constant lip-sync error.', 'Positivo atrasa o som. Para um erro constante de sincronia labial.'),
@@ -205,7 +211,9 @@ const Settings = (() => {
       }
       case 'hotkey': {
         // The saved hotkey as the app names it on this keyboard; a new one as you pressed it.
-        const shown = value === (s.saved && s.saved[field.key]) ? (s.hotkeyLabel || value) : (s.recordedLabel || value);
+        const shown = value === (s.saved && s.saved[field.key])
+          ? ((s.hotkeyLabels || {})[field.key] || value)
+          : ((s.recordedLabels || {})[field.key] || value);
         const b = el('button', 'act hotkey', shown);
         b.type = 'button';
         b.setAttribute('aria-label', `${field.label}: ${shown}`);
@@ -274,9 +282,10 @@ const Settings = (() => {
     const printed = e.key.length === 1 && e.key !== ' '
       ? (e.code.startsWith('Numpad') ? `Num ${e.key}` : e.key.toUpperCase())
       : main;
-    s.recordedLabel = [...mods, printed].join('+');
+    const label = [...mods, printed].join('+');
+    s.recordedLabels = { ...s.recordedLabels, [s.listening.key]: label };
     s.draft[s.listening.key] = combo;
-    stopListening(s.recordedLabel);
+    stopListening(label);
     changed();
   }, true);
 
@@ -474,8 +483,8 @@ const Settings = (() => {
         if (dirty()) return true;
         s.saved = message.config;
         s.draft = clone(message.config);
-        s.hotkeyLabel = message.hotkeyLabel;
-        s.recordedLabel = null;
+        s.hotkeyLabels = message.hotkeyLabels || {};
+        s.recordedLabels = {};
         s.confirming = false;
         render();
         return true;
@@ -504,8 +513,8 @@ const Settings = (() => {
         $('s-save').classList.remove('busy');
         s.saved = message.config;
         s.draft = clone(message.config);
-        s.hotkeyLabel = message.hotkeyLabel;
-        s.recordedLabel = null;
+        s.hotkeyLabels = message.hotkeyLabels || {};
+        s.recordedLabels = {};
         s.confirming = false;
         render();
         toast(L('Settings saved', 'Configurações salvas'));

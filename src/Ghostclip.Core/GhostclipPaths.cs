@@ -27,6 +27,9 @@ public sealed record GhostclipPaths(string DataDir)
 
     public string ProbeFile => Path.Combine(DataDir, "probe.json");
 
+    /// <summary>Favorites and bookmarks (<see cref="LibraryStore"/>).</summary>
+    public string LibraryFile => Path.Combine(DataDir, "library.json");
+
     /// <summary>The recorder's state for the library's badge, written by the tray (<see cref="RecorderStatus"/>).</summary>
     public string StatusFile => Path.Combine(DataDir, "status.json");
 
