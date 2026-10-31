@@ -29,6 +29,7 @@ internal sealed class TrayApp : ApplicationContext
     private string? _updateVersion;
     private readonly ScreenshotTaker _screenshots;
     private readonly SessionRecorder _session;
+    private readonly StorageKeeper _storage;
     private readonly UpdateService _updates = new(Log.ForContext<UpdateService>());
     private readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 2 * 60 * 1000 };
     private readonly HotkeyWindow _hotkey = new();
@@ -99,6 +100,7 @@ internal sealed class TrayApp : ApplicationContext
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
         _screenshots = new ScreenshotTaker(() => _config, Log.ForContext<ScreenshotTaker>());
         _session = new SessionRecorder(paths, _saver, Log.ForContext<SessionRecorder>());
+        _storage = new StorageKeeper(paths, () => _config, Log.ForContext<StorageKeeper>());
         // The menu shows how long the session has been running.
         _session.Ticked += ApplyTexts;
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
@@ -412,6 +414,7 @@ internal sealed class TrayApp : ApplicationContext
             var path = await _screenshots.TakeAsync(game).ConfigureAwait(true);
             if (_config.ConfirmationSound) _sound.Play();
             _lastClip = path;
+            _storage.Enforce();
             Notify(L("Screenshot saved", "Print salvo"), L($"{game}. Click to open it.", $"{game}. Clique para abrir."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
@@ -464,6 +467,8 @@ internal sealed class TrayApp : ApplicationContext
         {
             var path = await Task.Run(() => _saver.RemuxAsync(snapshot)).ConfigureAwait(true);
             _lastClip = path;
+            // The oldest make room for it; the newest is always kept.
+            _storage.Enforce();
             if (session)
             {
                 Notify(L("Session saved", "Sessão salva"),
@@ -489,6 +494,7 @@ internal sealed class TrayApp : ApplicationContext
             _log.Information("Finishing a clip from an earlier run: {Dir}", snapshot.Dir);
             await FinishAsync(snapshot, session: snapshot.Dir.EndsWith("-session", StringComparison.Ordinal)).ConfigureAwait(true);
         }
+        _storage.Enforce();
     }
 
     private void OnStatus(WorkerStatus status)
@@ -544,6 +550,8 @@ internal sealed class TrayApp : ApplicationContext
         else ApplyTexts();
         ApplyAutostart();
         _worker.UpdateConfig(config);
+        // A new or lower limit, or a different clips folder: applied now, not at the next save.
+        if (config.StorageLimitGB != previous.StorageLimitGB || config.ResolvedClipsFolder != previous.ResolvedClipsFolder) _storage.Enforce();
         _log.Information("Settings applied");
     }
 

@@ -3,6 +3,17 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A space limit for clips (Settings > Clips, off by default). Past it, the
+  oldest clips and screenshots are deleted for good after each save. Favorites,
+  clips you renamed, the newest clip and anything that isn't one of
+  Ghostclip's files in a game's folder are never deleted, so a clips folder
+  shared with other videos is safe. Setting a limit that would delete
+  something asks first and says how much; the setting shows the space in use.
+
 ## 0.7.0
 
 ### Added
