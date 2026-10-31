@@ -50,9 +50,11 @@ QuickSync. Everything else, including .NET and FFmpeg, comes with it.
 
 ## Status
 
-**0.5.** Recording, saving, audio routing, profiles, the clip library with
-trimming and compression, the settings page and the installer with updates
-work. Not done yet: game benchmark numbers,
+**0.6.** Recording on NVIDIA, AMD and Intel, saving, audio routing (with
+Discord on its own track), profiles, screenshots, session recording with
+bookmarks, the clip library with favorites, trimming and compression, the
+settings page in English and Portuguese, and the installer with updates work.
+Not done yet: game benchmark numbers,
 code signing (see [docs/releasing.md](docs/releasing.md)) and a GIF for this
 page (`assets\make-gif.ps1` makes one from a clip). The full plan is in
 [docs/spec.md](docs/spec.md).

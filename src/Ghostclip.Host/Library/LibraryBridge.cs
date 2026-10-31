@@ -236,11 +236,11 @@ internal sealed class LibraryBridge : IDisposable
                 var state = LibraryStore.Read(library);
                 return ClipLibrary.Scan(root).Select(c => ClipDto.From(c, state)).ToList();
             }).ConfigureAwait(true);
-            _window.Post(new LibraryEvent("clips", Clips: clips, Root: root));
+            _window.Post(new LibraryEvent("clips", Clips: clips, Root: root, HotkeyLabels: SaveHotkeyLabel()));
         }
         else
         {
-            _window.Post(new LibraryEvent("clips", Clips: [], Root: Root));
+            _window.Post(new LibraryEvent("clips", Clips: [], Root: Root, HotkeyLabels: SaveHotkeyLabel()));
             _window.Post(new LibraryEvent("error", Op: "list",
                 Message: L($"Your clips folder isn't available: {_rootError}", $"Sua pasta de clipes não está disponível: {_rootError}")));
         }
@@ -252,6 +252,9 @@ internal sealed class LibraryBridge : IDisposable
             PostOpen(pending);
         }
     }
+
+    // For the empty library's "Press Alt+F10 in a game": the key people actually set.
+    private Dictionary<string, string> SaveHotkeyLabel() => new() { ["hotkey"] = KeyLabels.Describe(_config.Hotkey) };
 
     // A new clips folder or language from the settings page shows up in this window right away.
     private void OnSettingsSaved(GhostclipConfig config)

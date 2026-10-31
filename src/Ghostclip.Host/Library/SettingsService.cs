@@ -67,8 +67,10 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 
     private void Save(LibraryRequest r)
     {
-        var config = (r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar."))).Normalize();
-        if (HotkeyProblem(config) is { } hotkeyError)
+        var raw = r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar."));
+        var config = raw.Normalize();
+        // The hotkeys as typed: normalizing would quietly swap a common shortcut for the default.
+        if ((HotkeyProblem(raw) ?? HotkeyProblem(config)) is { } hotkeyError)
         {
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;

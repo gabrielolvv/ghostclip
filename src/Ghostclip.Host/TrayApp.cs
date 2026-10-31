@@ -54,6 +54,8 @@ internal sealed class TrayApp : ApplicationContext
     private RecorderStatus? _published;
     private string? _lastClip;
     private DateTime _lastWarningUtc;
+    // Why the recorder stopped, for the library: the balloon that said so is gone after a few seconds.
+    private string? _problem;
 
     public TrayApp(GhostclipPaths paths, GhostclipConfig config, string? configProblem, LoggingLevelSwitch level)
     {
@@ -188,7 +190,7 @@ internal sealed class TrayApp : ApplicationContext
     // Only when the badge would change: a recording session writes a handful of times, not every second.
     private void PublishStatus(WorkerStatus status)
     {
-        var published = RecorderStatus.From(Environment.ProcessId, status, _config.Fps);
+        var published = RecorderStatus.From(Environment.ProcessId, status, _config.Fps, _problem);
         if (published == _published) return;
         try
         {
@@ -485,6 +487,8 @@ internal sealed class TrayApp : ApplicationContext
         // A status posted just before shutdown arrives after the icon is gone.
         if (_shuttingDown) return;
         _status = status;
+        // Probing again (a settings change) or recording: whatever stopped it is over.
+        if (status.State != WorkerState.Stopped) _problem = null;
         var icon = status.State switch
         {
             WorkerState.Recording => TrayIcons.Recording,
@@ -501,6 +505,8 @@ internal sealed class TrayApp : ApplicationContext
     {
         if (fatal)
         {
+            _problem = message;
+            PublishStatus(_status);
             Notify(L("Ghostclip is not recording", "O Ghostclip não está gravando"), message, ToolTipIcon.Error);
             return;
         }

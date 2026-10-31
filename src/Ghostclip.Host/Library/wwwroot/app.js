@@ -48,6 +48,7 @@ const state = {
   versions: new Map(),   // path -> version: a replaced file (same name, new trim) must not keep the old details
   game: null,            // null = all clips
   favorites: false,      // only favorites, across games
+  saveKey: 'Alt+F10',    // the clip hotkey as this keyboard prints it, for the empty library
   query: '',
   pendingOpen: null,
   current: null,         // clip shown in the clip view
@@ -258,6 +259,7 @@ function renderGrid() {
   grid.replaceChildren();
   const clips = visibleClips();
   $('empty').hidden = state.clips.length > 0;
+  $('empty-hint').textContent = L(`Press ${state.saveKey} in a game to save a clip.`, `Aperte ${state.saveKey} num jogo para salvar um clipe.`);
   $('no-match').hidden = state.clips.length === 0 || clips.length > 0;
   $('count').textContent = state.clips.length
     ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE') : L('CLIPS', 'CLIPES')}` : '';
@@ -679,6 +681,7 @@ function onMessage(message) {
     case 'clips': {
       state.clips = message.clips || [];
       state.listed = true;
+      if (message.hotkeyLabels && message.hotkeyLabels.hotkey) state.saveKey = message.hotkeyLabels.hotkey;
       const listed = new Map(state.clips.map(c => [c.path, c.version]));
       let reopen = null;
       for (const [path, version] of state.versions) {

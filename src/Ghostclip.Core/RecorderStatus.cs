@@ -9,11 +9,14 @@ namespace Ghostclip.Core;
 /// </summary>
 /// <param name="ProcessId">The tray's process: a status file left by a crash names a process that is gone.</param>
 /// <param name="Encoder">The encoder family (QSV, NVENC, AMF), or null before one is chosen.</param>
-public sealed record RecorderStatus(int ProcessId, WorkerState State, string? Encoder, int Fps, bool Audio)
+/// <param name="Problem">Why the recorder stopped (no hardware encoder, FFmpeg missing), while it is stopped; the library shows it.</param>
+public sealed record RecorderStatus(int ProcessId, WorkerState State, string? Encoder, int Fps, bool Audio, string? Problem = null)
 {
     /// <param name="captureFps">The configured rate: the measured one wanders and would mean a write every few seconds.</param>
-    public static RecorderStatus From(int processId, WorkerStatus s, int captureFps) =>
-        new(processId, s.State, Family(s.Encoder), s.State == WorkerState.Recording ? captureFps : 0, s.Audio);
+    /// <param name="problem">The recorder's last fatal error; kept only while it is stopped.</param>
+    public static RecorderStatus From(int processId, WorkerStatus s, int captureFps, string? problem = null) =>
+        new(processId, s.State, Family(s.Encoder), s.State == WorkerState.Recording ? captureFps : 0, s.Audio,
+            s.State == WorkerState.Stopped ? problem : null);
 
     // "h264_qsv (direct)" -> "QSV".
     private static string? Family(string? encoder)
