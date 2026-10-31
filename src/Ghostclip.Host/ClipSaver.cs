@@ -100,7 +100,15 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             PartFile.Commit(output);
             if (snapshot.Bookmarks is { Count: > 0 } bookmarks)
             {
-                LibraryStore.Update(paths.LibraryFile, s => s.SetBookmarks(output, bookmarks));
+                // The clip is saved by now; its bookmarks are a convenience and must not fail it.
+                try
+                {
+                    LibraryStore.Update(paths.LibraryFile, s => s.SetBookmarks(output, bookmarks));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    log.Warning("Saved {Path} without its bookmarks: {Error}", output, ex.Message);
+                }
             }
             Directory.Delete(snapshot.Dir, recursive: true);
             log.Information("Clip saved: {Path} (remux {Ms} ms)", output, (long)result.Elapsed.TotalMilliseconds);

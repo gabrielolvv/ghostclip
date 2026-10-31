@@ -8,9 +8,10 @@ public class StorageLimitTests
     private const string Root = @"C:\Clips";
     private const long MB = 1024 * 1024;
 
-    private static ClipEntry Clip(string relative, int day, long mb) =>
+    // Written on the day in its name unless said otherwise: a session or a trim is written later than its name says.
+    private static ClipEntry Clip(string relative, int day, long mb, int? writtenDay = null) =>
         new(Path.Combine(Root, relative), relative.Replace('\\', '/'), relative.Split('\\')[0],
-            new DateTime(2026, 10, day, 12, 0, 0), mb * MB, false, DateTime.UtcNow);
+            new DateTime(2026, 10, day, 12, 0, 0), mb * MB, false, new DateTime(2026, 10, writtenDay ?? day, 15, 0, 0, DateTimeKind.Utc));
 
     private static long Limit(long mb) => mb * MB;
 
@@ -60,10 +61,49 @@ public class StorageLimitTests
             Clip(@"G\G_2026-10-02_12-00-00.mp4", 2, 500),
             Clip(@"G\G_2026-10-03_12-00-00.mp4", 3, 500),
         };
-        // Only files in a game's folder count: 1500 MB, not 11.5 GB.
-        Assert.Equal(1500 * MB, StorageLimit.Used(Root, clips));
+        // Only the files Ghostclip named, in a game's folder, count: 1000 MB, not 12 GB.
+        Assert.Equal(1000 * MB, StorageLimit.Used(Root, clips));
+        var deleted = StorageLimit.SelectForDeletion(Root, clips, new LibraryState(), Limit(100));
+        Assert.Equal([@"C:\Clips\G\G_2026-10-02_12-00-00.mp4"], deleted.Select(c => c.Path));
+    }
+
+    [Fact]
+    public void Another_program_s_files_with_a_date_in_the_name_are_never_counted_or_deleted()
+    {
+        // Downloads as the clips folder: Telegram Desktop saves video_<date>_<time>.mp4 in a folder of its own.
+        var clips = new[]
+        {
+            Clip(@"Telegram Desktop\video_2026-10-01_12-00-00.mp4", 1, 4000),
+            Clip(@"Telegram Desktop\photo_2026-10-01_12-00-00.jpg", 1, 10),
+            Clip(@"G\Other_2026-10-01_12-00-00.mp4", 1, 4000),
+            Clip(@"G\G_2026-10-02_12-00-00.mp4", 2, 500),
+            Clip(@"G\G_2026-10-03_12-00-00.mp4", 3, 500),
+        };
+        Assert.Equal(1000 * MB, StorageLimit.Used(Root, clips));
         var deleted = StorageLimit.SelectForDeletion(Root, clips, new LibraryState(), Limit(600));
         Assert.Equal([@"C:\Clips\G\G_2026-10-02_12-00-00.mp4"], deleted.Select(c => c.Path));
+    }
+
+    [Fact]
+    public void A_session_saved_just_now_is_the_newest_even_though_its_name_has_its_start_time()
+    {
+        // A session started on the 1st and saved on the 3rd, a clip saved during it on the 2nd.
+        var session = Clip(@"G\G_2026-10-01_12-00-00.mp4", 1, 2000, writtenDay: 3);
+        var duringSession = Clip(@"G\G_2026-10-02_12-00-00.mp4", 2, 100);
+        var older = Clip(@"G\G_2026-09-30_12-00-00.mp4", 1, 100, writtenDay: 1);
+        var deleted = StorageLimit.SelectForDeletion(Root, [session, duringSession, older], new LibraryState(), Limit(1000));
+        Assert.Equal([older.Path, duringSession.Path], deleted.Select(c => c.Path));
+    }
+
+    [Fact]
+    public void A_trim_made_today_of_an_old_clip_is_not_among_the_oldest()
+    {
+        var oldClip = Clip(@"G\G_2026-10-01_12-00-00.mp4", 1, 300);
+        var newerClip = Clip(@"G\G_2026-10-05_12-00-00.mp4", 5, 300);
+        var trimToday = Clip(@"G\G_2026-10-01_12-00-00_trim.mp4", 1, 100, writtenDay: 10);
+        var newest = Clip(@"G\G_2026-10-09_12-00-00.mp4", 9, 300);
+        var deleted = StorageLimit.SelectForDeletion(Root, [oldClip, newerClip, trimToday, newest], new LibraryState(), Limit(500));
+        Assert.Equal([oldClip.Path, newerClip.Path], deleted.Select(c => c.Path));
     }
 
     [Fact]

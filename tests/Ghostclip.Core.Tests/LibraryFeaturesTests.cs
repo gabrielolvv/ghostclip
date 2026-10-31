@@ -127,9 +127,29 @@ public sealed class LibraryFeaturesTests : IDisposable
         Assert.True(read.IsFavorite(@"C:\Clips\G\a.mp4"));
         Assert.Equal([12.5], read.BookmarksFor(@"C:\Clips\G\s.mp4"));
 
-        // It only holds conveniences: unreadable means empty, never a crash.
+        // Shown as empty, never a crash.
         File.WriteAllText(file, "{ broken");
         Assert.Empty(LibraryStore.Read(file).Favorites);
+    }
+
+    // The favorites in it keep clips from the space limit: an unreadable file must not pass for "no favorites".
+    [Fact]
+    public void An_unreadable_library_file_is_never_taken_for_an_empty_one()
+    {
+        var file = Path.Combine(_dir, "library.json");
+        Assert.True(LibraryStore.TryRead(file, out var missing));
+        Assert.Empty(missing.Favorites);
+
+        LibraryStore.Update(file, s => s.SetFavorite(@"C:\Clips\G\a.mp4", true));
+        Assert.True(LibraryStore.TryRead(file, out var read));
+        Assert.True(read.IsFavorite(@"C:\Clips\G\a.mp4"));
+
+        File.WriteAllText(file, "{ broken");
+        Assert.False(LibraryStore.TryRead(file, out _));
+
+        // Writing over it would wipe whatever favorites it held.
+        Assert.Throws<IOException>(() => LibraryStore.Update(file, s => s.SetFavorite(@"C:\Clips\G\b.mp4", true)));
+        Assert.Equal("{ broken", File.ReadAllText(file));
     }
 
     // The library window reading the file while the tray writes a session's bookmarks must not lose the write.

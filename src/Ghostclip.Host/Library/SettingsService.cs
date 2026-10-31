@@ -92,8 +92,10 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         if (!r.Confirmed && config.StorageLimitGB > 0)
         {
             var root = config.ResolvedClipsFolder;
-            var deleting = StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), LibraryStore.Read(paths.LibraryFile),
-                config.StorageLimitGB * StorageLimit.BytesPerGB);
+            // Same rule as the tray's StorageKeeper: with favorites unknown, nothing is deleted.
+            var deleting = LibraryStore.TryRead(paths.LibraryFile, out var state)
+                ? StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), state, config.StorageLimitGB * StorageLimit.BytesPerGB)
+                : [];
             if (deleting.Count > 0)
             {
                 var gb = deleting.Sum(c => c.Bytes) / (double)StorageLimit.BytesPerGB;
