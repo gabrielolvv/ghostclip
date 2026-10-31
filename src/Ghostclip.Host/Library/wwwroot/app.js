@@ -10,6 +10,33 @@ const MIN_RANGE = 0.5;
 // "en" or "pt": the window opens the page with ?lang=, and a "language" message changes it live.
 // Texts built here carry both translations where they are used: L('Settings', 'Configurações').
 let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
+
+// A soft light follows the pointer (app.css, "Light"): --mx/--my over the window, --lx/--ly inside
+// the card, button or sidebar item it's over. One write per frame, however fast the pointer moves.
+const LIT = '.card, .card-s, .act, .game, .update-card';
+let pointer = null;
+document.addEventListener('pointermove', e => {
+  const first = pointer === null;
+  pointer = e;
+  if (first) requestAnimationFrame(() => {
+    const p = pointer;
+    pointer = null;
+    const root = document.documentElement.style;
+    root.setProperty('--mx', `${p.clientX}px`);
+    root.setProperty('--my', `${p.clientY}px`);
+    const lit = p.target instanceof Element && p.target.closest(LIT);
+    if (lit) {
+      const r = lit.getBoundingClientRect();
+      lit.style.setProperty('--lx', `${p.clientX - r.left}px`);
+      lit.style.setProperty('--ly', `${p.clientY - r.top}px`);
+    }
+  });
+}, { passive: true });
+// Leaving the window takes the light with it.
+document.documentElement.addEventListener('pointerleave', () => {
+  document.documentElement.style.setProperty('--mx', '-1000px');
+  document.documentElement.style.setProperty('--my', '-1000px');
+});
 function L(en, pt) { return lang === 'pt' ? pt : en; }
 
 // The page's fixed texts: English is what the HTML carries, Portuguese sits next to it in data-pt,

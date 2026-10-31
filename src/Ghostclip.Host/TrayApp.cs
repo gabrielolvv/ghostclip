@@ -78,6 +78,8 @@ internal sealed class TrayApp : ApplicationContext
         _logsItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_paths.LogsDir));
         _exitItem = new ToolStripMenuItem("", null, (_, _) => Exit());
         var menu = new ContextMenuStrip();
+        TrayMenuStyle.Apply(menu);
+        _updateItem.Name = TrayMenuStyle.UpdateItemName;
         menu.Items.Add(_statusItem);
         menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());

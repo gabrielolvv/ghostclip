@@ -14,6 +14,17 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   shared with other videos is safe. Setting a limit that would delete
   something asks first and says how much; the setting shows the space in use.
 
+### Changed
+
+- A soft cyan light follows the pointer across the library: a halo over the
+  window, and inside the card, button or sidebar item under it, whose edge
+  lights up near the pointer. Cards lift and glow, the active sidebar item has
+  a gradient, and the REC dot pulses. Off when Windows is set to reduce
+  animations.
+- The tray menu matches the library: dark, roomier, rounded corners on
+  Windows 11, a cyan highlight on the item under the pointer, slightly
+  see-through.
+
 ## 0.7.0
 
 ### Added

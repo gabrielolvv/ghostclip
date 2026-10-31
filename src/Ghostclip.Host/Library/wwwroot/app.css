@@ -246,3 +246,39 @@ details.more[open] summary { color: var(--text); }
 .savebar.warn { border-color: rgba(229, 179, 75, 0.55); }
 .savebar.warn span { color: #E5B34B; }
 .settings-open #games .game.on { background: none; box-shadow: none; color: var(--muted); }
+
+/* Effects: a little depth and light where the pointer is */
+.brand svg { filter: drop-shadow(0 0 6px rgba(92, 225, 230, 0.45)); }
+.game.on { background: linear-gradient(90deg, rgba(92, 225, 230, 0.13), rgba(92, 225, 230, 0.02)); }
+.card { transition: border-color var(--fast), transform var(--fast), box-shadow var(--fast); }
+.card:hover, .card:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(92, 225, 230, 0.18), 0 0 24px rgba(92, 225, 230, 0.10); }
+.act.primary:hover { box-shadow: 0 0 16px rgba(92, 225, 230, 0.25); }
+.badge.rec .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 2px var(--red); opacity: 0.6; } }
+
+/* Light: a soft glow follows the pointer. app.js sets --mx/--my for the window, and --lx/--ly
+   inside the card, button or sidebar item under it, whose edge lights up near the pointer. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, -1000px) var(--my, -1000px), rgba(92, 225, 230, 0.09), transparent 65%);
+}
+.card, .card-s, .act, .game, .update-card { position: relative; }
+.act, .game { overflow: hidden; }
+:is(.card, .card-s, .act, .game, .update-card)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity 200ms;
+  background: radial-gradient(240px circle at var(--lx, 50%) var(--ly, 50%), rgba(92, 225, 230, 0.18), transparent 60%);
+}
+/* The edge: a 1 px ring, masked to the border, bright near the pointer. */
+:is(.card, .card-s, .update-card)::before {
+  content: ""; position: absolute; inset: 0; padding: 1px; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity 200ms;
+  background: radial-gradient(180px circle at var(--lx, 50%) var(--ly, 50%), rgba(92, 225, 230, 0.95), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+:is(.card, .card-s, .act, .game, .update-card):hover::after,
+:is(.card, .card-s, .update-card):hover::before { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  body::after, :is(.card, .card-s, .act, .game, .update-card)::after, :is(.card, .card-s, .update-card)::before { display: none; }
+}
