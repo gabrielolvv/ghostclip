@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Saving settings, favorites or a session's bookmarks waits up to about a
+  second for a program holding the file (antivirus, the library reading it)
+  instead of half that, and favorites and bookmarks no longer fail on the
+  first try when the library happens to be reading them.
+
 ## 0.8.0
 
 ### Added

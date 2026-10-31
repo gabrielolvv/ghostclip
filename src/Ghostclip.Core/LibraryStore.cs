@@ -101,8 +101,25 @@ public static class LibraryStore
             {
                 JsonSerializer.Serialize(stream, state, CoreJson.Indented.LibraryState);
             }
-            File.Move(temp, file, overwrite: true);
-            return state;
+            // The lock keeps writers apart, not readers: the other process listing clips can hold the file
+            // for a moment. Up to about a second, as ConfigStore.Save does.
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temp, file, overwrite: true);
+                    return state;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
+                {
+                    Thread.Sleep(50);
+                }
+                catch
+                {
+                    try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                    throw;
+                }
+            }
         }
         finally
         {
