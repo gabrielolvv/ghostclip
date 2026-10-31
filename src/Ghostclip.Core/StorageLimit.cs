@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Ghostclip.Core;
 
 /// <summary>
@@ -22,9 +24,10 @@ public static class StorageLimit
     public static bool Counts(string root, ClipEntry clip)
     {
         var parts = Path.GetRelativePath(root, clip.Path).Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
-        return parts.Length == 2
-            && parts[1].StartsWith(parts[0] + "_", StringComparison.OrdinalIgnoreCase)
-            && ClipLibrary.TimeFromName(parts[1]) is not null;
+        // Game_<time>, then a number when two saves shared a second, then any _trim/_discord copies of copies.
+        return parts.Length == 2 && Regex.IsMatch(Path.GetFileNameWithoutExtension(parts[1]),
+            "^" + Regex.Escape(parts[0]) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord)(_\d+)?)*$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     /// <summary>What the clips counted toward the limit take now.</summary>
@@ -35,11 +38,15 @@ public static class StorageLimit
     /// The clips to delete, oldest first, to get under <paramref name="limitBytes"/>;
     /// none when there is no limit (0) or the folder is under it.
     /// </summary>
-    public static IReadOnlyList<ClipEntry> SelectForDeletion(string root, IReadOnlyList<ClipEntry> clips, LibraryState state, long limitBytes)
+    public static IReadOnlyList<ClipEntry> SelectForDeletion(string root, IReadOnlyList<ClipEntry> clips, LibraryState state, long limitBytes,
+        DateTime? nowUtc = null)
     {
         if (limitBytes <= 0) return [];
+        // A file dated in the future (a wrong clock, copied from another PC) counts as written now, so it can't
+        // stay "newest" forever and leave the clip just saved unprotected.
+        var now = nowUtc ?? DateTime.UtcNow;
         var counted = clips.Where(c => Counts(root, c))
-            .OrderBy(c => c.LastWriteUtc).ThenBy(c => c.Path, StringComparer.OrdinalIgnoreCase).ToList();
+            .OrderBy(c => c.LastWriteUtc > now ? now : c.LastWriteUtc).ThenBy(c => c.Path, StringComparer.OrdinalIgnoreCase).ToList();
         var over = counted.Sum(c => c.Bytes) - limitBytes;
         var result = new List<ClipEntry>();
         foreach (var clip in counted.SkipLast(1))

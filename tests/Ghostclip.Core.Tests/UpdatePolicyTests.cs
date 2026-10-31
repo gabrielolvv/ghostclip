@@ -6,9 +6,9 @@ namespace Ghostclip.Core.Tests;
 public class UpdatePolicyTests
 {
     [Fact]
-    public void Plain_launch_applies_a_downloaded_update_on_startup()
+    public void Plain_launch_with_nothing_else_running_applies_a_downloaded_update_on_startup()
     {
-        Assert.True(UpdatePolicy.ApplyOnStartup([]));
+        Assert.True(UpdatePolicy.ApplyOnStartup([], trayRunning: false, libraryOpen: false));
     }
 
     [Theory]
@@ -21,7 +21,17 @@ public class UpdatePolicyTests
     public void Other_launches_leave_the_update_for_the_tray(params string[] args)
     {
         // Applying stops every Ghostclip process, the recording tray included, and restarts only this one.
-        Assert.False(UpdatePolicy.ApplyOnStartup(args));
+        Assert.False(UpdatePolicy.ApplyOnStartup(args, trayRunning: false, libraryOpen: false));
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void A_plain_launch_leaves_it_while_Ghostclip_is_already_running(bool trayRunning, bool libraryOpen)
+    {
+        // The Start menu shortcut clicked while the tray records, or after Exit with the library still compressing.
+        Assert.False(UpdatePolicy.ApplyOnStartup([], trayRunning, libraryOpen));
     }
 
     [Theory]

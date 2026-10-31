@@ -107,6 +107,30 @@ public class StorageLimitTests
     }
 
     [Fact]
+    public void A_copy_of_a_copy_counts_and_a_name_with_text_before_the_time_does_not()
+    {
+        var clips = new[]
+        {
+            Clip(@"G\G_2026-10-01_12-00-00_trim_discord.mp4", 1, 300),
+            Clip(@"G\G_2026-10-01_12-00-00_trim_2_trim.mp4", 1, 300),
+            Clip(@"G\G_note_2026-10-01_12-00-00.mp4", 1, 5000),
+            Clip(@"G\G_2026-10-02_12-00-00_2.jpg", 2, 100),
+        };
+        Assert.Equal(700 * MB, StorageLimit.Used(Root, clips));
+    }
+
+    [Fact]
+    public void A_file_dated_in_the_future_does_not_take_the_newest_clip_s_place()
+    {
+        // A clock that was wrong, or a file copied from another PC: it counts as written now, not later.
+        var future = Clip(@"G\G_2026-10-01_12-00-00.mp4", 1, 300, writtenDay: 28);
+        var justSaved = Clip(@"G\G_2026-10-10_12-00-00.mp4", 10, 300, writtenDay: 10);
+        var deleted = StorageLimit.SelectForDeletion(Root, [future, justSaved], new LibraryState(), Limit(400),
+            nowUtc: new DateTime(2026, 10, 10, 15, 0, 0, DateTimeKind.Utc));
+        Assert.Equal([future.Path], deleted.Select(c => c.Path));
+    }
+
+    [Fact]
     public void The_newest_is_kept_even_over_the_limit()
     {
         var clips = new[] { Clip(@"G\G_2026-10-01_12-00-00.mp4", 1, 300), Clip(@"G\G_2026-10-02_12-00-00.mp4", 2, 2000) };

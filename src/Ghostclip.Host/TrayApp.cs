@@ -290,8 +290,8 @@ internal sealed class TrayApp : ApplicationContext
         // The library offers it too, with a button.
         PublishStatus(_status);
         Notify(L("Update ready", "Atualização pronta"),
-            L($"Ghostclip {version} installs the next time Ghostclip closes or your PC restarts. To install it now, use the library or the tray menu.",
-                $"O Ghostclip {version} será instalado quando o Ghostclip fechar ou o PC reiniciar. Para instalar agora, use a biblioteca ou o menu da bandeja."), ToolTipIcon.Info);
+            L($"Ghostclip {version} installs when you exit Ghostclip or the next time it starts. To install it now, use the library or the tray menu.",
+                $"O Ghostclip {version} será instalado quando você sair do Ghostclip ou na próxima vez que ele abrir. Para instalar agora, use a biblioteca ou o menu da bandeja."), ToolTipIcon.Info);
     }
 
     private void RestartToUpdate()
@@ -595,9 +595,16 @@ internal sealed class TrayApp : ApplicationContext
     // shutdown request (uninstall, update) goes through Exit above.
     private void ExitFromMenu()
     {
-        Shutdown();
-        if (UpdatePolicy.ApplyOnExit(_updates.IsReady, Library.LibraryProgram.IsOpen())) _updates.ApplyOnExit();
-        ExitThread();
+        try
+        {
+            Shutdown();
+            if (UpdatePolicy.ApplyOnExit(_updates.IsReady, Library.LibraryProgram.IsOpen())) _updates.ApplyOnExit();
+        }
+        finally
+        {
+            // Whatever failed, never stay behind as a process with no icon that holds the hotkeys.
+            ExitThread();
+        }
     }
 
     private void Shutdown()

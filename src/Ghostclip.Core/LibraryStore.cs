@@ -72,16 +72,28 @@ public static class LibraryStore
     public static bool TryRead(string file, out LibraryState state)
     {
         state = new LibraryState();
-        try
+        // Only a file that isn't there means no favorites; File.Exists also says false when it can't tell.
+        // A lock (antivirus, the indexer, the other process writing) gets about a second, as writing does.
+        for (var attempt = 1; ; attempt++)
         {
-            if (!File.Exists(file)) return true;
-            using var stream = File.OpenRead(file);
-            state = JsonSerializer.Deserialize(stream, CoreJson.Default.LibraryState) ?? new LibraryState();
-            return true;
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            return false;
+            try
+            {
+                using var stream = File.OpenRead(file);
+                state = JsonSerializer.Deserialize(stream, CoreJson.Default.LibraryState) ?? new LibraryState();
+                return true;
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
+            {
+                Thread.Sleep(50);
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
         }
     }
 
@@ -107,7 +119,7 @@ public static class LibraryStore
             if (!owned) throw new IOException(UiText.L($"{Path.GetFileName(file)} is busy in another Ghostclip window. Try again.", $"O {Path.GetFileName(file)} está ocupado em outra janela do Ghostclip. Tente de novo."));
             if (!TryRead(file, out var state))
             {
-                throw new IOException(UiText.L($"{Path.GetFileName(file)} can't be read, so favorites can't be changed. Fix or delete the file in Ghostclip's data folder.", $"Não foi possível ler o {Path.GetFileName(file)}, então os favoritos não podem ser alterados. Corrija ou apague o arquivo na pasta de dados do Ghostclip."));
+                throw new IOException(UiText.L($"{Path.GetFileName(file)}, where favorites are kept, can't be read. Until it can, favorites can't change and the space limit deletes nothing.", $"Não foi possível ler o {Path.GetFileName(file)}, onde ficam os favoritos. Até que seja possível, os favoritos não mudam e o limite de espaço não apaga nada."));
             }
             change(state);
             Directory.CreateDirectory(Path.GetDirectoryName(file)!);

@@ -46,7 +46,8 @@ Baixe o `Ghostclip-win-Setup.exe` do
 [último release](https://github.com/gabrielolvv/ghostclip/releases/latest) e
 execute. Ele instala só para o seu usuário, sem pedir admin, abre na bandeja e
 se atualiza pelo GitHub Releases: a versão nova é baixada em segundo plano e
-instalada quando o Ghostclip fecha ou o PC reinicia, ou na hora pelo botão
+instalada quando você sai do Ghostclip ou na próxima vez que ele abre (ao
+entrar no Windows, por padrão), ou na hora pelo botão
 "Atualizar agora" da biblioteca, nunca no meio de um jogo. Requer Windows 10
 2004 ou mais novo e uma GPU com NVENC, AMF ou QuickSync. Todo o resto, inclusive
 o .NET e o FFmpeg, vem junto.

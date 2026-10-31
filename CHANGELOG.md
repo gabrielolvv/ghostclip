@@ -8,9 +8,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 ### Changed
 
 - A downloaded update installs on its own: when you exit Ghostclip from the
-  tray, or at its next start, including when Windows signs you in. "Update
-  now" in the library and "Restart to update" in the tray still install it
-  right away. Exiting with the library open leaves it for the next start.
+  tray, or the next time it starts, including when Windows signs you in.
+  "Update now" in the library and "Restart to update" in the tray still
+  install it right away. Exiting with the library open leaves it for the
+  next start, and opening Ghostclip while it already runs never installs.
 
 ### Fixed
 
@@ -23,7 +24,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   (named after that clip) are no longer deleted as the oldest.
 - When the favorites file can't be read, the space limit deletes nothing
   instead of treating favorites as none, and favorites can't be changed
-  until it reads again, so it is never overwritten empty.
+  until it reads again, so it is never overwritten empty. A program holding
+  the file for a moment is waited out instead of taken for a broken file.
+- A trim of a trim, or its Discord copy, counts toward the space limit again.
 - Opening the library, or running --trim, --compress or --save, while an
   update was waiting no longer installs it: the installer stopped the
   recording and only that window came back, leaving no tray until the next

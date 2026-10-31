@@ -152,6 +152,25 @@ public sealed class LibraryFeaturesTests : IDisposable
         Assert.Equal("{ broken", File.ReadAllText(file));
     }
 
+    // An antivirus or the indexer holding the file for a moment is not a broken file.
+    [Fact]
+    public void Reading_the_library_file_waits_out_a_moment_s_lock()
+    {
+        var file = Path.Combine(_dir, "library.json");
+        LibraryStore.Update(file, s => s.SetFavorite(@"C:\Clips\G\a.mp4", true));
+        var holder = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var release = new Thread(() =>
+        {
+            Thread.Sleep(200);
+            holder.Dispose();
+        });
+        release.Start();
+
+        Assert.True(LibraryStore.TryRead(file, out var state));
+        release.Join();
+        Assert.True(state.IsFavorite(@"C:\Clips\G\a.mp4"));
+    }
+
     // The library window reading the file while the tray writes a session's bookmarks must not lose the write.
     [Fact]
     public void Writing_the_library_file_waits_out_a_reader()
