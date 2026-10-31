@@ -44,8 +44,10 @@ const Settings = (() => {
         options: [[0, 'Monitor'], [2160, '2160p'], [1440, '1440p'], [1080, '1080p'], [720, '720p']] },
       { key: 'monitor', label: 'Monitor', hint: L('0 is the first monitor of the GPU.', '0 é o primeiro monitor da GPU.'), type: 'number', min: 0, max: 16 },
     ], more: [
-      { key: 'input', label: L('Color conversion', 'Conversão de cor'), hint: L('Auto uses what was measured to cost least.', 'Auto usa o que foi medido como mais barato.'), type: 'select',
-        options: [['Auto', 'Auto'], ['Direct', L('In the encoder', 'No encoder')], ['Nv12', L('On the GPU first', 'Na GPU antes')]] },
+      { key: 'input', label: L('Color conversion', 'Conversão de cor'),
+        hint: L('Auto uses what was measured to cost least. Through memory is a last resort for drivers where neither works; NVIDIA and AMD only.',
+          'Auto usa o que foi medido como mais barato. Pela memória é o último recurso para drivers em que nenhum dos dois funciona; só NVIDIA e AMD.'), type: 'select',
+        options: [['Auto', 'Auto'], ['Direct', L('In the encoder', 'No encoder')], ['Nv12', L('On the GPU first', 'Na GPU antes')], ['Memory', L('Through memory', 'Pela memória')]] },
       { key: 'qsvAsyncDepth', label: L('QuickSync queue', 'Fila do QuickSync'), hint: L('1 uses the least memory. Raise it if clips drop frames.', '1 usa menos memória. Aumente se os clipes perderem quadros.'),
         type: 'number', min: 1, max: 8 },
     ] },

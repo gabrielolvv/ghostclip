@@ -64,7 +64,9 @@ Ghostclip.exe (tray)              Ghostclip.Worker.exe (headless)        ffmpeg.
   network. If it crashes or stops answering, the host restarts it. The buffer
   is on disk, so nothing is lost; a job object makes sure FFmpeg dies with it.
 - **Frames stay on the GPU.** Captured at the clip rate (60 fps), not the
-  monitor's, converted and encoded on the GPU.
+  monitor's, converted and encoded on the GPU. Only when a driver refuses the
+  captured frames (seen with AMD's encoder on a Radeon RX 6600) does each
+  frame take one copy through system memory; it is still encoded on the GPU.
 - **Buffer.** 2 s segments with a keyframe at the start of each, numbered and
   rotated so only about one clip's worth stays on disk.
 - **Saving.** The hotkey hard-links the segments into a pending folder (tens of

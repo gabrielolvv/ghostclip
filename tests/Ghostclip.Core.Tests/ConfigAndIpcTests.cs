@@ -111,4 +111,31 @@ public sealed class ConfigAndIpcTests : IDisposable
         Assert.Equal(EncoderInput.Nv12, cache.Choose(EncoderKind.Qsv, EncoderInput.Nv12)!.Input);
         Assert.Null(cache.Choose(EncoderKind.Nvenc, EncoderInput.Auto));
     }
+
+    [Fact]
+    public void Memory_is_the_last_resort_after_every_gpu_pair()
+    {
+        var pairs = EncoderProbe.Pairs(EncoderKind.Auto, EncoderInput.Auto);
+        Assert.Equal(
+        [
+            (EncoderKind.Nvenc, EncoderInput.Direct), (EncoderKind.Nvenc, EncoderInput.Nv12),
+            (EncoderKind.Amf, EncoderInput.Direct), (EncoderKind.Amf, EncoderInput.Nv12),
+            (EncoderKind.Qsv, EncoderInput.Direct), (EncoderKind.Qsv, EncoderInput.Nv12),
+            (EncoderKind.Nvenc, EncoderInput.Memory), (EncoderKind.Amf, EncoderInput.Memory),
+        ], pairs);
+        Assert.Empty(EncoderProbe.Pairs(EncoderKind.Qsv, EncoderInput.Memory));
+
+        // NVENC through memory works, but QuickSync on the GPU is still the better choice.
+        var cache = new ProbeCache("id", VideoCodec.H264, 0, DateTime.UtcNow,
+        [
+            new(EncoderKind.Nvenc, EncoderInput.Memory, true, 1, null),
+            new(EncoderKind.Qsv, EncoderInput.Nv12, true, 1, null),
+        ]);
+        Assert.Equal((EncoderKind.Qsv, EncoderInput.Nv12), (cache.Choose(EncoderKind.Auto, EncoderInput.Auto)!.Encoder, cache.Choose(EncoderKind.Auto, EncoderInput.Auto)!.Input));
+
+        // A probe from before Memory existed, where nothing worked: no choice, so the worker probes again.
+        var old = new ProbeCache("id", VideoCodec.H264, 0, DateTime.UtcNow,
+            [new(EncoderKind.Amf, EncoderInput.Direct, false, 1, "SubmitInput() failed with error 18")]);
+        Assert.Null(old.Choose(EncoderKind.Auto, EncoderInput.Auto));
+    }
 }

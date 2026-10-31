@@ -12,6 +12,14 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   notifications, library and settings switch as soon as you save, without
   restarting recording. Logs stay in English.
 
+### Fixed
+
+- Ghostclip records on PCs whose GPU driver refuses the captured frames, as
+  AMD's encoder did on a Radeon RX 6600 ("SubmitInput() failed with error 18"):
+  the frames then go through system memory and are still encoded on the GPU.
+  This is tried only when nothing on the GPU works, and can also be picked in
+  Settings > Video > Encoder options > Color conversion.
+
 ## 0.5.2
 
 ### Changed
