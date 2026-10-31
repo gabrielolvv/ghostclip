@@ -60,6 +60,7 @@
       </header>
       <div class="stage">
         <video id="video" preload="metadata" disablepictureinpicture></video>
+        <img id="image" alt="" hidden>
         <div id="no-video" class="no-video" hidden data-pt="Este PC não consegue mostrar a imagem deste vídeo aqui (o HEVC precisa das Extensões de Vídeo HEVC da Microsoft Store). Você ainda pode cortar, comprimir e copiar o clipe.">This PC can't show this video's picture here (HEVC needs the HEVC Video Extensions from the Microsoft Store). You can still trim, compress and copy the clip.</div>
         <div id="play-hint" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -87,6 +88,12 @@
         <button id="a-copy" class="act" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-pt="Copiar">Copy</span>
         </button>
+        <button id="a-favorite" class="act" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg><span data-pt="Favorito">Favorite</span>
+        </button>
+        <button id="a-rename" class="act" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg><span data-pt="Renomear">Rename</span>
+        </button>
         <button id="a-folder" class="act" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg><span data-pt="Pasta">Folder</span>
         </button>
@@ -95,6 +102,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
         </button>
       </div>
+      <form id="rename" class="confirm rename" hidden>
+        <input id="rename-name" class="field" type="text" spellcheck="false" autocomplete="off" aria-label="New name" data-pt-label="Novo nome">
+        <span id="rename-ext" class="mono muted"></span>
+        <button id="r-yes" class="act primary" type="submit" data-pt="Renomear">Rename</button>
+        <button id="r-no" class="act" type="button" data-pt="Cancelar">Cancel</button>
+      </form>
       <div id="confirm" class="confirm" hidden>
         <span data-pt="Apagar este clipe? Ele vai para a Lixeira.">Delete this clip? It goes to the Recycle Bin.</span>
         <button id="c-yes" class="act danger" type="button" data-pt="Apagar">Delete</button>

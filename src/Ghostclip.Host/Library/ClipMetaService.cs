@@ -48,7 +48,8 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
                         TimeSpan.FromSeconds(60), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
                 }
                 // Throws on a failed or timed-out probe, so nothing partial is cached.
-                meta = ClipMedia.BuildMeta(probe.Duration, probe.Height, probe.Fps, probe.AudioTracks, probe.VideoCodec, keyframes, peaks);
+                meta = ClipMedia.BuildMeta(probe.Duration, probe.Height, probe.Fps, probe.AudioTracks, probe.VideoCodec, keyframes, peaks,
+                    probe.AudioTitles.Count > 0 ? probe.AudioTitles : null);
                 await WriteAtomicallyAsync(metaFile, JsonSerializer.Serialize(meta, LibraryJson.Default.ClipMeta), ct).ConfigureAwait(false);
             }
 

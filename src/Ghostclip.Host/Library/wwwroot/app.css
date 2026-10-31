@@ -141,6 +141,23 @@ main { min-width: 0; min-height: 0; display: flex; }
 .act.busy { opacity: 0.6; pointer-events: none; }
 .confirm { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--card); border: 1px solid rgba(255, 77, 94, 0.35); }
 .confirm span { flex: 1; }
+.rename { margin-top: 12px; border-color: var(--line-strong); }
+.rename .field { flex: 1; min-width: 0; }
+.rename span { flex: none; }
+
+/* Favorites, screenshots and bookmarks */
+.act[aria-pressed=true] { color: #E5B34B; border-color: rgba(229, 179, 75, 0.5); }
+.act[aria-pressed=true] svg { fill: currentColor; }
+.quick button.fav svg { fill: currentColor; color: #E5B34B; }
+.star { position: absolute; left: 6px; bottom: 6px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: rgba(11, 13, 16, 0.78); color: #E5B34B; }
+.star svg { width: 13px; height: 13px; fill: currentColor; }
+#image { width: 100%; height: 100%; object-fit: contain; display: block; }
+.is-image .stage { cursor: default; }
+.is-image #timeline, .is-image .times, .is-image #a-trim, .is-image #a-discord, .is-image #play-hint { display: none; }
+.is-image .actions { margin-top: 14px; }
+.bookmark { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer; z-index: 1; }
+.bookmark::before { content: ""; position: absolute; left: 0; top: -1px; border: 4.5px solid transparent; border-top: 6px solid #E5B34B; }
+.bookmark::after { content: ""; position: absolute; left: 4px; top: 4px; bottom: 0; width: 1px; background: rgba(229, 179, 75, 0.6); }
 
 .toast {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);

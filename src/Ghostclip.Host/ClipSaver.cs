@@ -5,8 +5,10 @@ using Serilog;
 
 namespace Ghostclip.Host;
 
-/// <summary>A clip frozen at the moment of the hotkey, waiting to become an MP4.</summary>
-internal sealed record ClipSnapshot(string Dir, string Game, DateTime Time, int Segments, double Seconds, int AudioLeadMs, string[]? AudioTitles, TimeSpan Took);
+/// <summary>A clip frozen at the moment of the hotkey (or a session when it stopped), waiting to become an MP4.</summary>
+/// <param name="Bookmarks">Seconds into the clip that a session marked; the library shows them on the timeline.</param>
+internal sealed record ClipSnapshot(string Dir, string Game, DateTime Time, int Segments, double Seconds, int AudioLeadMs, string[]? AudioTitles, TimeSpan Took,
+    IReadOnlyList<double>? Bookmarks = null);
 
 /// <summary>
 /// Saving happens in two steps.
@@ -23,8 +25,9 @@ internal sealed record ClipSnapshot(string Dir, string Game, DateTime Time, int 
 /// </summary>
 internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> config, ILogger log)
 {
-    private const string ListFile = "list.ffconcat";
-    private const string MetaFile = "clip.txt";
+    internal const string ListFile = "list.ffconcat";
+    internal const string MetaFile = "clip.txt";
+    internal const string BookmarksFile = "bookmarks.txt";
     private readonly SemaphoreSlim _remuxGate = new(1, 1);
 
     public ClipSnapshot TakeSnapshot(string game, bool recording)
@@ -84,8 +87,10 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
 
             // Written under a temporary name, so the library never lists a half-written clip.
+            // Stream copy runs far faster than real time; a long session gets a second per segment.
+            var timeout = TimeSpan.FromSeconds(Math.Max(120, snapshot.Segments));
             var result = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Remux(Path.Combine(snapshot.Dir, ListFile), PartFile.For(output), snapshot.AudioLeadMs, snapshot.AudioTitles),
-                TimeSpan.FromSeconds(120), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+                timeout, ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
             if (!result.Succeeded)
             {
                 PartFile.Discard(output);
@@ -93,6 +98,10 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
                 throw new InvalidOperationException(L($"Could not write the clip: {result.FirstError}", $"Não foi possível gravar o clipe: {result.FirstError}"));
             }
             PartFile.Commit(output);
+            if (snapshot.Bookmarks is { Count: > 0 } bookmarks)
+            {
+                LibraryStore.Update(paths.LibraryFile, s => s.SetBookmarks(output, bookmarks));
+            }
             Directory.Delete(snapshot.Dir, recursive: true);
             log.Information("Clip saved: {Path} (remux {Ms} ms)", output, (long)result.Elapsed.TotalMilliseconds);
             return output;
@@ -123,12 +132,22 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             var lead = lines.Length > 2 && int.TryParse(lines[2], CultureInfo.InvariantCulture, out var l) ? l : 0;
             var titles = lines.Length > 3 && lines[3].Length > 0 ? lines[3].Split('|') : null;
             result.Add(new ClipSnapshot(dir, lines.Length > 0 ? lines[0] : ClipNaming.FallbackGame, time, segments,
-                segments * GhostclipConfig.SegmentSeconds, lead, titles, TimeSpan.Zero));
+                segments * GhostclipConfig.SegmentSeconds, lead, titles, TimeSpan.Zero, ReadBookmarks(dir)));
         }
         return result;
     }
 
-    private bool LinkOrCopy(string source, string target)
+    // A session's bookmarks, one offset in seconds per line; a crash mid-session keeps them.
+    internal static IReadOnlyList<double>? ReadBookmarks(string dir)
+    {
+        var file = Path.Combine(dir, BookmarksFile);
+        if (!File.Exists(file)) return null;
+        return File.ReadAllLines(file)
+            .Select(l => double.TryParse(l, NumberStyles.Float, CultureInfo.InvariantCulture, out var s) ? s : -1)
+            .Where(s => s >= 0).ToList();
+    }
+
+    internal bool LinkOrCopy(string source, string target)
     {
         if (Native.CreateHardLink(target, source, 0)) return true;
         try

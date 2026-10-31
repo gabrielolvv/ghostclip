@@ -7,8 +7,9 @@ namespace Ghostclip.Core;
 /// <summary>What the library shows about a clip, cached next to its thumbnail.</summary>
 /// <param name="Keyframes">Seconds where a stream-copy trim can start.</param>
 /// <param name="Peaks">Peak level of the first audio track, 0..1, in <see cref="ClipMedia.PeakCount"/> buckets.</param>
+/// <param name="AudioTitles">The tracks' names as saving wrote them ("Game", "Microphone", "Discord"); null in details cached before they were read.</param>
 public sealed record ClipMeta(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec,
-    IReadOnlyList<double> Keyframes, IReadOnlyList<float> Peaks);
+    IReadOnlyList<double> Keyframes, IReadOnlyList<float> Peaks, IReadOnlyList<string>? AudioTitles = null);
 
 /// <summary>Parsing what ffprobe and FFmpeg report about a clip for the library.</summary>
 public static class ClipMedia
@@ -70,7 +71,7 @@ public static class ClipMedia
     /// throws instead: cached, a partial list would snap trims to the wrong place.
     /// </summary>
     public static ClipMeta BuildMeta(double duration, int height, double fps, int audioTracks, string videoCodec,
-        ProcessResult keyframes, ProcessResult? peaks)
+        ProcessResult keyframes, ProcessResult? peaks, IReadOnlyList<string>? audioTitles = null)
     {
         if (!keyframes.Succeeded)
         {
@@ -83,7 +84,7 @@ public static class ClipMedia
             throw new InvalidOperationException($"Could not read the clip's audio levels: {(peaks is null ? "not measured" : peaks.TimedOut ? "timed out" : peaks.FirstError)}");
         }
         return new ClipMeta(duration, height, Math.Round(fps, 2), audioTracks, videoCodec, keys,
-            peaks is null ? [] : ParsePeaks(peaks.StdErr));
+            peaks is null ? [] : ParsePeaks(peaks.StdErr), audioTitles);
     }
 
     /// <summary>

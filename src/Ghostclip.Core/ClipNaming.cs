@@ -63,18 +63,53 @@ public static class ClipNaming
 
     /// <summary>
     /// &lt;root&gt;\&lt;Game&gt;\&lt;Game&gt;_YYYY-MM-DD_HH-MM-SS.mp4, with _2, _3... when the
-    /// name is taken (two saves in the same second).
+    /// name is taken (two saves in the same second). Screenshots pass ".jpg".
     /// </summary>
-    public static string BuildPath(string root, string? game, DateTime localTime, Func<string, bool> exists)
+    public static string BuildPath(string root, string? game, DateTime localTime, Func<string, bool> exists, string extension = ".mp4")
     {
         var safe = SafeGameName(game);
         var dir = Path.Combine(root, safe);
         var stem = string.Create(CultureInfo.InvariantCulture, $"{safe}_{localTime:yyyy-MM-dd_HH-mm-ss}");
-        var path = Path.Combine(dir, stem + ".mp4");
+        var path = Path.Combine(dir, stem + extension);
         for (var n = 2; exists(path); n++)
         {
-            path = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{stem}_{n}.mp4"));
+            path = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{stem}_{n}{extension}"));
         }
         return path;
+    }
+
+    /// <summary>
+    /// The path <paramref name="path"/> gets when renamed to <paramref name="name"/>: same folder,
+    /// same extension. Null when the name doesn't change. Throws, with a message for
+    /// people, on a name Windows can't use or one another file already has.
+    /// </summary>
+    public static string? RenamedPath(string path, string name, Func<string, bool> exists)
+    {
+        var extension = Path.GetExtension(path);
+        var stem = name.Trim();
+        // "Clip.mp4" typed in full means the same as "Clip".
+        if (stem.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) stem = stem[..^extension.Length].TrimEnd();
+        if (stem.Length == 0)
+        {
+            throw new InvalidOperationException(UiText.L("Type a name.", "Digite um nome."));
+        }
+        if (stem.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || stem.EndsWith('.') || ReservedNames.Contains(stem.Split('.')[0]))
+        {
+            throw new InvalidOperationException(UiText.L(
+                "Windows can't use that name. Leave out \\ / : * ? \" < > | and don't end it with a dot.",
+                "O Windows não aceita esse nome. Tire \\ / : * ? \" < > | e não termine com ponto."));
+        }
+        if (stem.Length > 150)
+        {
+            throw new InvalidOperationException(UiText.L("That name is too long.", "Esse nome é longo demais."));
+        }
+        var target = Path.Combine(Path.GetDirectoryName(path) ?? "", stem + extension);
+        if (string.Equals(target, path, StringComparison.Ordinal)) return null;
+        // Only the case changed: the same file on Windows, so it's not taken.
+        if (!string.Equals(target, path, StringComparison.OrdinalIgnoreCase) && exists(target))
+        {
+            throw new InvalidOperationException(UiText.L($"There is already a file called {stem}{extension} here.", $"Já existe um arquivo chamado {stem}{extension} aqui."));
+        }
+        return target;
     }
 }

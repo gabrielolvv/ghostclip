@@ -3,11 +3,12 @@ using System.Text.RegularExpressions;
 
 namespace Ghostclip.Core;
 
-/// <summary>One saved clip as the library shows it.</summary>
+/// <summary>One saved clip or screenshot as the library shows it.</summary>
 /// <param name="RelativeUrl">Path under the clips folder, escaped per segment, for the library's virtual host.</param>
 /// <param name="Derived">A _trim or _discord copy of another clip.</param>
 /// <param name="LastWriteUtc">With <paramref name="Bytes"/>, tells a replaced file from the one it replaced.</param>
-public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived, DateTime LastWriteUtc);
+/// <param name="Image">A screenshot rather than a video.</param>
+public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived, DateTime LastWriteUtc, bool Image = false);
 
 /// <summary>
 /// The clips folder is the library: one folder per game, as saving lays it
@@ -17,7 +18,11 @@ public static partial class ClipLibrary
 {
     private static readonly EnumerationOptions Recursive = new() { RecurseSubdirectories = true, IgnoreInaccessible = true };
 
-    /// <summary>Every clip under <paramref name="root"/>, newest first. A missing folder is an empty library.</summary>
+    /// <summary>Extensions the library lists: clips, and screenshots (.jpg from the hotkey, .png if people add them).</summary>
+    public static bool IsImage(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".png";
+
+    /// <summary>Every clip and screenshot under <paramref name="root"/>, newest first. A missing folder is an empty library.</summary>
     public static IReadOnlyList<ClipEntry> Scan(string root)
     {
         if (!Directory.Exists(root)) return [];
@@ -25,7 +30,8 @@ public static partial class ClipLibrary
         foreach (var path in Directory.EnumerateFiles(root, "*", Recursive))
         {
             // Exact extension: a clip being written is still a .mp4.part.
-            if (!string.Equals(Path.GetExtension(path), ".mp4", StringComparison.OrdinalIgnoreCase)) continue;
+            var image = IsImage(path);
+            if (!image && !string.Equals(Path.GetExtension(path), ".mp4", StringComparison.OrdinalIgnoreCase)) continue;
             FileInfo info;
             try
             {
@@ -40,7 +46,8 @@ public static partial class ClipLibrary
             var separator = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
             var game = separator > 0 ? relative[..separator] : ClipNaming.FallbackGame;
             var name = info.Name;
-            clips.Add(new ClipEntry(path, ToRelativeUrl(root, path), game, TimeFromName(name) ?? info.LastWriteTime, info.Length, IsDerived(name), info.LastWriteTimeUtc));
+            clips.Add(new ClipEntry(path, ToRelativeUrl(root, path), game, TimeFromName(name) ?? info.LastWriteTime, info.Length,
+                !image && IsDerived(name), info.LastWriteTimeUtc, image));
         }
         clips.Sort((a, b) => b.SavedLocal != a.SavedLocal
             ? b.SavedLocal.CompareTo(a.SavedLocal)

@@ -68,6 +68,13 @@ public sealed record GhostclipConfig
     public const int SegmentSeconds = 2;
 
     public string Hotkey { get; set; } = "Alt+F10";
+
+    /// <summary>Saves a picture of the monitor being recorded.</summary>
+    public string ScreenshotHotkey { get; set; } = "Alt+F11";
+
+    /// <summary>Starts and stops a session recording; while one runs, the clip hotkey also adds a bookmark.</summary>
+    public string SessionHotkey { get; set; } = "Alt+F9";
+
     public int ClipSeconds { get; set; } = 60;
     public int Fps { get; set; } = 60;
     public int BitrateMbps { get; set; } = 20;
@@ -88,6 +95,12 @@ public sealed record GhostclipConfig
 
     /// <summary>Records the default microphone as a second audio track.</summary>
     public bool Microphone { get; set; }
+
+    /// <summary>
+    /// Records the Discord app on a track of its own and leaves it out of the
+    /// system track, so a call can be muted or turned down after the fact.
+    /// </summary>
+    public bool DiscordTrack { get; set; }
 
     /// <summary>Size limit for "Compress for Discord" (10 MB on a free account).</summary>
     public int DiscordLimitMB { get; set; } = 10;
@@ -122,6 +135,8 @@ public sealed record GhostclipConfig
     public GhostclipConfig Normalize() => this with
     {
         Hotkey = string.IsNullOrWhiteSpace(Hotkey) ? "Alt+F10" : Hotkey.Trim(),
+        ScreenshotHotkey = string.IsNullOrWhiteSpace(ScreenshotHotkey) ? "Alt+F11" : ScreenshotHotkey.Trim(),
+        SessionHotkey = string.IsNullOrWhiteSpace(SessionHotkey) ? "Alt+F9" : SessionHotkey.Trim(),
         ClipSeconds = Math.Clamp(ClipSeconds, 10, 600),
         Fps = Math.Clamp(Fps, 24, 144),
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),
@@ -148,6 +163,10 @@ public sealed record GhostclipConfig
 
     public bool MicrophoneMutedFor(string? game) => ProfileFor(game)?.MuteMicrophone ?? false;
 
+    /// <summary>The save, screenshot and session hotkeys, in that order.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> Hotkeys => [Hotkey, ScreenshotHotkey, SessionHotkey];
+
     /// <summary>The longest clip any profile can ask for: the buffer must hold that much.</summary>
     public int MaxClipSeconds => Profiles.Select(p => p.ClipSeconds ?? 0).Append(ClipSeconds).Max();
 
@@ -160,6 +179,6 @@ public sealed record GhostclipConfig
         Fps == other.Fps && BitrateMbps == other.BitrateMbps && Codec == other.Codec &&
         Encoder == other.Encoder && Input == other.Input && OutputHeight == other.OutputHeight &&
         Monitor == other.Monitor && SystemAudio == other.SystemAudio && Microphone == other.Microphone &&
-        AudioOffsetMs == other.AudioOffsetMs && QsvAsyncDepth == other.QsvAsyncDepth &&
+        DiscordTrack == other.DiscordTrack && AudioOffsetMs == other.AudioOffsetMs && QsvAsyncDepth == other.QsvAsyncDepth &&
         FfmpegPath == other.FfmpegPath;
 }

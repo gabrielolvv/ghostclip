@@ -59,7 +59,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         saved(config);
         var root = clipsRoot();
         var games = await Task.Run(() => ClipLibrary.Scan(root).Select(c => c.Game)).ConfigureAwait(true);
-        window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(), HotkeyLabel: KeyLabels.Describe(config.Hotkey),
+        window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(), HotkeyLabels: HotkeyLabels(config),
             Games: games.Concat(config.Profiles.Select(p => p.Game)).Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase).ToList(),
             Status: status.Current));
@@ -68,7 +68,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
     private void Save(LibraryRequest r)
     {
         var config = (r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar."))).Normalize();
-        if (!HotkeyWindow.TryParse(config.Hotkey, out _, out _, out var hotkeyError))
+        if (HotkeyProblem(config) is { } hotkeyError)
         {
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;
@@ -89,7 +89,31 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         }
         ConfigStore.Save(paths.ConfigFile, config);
         saved(config);
-        window.Post(new LibraryEvent("done", Op: r.Type, Config: config, HotkeyLabel: KeyLabels.Describe(config.Hotkey)));
+        window.Post(new LibraryEvent("done", Op: r.Type, Config: config, HotkeyLabels: HotkeyLabels(config)));
+    }
+
+    // Keyed like the config fields the page edits.
+    private static Dictionary<string, string> HotkeyLabels(GhostclipConfig config) => new()
+    {
+        ["hotkey"] = KeyLabels.Describe(config.Hotkey),
+        ["screenshotHotkey"] = KeyLabels.Describe(config.ScreenshotHotkey),
+        ["sessionHotkey"] = KeyLabels.Describe(config.SessionHotkey),
+    };
+
+    // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
+    private static string? HotkeyProblem(GhostclipConfig config)
+    {
+        foreach (var gesture in config.Hotkeys)
+        {
+            if (!HotkeyWindow.TryParse(gesture, out _, out _, out var error)) return error;
+        }
+        var keys = config.Hotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
+        if (keys.Distinct().Count() < keys.Count)
+        {
+            return L("Saving a clip, taking a screenshot and recording a session each need a hotkey of their own.",
+                "Salvar clipe, tirar print e gravar sessão precisam de uma hotkey diferente cada.");
+        }
+        return null;
     }
 
     private static string Unreadable(string? error) => L(

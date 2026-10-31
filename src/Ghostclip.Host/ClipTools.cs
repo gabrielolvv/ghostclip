@@ -6,7 +6,8 @@ using Serilog;
 
 namespace Ghostclip.Host;
 
-internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec);
+/// <param name="AudioTitles">Track names saving wrote ("Game", "Microphone", "Discord"); empty for clips with unnamed tracks.</param>
+internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec, IReadOnlyList<string> AudioTitles);
 
 /// <summary>
 /// Trimming and "compress for Discord". Both run at below-normal priority, so a
@@ -17,7 +18,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<ClipInfo> ProbeAsync(string clip, CancellationToken ct = default)
     {
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
-            "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate", "-of", "json", clip,
+            "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate:stream_tags=handler_name", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}"));
 
@@ -26,10 +27,15 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         int height = 0, audio = 0;
         double fps = 0;
         var codec = "";
+        var titles = new List<string>();
         foreach (var s in json.RootElement.GetProperty("streams").EnumerateArray())
         {
             var type = s.GetProperty("codec_type").GetString();
-            if (type == "audio") audio++;
+            if (type == "audio")
+            {
+                audio++;
+                titles.Add(s.TryGetProperty("tags", out var tags) && tags.TryGetProperty("handler_name", out var handler) ? handler.GetString() ?? "" : "");
+            }
             if (type == "video" && height == 0)
             {
                 height = s.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
@@ -43,7 +49,9 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
                 }
             }
         }
-        return new ClipInfo(duration, height, fps, audio, codec);
+        // MP4 names an unnamed track "SoundHandler": only names saving gave count.
+        return new ClipInfo(duration, height, fps, audio, codec,
+            titles.Any(t => t is "Game" or "Microphone" or "Discord") ? titles : []);
     }
 
     /// <summary>Cuts by stream copy into Game_..._trim.mp4. Takes about as long as copying the file.</summary>

@@ -6,7 +6,7 @@ using Serilog.Events;
 
 namespace Ghostclip.Host;
 
-/// <summary>The tray app: icon and menu, hotkey, saving, and the worker's lifecycle.</summary>
+/// <summary>The tray app: icon and menu, hotkeys, saving, screenshots, sessions, and the worker's lifecycle.</summary>
 internal sealed class TrayApp : ApplicationContext
 {
     private readonly GhostclipPaths _paths;
@@ -15,6 +15,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly SynchronizationContext _ui;
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _saveItem;
+    private readonly ToolStripMenuItem _screenshotItem;
+    private readonly ToolStripMenuItem _sessionItem;
     private readonly ToolStripMenuItem _statusItem = new() { Enabled = false };
     private readonly ToolStripMenuItem _updateItem = new() { Visible = false };
     private readonly ToolStripMenuItem _libraryItem;
@@ -22,9 +24,11 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _settingsItem;
     private readonly ToolStripMenuItem _logsItem;
     private readonly ToolStripMenuItem _exitItem;
-    // The registered hotkey as the menu names it (null when none is), and the update waiting to be applied.
-    private string? _hotkeyLabel;
+    // Each registered hotkey as the menu names it (missing when none is), and the update waiting to be applied.
+    private readonly Dictionary<HotkeyAction, string> _hotkeyLabels = [];
     private string? _updateVersion;
+    private readonly ScreenshotTaker _screenshots;
+    private readonly SessionRecorder _session;
     private readonly UpdateService _updates = new(Log.ForContext<UpdateService>());
     private readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 2 * 60 * 1000 };
     private readonly HotkeyWindow _hotkey = new();
@@ -61,6 +65,8 @@ internal sealed class TrayApp : ApplicationContext
 
         // Texts come from ApplyTexts, in the chosen language.
         _saveItem = new ToolStripMenuItem("", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
+        _screenshotItem = new ToolStripMenuItem("", null, (_, _) => TakeScreenshot());
+        _sessionItem = new ToolStripMenuItem("", null, (_, _) => ToggleSession());
         _libraryItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary());
         _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
@@ -71,6 +77,9 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
+        menu.Items.Add(_screenshotItem);
+        menu.Items.Add(_sessionItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_libraryItem);
         menu.Items.Add(_clipsFolderItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -84,6 +93,10 @@ internal sealed class TrayApp : ApplicationContext
         _icon.BalloonTipClicked += (_, _) => OpenLibrary(_lastClip);
 
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
+        _screenshots = new ScreenshotTaker(() => _config, Log.ForContext<ScreenshotTaker>());
+        _session = new SessionRecorder(paths, _saver, Log.ForContext<SessionRecorder>());
+        // The menu shows how long the session has been running.
+        _session.Ticked += ApplyTexts;
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
         _foregroundTimer.Tick += (_, _) => CheckForeground();
         _foregroundTimer.Start();
@@ -101,7 +114,15 @@ internal sealed class TrayApp : ApplicationContext
         _worker = new WorkerSupervisor(Log.ForContext<WorkerSupervisor>());
         _worker.StatusChanged += s => _ui.Post(_ => OnStatus(s), null);
         _worker.ErrorReported += (message, fatal) => _ui.Post(_ => OnWorkerError(message, fatal), null);
-        _hotkey.Pressed += SaveClip;
+        _hotkey.Pressed += action =>
+        {
+            switch (action)
+            {
+                case HotkeyAction.SaveClip: SaveClip(); break;
+                case HotkeyAction.Screenshot: TakeScreenshot(); break;
+                case HotkeyAction.Session: ToggleSession(); break;
+            }
+        };
         // An exit request set before this instance existed (by the installer's hook,
         // while some other process kept the event alive) is not meant for it.
         _exitRequest.Reset();
@@ -110,7 +131,7 @@ internal sealed class TrayApp : ApplicationContext
         _exitRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _exitRequest, (_, _) => _ui.Post(_ => Exit(), null), null, Timeout.Infinite, executeOnlyOnce: true);
 
-        RegisterHotkey();
+        RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
         _worker.Start(_config);
         PublishStatus(_status);
@@ -181,32 +202,47 @@ internal sealed class TrayApp : ApplicationContext
     }
 
     // A new hotkey another program already holds must not leave you without one: the old one stays.
-    private void RegisterHotkey(string? previous = null)
+    // All are let go first, so two actions can swap keys.
+    private void RegisterHotkeys(GhostclipConfig? previous = null)
     {
-        if (_hotkey.TryRegister(_config.Hotkey, out var error))
+        _hotkey.UnregisterAll();
+        _hotkeyLabels.Clear();
+        foreach (var action in Enum.GetValues<HotkeyAction>())
         {
-            _hotkeyLabel = KeyLabels.Describe(_config.Hotkey);
-        }
-        else if (previous is not null && _hotkey.TryRegister(previous, out _))
-        {
-            _hotkeyLabel = KeyLabels.Describe(previous);
-            Notify(L("Hotkey not changed", "Hotkey não alterada"),
-                L($"{error} Still using {_hotkeyLabel}. Pick another one in Settings.",
-                    $"{error} Continua valendo {_hotkeyLabel}. Escolha outra em Configurações."), ToolTipIcon.Warning);
-        }
-        else
-        {
-            _hotkeyLabel = null;
-            Notify(L("Hotkey not available", "Hotkey indisponível"),
-                L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
+            var gesture = _config.Hotkeys[(int)action];
+            var old = previous?.Hotkeys[(int)action];
+            if (_hotkey.TryRegister(action, gesture, out var error))
+            {
+                _hotkeyLabels[action] = KeyLabels.Describe(gesture);
+            }
+            else if (old is not null && old != gesture && _hotkey.TryRegister(action, old, out _))
+            {
+                _hotkeyLabels[action] = KeyLabels.Describe(old);
+                Notify(L("Hotkey not changed", "Hotkey não alterada"),
+                    L($"{error} Still using {_hotkeyLabels[action]}. Pick another one in Settings.",
+                        $"{error} Continua valendo {_hotkeyLabels[action]}. Escolha outra em Configurações."), ToolTipIcon.Warning);
+            }
+            else
+            {
+                Notify(L("Hotkey not available", "Hotkey indisponível"),
+                    L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
+            }
         }
         ApplyTexts();
     }
 
-    // Every text the tray shows; again whenever the language changes.
+    // "Save clip (Alt+F10)", or without the key when none is registered.
+    private string WithHotkey(HotkeyAction action, string text) =>
+        _hotkeyLabels.TryGetValue(action, out var label) ? $"{text} ({label})" : text;
+
+    // Every text the tray shows; again whenever the language changes, and every second of a session.
     private void ApplyTexts()
     {
-        _saveItem.Text = _hotkeyLabel is null ? L("Save clip", "Salvar clipe") : L($"Save clip ({_hotkeyLabel})", $"Salvar clipe ({_hotkeyLabel})");
+        _saveItem.Text = WithHotkey(HotkeyAction.SaveClip, L("Save clip", "Salvar clipe"));
+        _screenshotItem.Text = WithHotkey(HotkeyAction.Screenshot, L("Take screenshot", "Tirar print"));
+        _sessionItem.Text = _session.Running
+            ? WithHotkey(HotkeyAction.Session, L($"Stop session recording · {Clock(_session.Elapsed)}", $"Parar gravação da sessão · {Clock(_session.Elapsed)}"))
+            : WithHotkey(HotkeyAction.Session, L("Record session", "Gravar sessão"));
         _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}");
         _libraryItem.Text = L("Open library", "Abrir biblioteca");
         _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes");
@@ -292,10 +328,14 @@ internal sealed class TrayApp : ApplicationContext
             _ => L("Starting", "Iniciando"),
         };
         var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}") : "";
-        var mic = _status.Microphone ? " · mic" : "";
+        var mic = (_status.Microphone ? " · mic" : "") + (_status.Discord ? " · discord" : "");
         var game = _gamePid != 0 ? _game : _foreground;
-        _statusItem.Text = $"{state} · {game}{audio}{mic}";
+        var session = _session.Running ? L($"● Session {Clock(_session.Elapsed)} · ", $"● Sessão {Clock(_session.Elapsed)} · ") : "";
+        _statusItem.Text = $"{session}{state} · {game}{audio}{mic}";
     }
+
+    private static string Clock(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
 
     // The worker names the audio route in English, for its log as well.
     private static string PortugueseRoute(string route) => route switch
@@ -303,6 +343,7 @@ internal sealed class TrayApp : ApplicationContext
         "system" => "sistema",
         "microphone" => "microfone",
         "silence" => "silêncio",
+        "system without discord" => "sistema sem discord",
         "starting" => "iniciando",
         _ when route.StartsWith("game ", StringComparison.Ordinal) => "jogo " + route["game ".Length..],
         _ => route,
@@ -324,11 +365,18 @@ internal sealed class TrayApp : ApplicationContext
         _icon.Text = text.Length > 127 ? text[..127] : text;
     }
 
+    // Named after the game being played, even if the hotkey came from another window.
+    private string CurrentGame()
+    {
+        var front = ForegroundGame.Detect();
+        return _gamePid != 0 && !front.Fullscreen && _config.ProfileFor(front.Game) is null ? _game : front.Game;
+    }
+
     private void SaveClip()
     {
-        // Named after the game being played, even if the hotkey came from another window.
-        var front = ForegroundGame.Detect();
-        var game = _gamePid != 0 && !front.Fullscreen && _config.ProfileFor(front.Game) is null ? _game : front.Game;
+        var game = CurrentGame();
+        // During a session the moment is also marked in it; the clip is saved as well.
+        if (_session.Running) _session.AddBookmark();
         ClipSnapshot snapshot;
         try
         {
@@ -345,12 +393,73 @@ internal sealed class TrayApp : ApplicationContext
         _ = FinishAsync(snapshot);
     }
 
-    private async Task FinishAsync(ClipSnapshot snapshot)
+    private async void TakeScreenshot()
+    {
+        var game = CurrentGame();
+        try
+        {
+            var path = await _screenshots.TakeAsync(game).ConfigureAwait(true);
+            if (_config.ConfirmationSound) _sound.Play();
+            _lastClip = path;
+            Notify(L("Screenshot saved", "Print salvo"), L($"{game}. Click to open it.", $"{game}. Clique para abrir."), ToolTipIcon.None);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            _log.Warning("Screenshot failed: {Error}", ex.Message);
+            Notify(L("Screenshot not saved", "Print não salvo"), ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
+    private void ToggleSession()
+    {
+        if (_session.Running)
+        {
+            StopSession();
+            return;
+        }
+        // A session is the buffer kept: there must be a buffer being written.
+        if (_status.State != WorkerState.Recording)
+        {
+            Notify(L("Session not started", "Sessão não iniciada"),
+                L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora."), ToolTipIcon.Warning);
+            return;
+        }
+        _session.Start(CurrentGame());
+        if (_config.ConfirmationSound) _sound.Play();
+        var stop = _hotkeyLabels.TryGetValue(HotkeyAction.Session, out var s) ? s : L("the tray menu", "o menu da bandeja");
+        var mark = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var c) ? c : L("the clip hotkey", "a hotkey de clipe");
+        Notify(L("Recording the session", "Gravando a sessão"),
+            L($"{_session.Game}. {mark} saves a clip and adds a bookmark; {stop} stops.",
+                $"{_session.Game}. {mark} salva um clipe e marca o momento; {stop} para."), ToolTipIcon.None);
+        ApplyTexts();
+    }
+
+    private void StopSession()
+    {
+        var snapshot = _session.Stop();
+        ApplyTexts();
+        if (snapshot is null)
+        {
+            Notify(L("Session not saved", "Sessão não salva"), L("Nothing was recorded.", "Nada foi gravado."), ToolTipIcon.Warning);
+            return;
+        }
+        if (_config.ConfirmationSound) _sound.Play();
+        _ = FinishAsync(snapshot, session: true);
+    }
+
+    private async Task FinishAsync(ClipSnapshot snapshot, bool session = false)
     {
         try
         {
             var path = await Task.Run(() => _saver.RemuxAsync(snapshot)).ConfigureAwait(true);
             _lastClip = path;
+            if (session)
+            {
+                Notify(L("Session saved", "Sessão salva"),
+                    L($"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} bookmarks. Click to open it.",
+                        $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Clique para abrir."), ToolTipIcon.None);
+                return;
+            }
             Notify(L("Clip saved", "Clipe salvo"),
                 L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir."), ToolTipIcon.None);
         }
@@ -367,7 +476,7 @@ internal sealed class TrayApp : ApplicationContext
         foreach (var snapshot in _saver.PendingFromEarlierRuns())
         {
             _log.Information("Finishing a clip from an earlier run: {Dir}", snapshot.Dir);
-            await FinishAsync(snapshot).ConfigureAwait(true);
+            await FinishAsync(snapshot, session: snapshot.Dir.EndsWith("-session", StringComparison.Ordinal)).ConfigureAwait(true);
         }
     }
 
@@ -405,12 +514,18 @@ internal sealed class TrayApp : ApplicationContext
     // The worker restarts recording only when the capture settings changed (GhostclipConfig.SameCaptureAs).
     private void ApplyConfig(GhostclipConfig config)
     {
-        var previousHotkey = _config.Hotkey;
+        var previous = _config;
+        // The recorder is about to start over in another format, and a session's segments must all join: save it as it is.
+        if (_session.Running && !config.SameCaptureAs(previous))
+        {
+            _log.Information("Capture settings changed; ending the session");
+            StopSession();
+        }
         _config = config;
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         UiText.Use(config.Language);
         // Both redo the menu's texts, in the language just set.
-        if (config.Hotkey != previousHotkey) RegisterHotkey(previousHotkey);
+        if (!config.Hotkeys.SequenceEqual(previous.Hotkeys)) RegisterHotkeys(previous);
         else ApplyTexts();
         ApplyAutostart();
         _worker.UpdateConfig(config);
@@ -455,6 +570,9 @@ internal sealed class TrayApp : ApplicationContext
     {
         _shuttingDown = true;
         _icon.Visible = false;
+        // A session left in Pending is finished into an MP4 on the next start, like any interrupted save.
+        _session.Stop();
+        _session.Dispose();
         _hotkey.Dispose();
         _foregroundTimer.Dispose();
         _updateTimer.Dispose();
