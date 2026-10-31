@@ -11,10 +11,13 @@ public enum EncoderKind { Auto, Nvenc, Amf, Qsv }
 /// <summary>
 /// How frames reach the encoder. Nv12 converts BGRA to NV12 in an explicit GPU
 /// step first; Direct hands BGRA to the encoder and lets it convert. Both stay
-/// on the GPU; which one costs fewer FPS depends on the driver.
+/// on the GPU; which one costs fewer FPS depends on the driver. Memory copies
+/// each frame to system memory and hands that BGRA to the encoder, which still
+/// encodes on the GPU: the fallback for drivers that refuse the captured
+/// texture (AMF on a Radeon RX 6600), NVENC and AMF only.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<EncoderInput>))]
-public enum EncoderInput { Auto, Nv12, Direct }
+public enum EncoderInput { Auto, Nv12, Direct, Memory }
 
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }
