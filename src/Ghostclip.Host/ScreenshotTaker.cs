@@ -11,7 +11,23 @@ namespace Ghostclip.Host;
 /// </summary>
 internal sealed class ScreenshotTaker(Func<GhostclipConfig> config, ILogger log)
 {
+    // One at a time: two presses in the same second would otherwise pick the same name and write one file.
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
     public async Task<string> TakeAsync(string game, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await TakeOneAsync(game, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task<string> TakeOneAsync(string game, CancellationToken ct)
     {
         var cfg = config();
         var ffmpeg = FfmpegLocator.Find(cfg.FfmpegPath, AppContext.BaseDirectory)

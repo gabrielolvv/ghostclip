@@ -195,7 +195,8 @@ internal sealed class LibraryBridge : IDisposable
                     break;
                 case "delete":
                     RecycleBin.Send(path, _window.Handle);
-                    LibraryStore.Update(_paths.LibraryFile, s => s.Forget(path));
+                    // In the Recycle Bin already: a favorites file that can't be written mustn't report it as kept.
+                    UpdateLibraryQuietly(s => s.Forget(path));
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));
                     break;
                 case "favorite":
@@ -208,7 +209,7 @@ internal sealed class LibraryBridge : IDisposable
                     if (renamed is not null)
                     {
                         File.Move(path, renamed);
-                        LibraryStore.Update(_paths.LibraryFile, s => s.Move(path, renamed));
+                        UpdateLibraryQuietly(s => s.Move(path, renamed));
                     }
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: renamed ?? path));
                     await ListAsync().ConfigureAwait(true);
@@ -245,6 +246,20 @@ internal sealed class LibraryBridge : IDisposable
         finally
         {
             Interlocked.Decrement(ref _jobs);
+        }
+    }
+
+    // For changes that follow one already made to the file itself (deleted, renamed): the file's change stands
+    // either way, so a busy or unreadable library.json is logged rather than reported as a failure.
+    private void UpdateLibraryQuietly(Action<LibraryState> change)
+    {
+        try
+        {
+            LibraryStore.Update(_paths.LibraryFile, change);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warning("Could not update the library file: {Error}", ex.Message);
         }
     }
 

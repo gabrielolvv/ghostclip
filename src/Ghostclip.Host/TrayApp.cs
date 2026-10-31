@@ -452,11 +452,16 @@ internal sealed class TrayApp : ApplicationContext
 
     private void StopSession()
     {
+        var earlierParts = _session.SavedParts;
         var snapshot = _session.Stop();
         ApplyTexts();
         if (snapshot is null)
         {
-            Notify(L("Session not saved", "Sessão não salva"), L("Nothing was recorded.", "Nada foi gravado."), ToolTipIcon.Warning);
+            // Stopped while the recorder was down: the parts before it are saved already.
+            if (earlierParts == 0)
+            {
+                Notify(L("Session not saved", "Sessão não salva"), L("Nothing was recorded.", "Nada foi gravado."), ToolTipIcon.Warning);
+            }
             return;
         }
         if (_config.ConfirmationSound) _sound.Play();
@@ -503,7 +508,19 @@ internal sealed class TrayApp : ApplicationContext
     {
         // A status posted just before shutdown arrives after the icon is gone.
         if (_shuttingDown) return;
+        var previous = _status.State;
         _status = status;
+        // A session can't join segments across a recorder restart: the part so far is saved, and the
+        // session goes on in a new file once recording is back.
+        if (_session.Running && previous == WorkerState.Recording && status.State != WorkerState.Recording
+            && _session.RecorderStopped() is { } part)
+        {
+            _ = FinishAsync(part, session: true);
+        }
+        else if (_session.Running && previous != WorkerState.Recording && status.State == WorkerState.Recording)
+        {
+            _session.RecorderResumed();
+        }
         // Probing again (a settings change) or recording: whatever stopped it is over.
         if (status.State != WorkerState.Stopped) _problem = null;
         var icon = status.State switch
@@ -587,8 +604,14 @@ internal sealed class TrayApp : ApplicationContext
 
     private void Exit()
     {
-        Shutdown();
-        ExitThread();
+        try
+        {
+            Shutdown();
+        }
+        finally
+        {
+            ExitThread();
+        }
     }
 
     // Only the user's own Exit installs a downloaded update; the installer's

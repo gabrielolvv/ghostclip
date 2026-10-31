@@ -32,8 +32,9 @@ internal static partial class RecycleBin
                 fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_WANTNUKEWARNING | FOF_NOERRORUI | FOF_SILENT,
             };
             var result = SHFileOperationW(ref op);
-            if (op.fAnyOperationsAborted != 0) throw new IOException("Kept the clip.");
-            if (result != 0) throw new IOException($"Windows couldn't delete the clip (error 0x{result:X}). Is it open in another program?");
+            if (op.fAnyOperationsAborted != 0) throw new IOException(L("Kept the clip.", "O clipe foi mantido."));
+            if (result != 0) throw new IOException(L($"Windows couldn't delete the clip (error 0x{result:X}). Is it open in another program?",
+                $"O Windows não conseguiu apagar o clipe (erro 0x{result:X}). Ele está aberto em outro programa?"));
         }
         finally
         {

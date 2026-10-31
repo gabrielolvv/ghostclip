@@ -752,6 +752,8 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
+      // The star was lit before the app answered: a fresh list puts it back as it really is.
+      if (message.op === 'favorite') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
       if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;

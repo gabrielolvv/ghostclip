@@ -85,6 +85,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
                 ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
             var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, snapshot.Game, snapshot.Time, File.Exists);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            EnsureRoomFor(snapshot.Dir, output);
 
             // Written under a temporary name, so the library never lists a half-written clip.
             // Stream copy runs far faster than real time; a long session gets a second per segment.
@@ -110,7 +111,17 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
                     log.Warning("Saved {Path} without its bookmarks: {Error}", output, ex.Message);
                 }
             }
-            Directory.Delete(snapshot.Dir, recursive: true);
+            // Saved. Without its details the pending folder is a leftover, not a clip to save again on the
+            // next start, even if a file in it can't be deleted yet.
+            try
+            {
+                File.Delete(Path.Combine(snapshot.Dir, MetaFile));
+                Directory.Delete(snapshot.Dir, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log.Warning("Saved {Path}; its pending folder is removed on the next start: {Error}", output, ex.Message);
+            }
             log.Information("Clip saved: {Path} (remux {Ms} ms)", output, (long)result.Elapsed.TotalMilliseconds);
             return output;
         }
@@ -118,6 +129,30 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             _remuxGate.Release();
         }
+    }
+
+    // The joined file is about the size of its segments, written while they still take their space. Said
+    // plainly when it doesn't fit, instead of an FFmpeg write error; the snapshot stays for the next try.
+    private static void EnsureRoomFor(string snapshotDir, string output)
+    {
+        long needed = 0;
+        foreach (var segment in Directory.EnumerateFiles(snapshotDir, "seg_*.ts")) needed += new FileInfo(segment).Length;
+        var root = Path.GetPathRoot(Path.GetFullPath(output));
+        if (string.IsNullOrEmpty(root)) return;
+        long free;
+        try
+        {
+            free = new DriveInfo(root).AvailableFreeSpace;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return;
+        }
+        const long margin = 64L * 1024 * 1024;
+        if (free >= needed + margin) return;
+        var gb = (needed + margin) / 1024.0 / 1024 / 1024;
+        throw new IOException(L($"Not enough free space on {root}: saving it needs about {gb:0.0} GB. It is kept and saved on the next start.",
+            $"Não há espaço livre suficiente em {root}: salvar precisa de cerca de {gb:0.0} GB. Ele fica guardado e é salvo na próxima vez que o Ghostclip abrir."));
     }
 
     /// <summary>Snapshots left by a run that ended before remuxing them.</summary>
@@ -130,8 +165,9 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             var meta = Path.Combine(dir, MetaFile);
             if (!File.Exists(meta) || !File.Exists(Path.Combine(dir, ListFile)))
             {
-                // Interrupted mid-snapshot: nothing usable.
-                Directory.Delete(dir, recursive: true);
+                // Interrupted mid-snapshot, or saved already: nothing to do but clear it away.
+                try { Directory.Delete(dir, recursive: true); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { log.Debug("Could not remove {Dir}: {Error}", dir, ex.Message); }
                 continue;
             }
             var lines = File.ReadAllLines(meta);
@@ -172,7 +208,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // Copies the bytes written so far. The recorder keeps writing to its file.
-    private bool CopyGrowing(string source, string target)
+    internal bool CopyGrowing(string source, string target)
     {
         try
         {
