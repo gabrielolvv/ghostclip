@@ -14,6 +14,15 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   shared with other videos is safe. Setting a limit that would delete
   something asks first and says how much; the setting shows the space in use.
 
+### Changed
+
+- A glass look. On Windows 11 (22H2 and later) the library window has the
+  system's acrylic behind it: the sidebar shows the desktop blurred through,
+  and cards, settings and pop-ups are translucent. Windows 10 keeps the solid
+  look. Cards lift and glow under the pointer, and the REC dot pulses.
+- The tray menu matches the library: dark, rounded corners on Windows 11, a
+  cyan highlight, slightly see-through.
+
 ## 0.7.0
 
 ### Added

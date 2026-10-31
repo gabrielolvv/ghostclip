@@ -246,3 +246,31 @@ details.more[open] summary { color: var(--text); }
 .savebar.warn { border-color: rgba(229, 179, 75, 0.55); }
 .savebar.warn span { color: #E5B34B; }
 .settings-open #games .game.on { background: none; box-shadow: none; color: var(--muted); }
+
+/* Effects, in both looks: a little depth and light where the pointer is */
+.brand svg { filter: drop-shadow(0 0 6px rgba(92, 225, 230, 0.45)); }
+.game.on { background: linear-gradient(90deg, rgba(92, 225, 230, 0.13), rgba(92, 225, 230, 0.02)); }
+.card { transition: border-color var(--fast), transform var(--fast), box-shadow var(--fast); }
+.card:hover, .card:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(92, 225, 230, 0.18), 0 0 24px rgba(92, 225, 230, 0.10); }
+.act.primary:hover { box-shadow: 0 0 16px rgba(92, 225, 230, 0.25); }
+.badge.rec .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 2px var(--red); opacity: 0.6; } }
+
+/* Glass: Windows 11's acrylic behind the window (LibraryWindow), the page translucent over it */
+html.glass, html.glass body { background: transparent; }
+html.glass .side { background: rgba(14, 16, 20, 0.30); border-right-color: rgba(255, 255, 255, 0.08); box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03); }
+html.glass main { background: rgba(11, 13, 16, 0.66); }
+html.glass .card, html.glass .card-s, html.glass #timeline {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+  border-color: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(12px) saturate(130%);
+}
+html.glass .card-s { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
+html.glass .thumb { background-color: rgba(255, 255, 255, 0.04); }
+html.glass #search, html.glass .field, html.glass .segmented { background: rgba(0, 0, 0, 0.28); }
+html.glass .act { background: rgba(255, 255, 255, 0.03); }
+html.glass .toast, html.glass .savebar, html.glass .confirm {
+  background: rgba(22, 26, 32, 0.70); backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+html.glass ::-webkit-scrollbar-thumb { border-color: transparent; background-clip: padding-box; }

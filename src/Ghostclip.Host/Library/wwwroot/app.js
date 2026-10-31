@@ -10,6 +10,9 @@ const MIN_RANGE = 0.5;
 // "en" or "pt": the window opens the page with ?lang=, and a "language" message changes it live.
 // Texts built here carry both translations where they are used: L('Settings', 'Configurações').
 let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
+
+// The window has Windows 11's acrylic behind it: panels turn translucent to show it (app.css, html.glass).
+if (new URLSearchParams(location.search).get('glass') === '1') document.documentElement.classList.add('glass');
 function L(en, pt) { return lang === 'pt' ? pt : en; }
 
 // The page's fixed texts: English is what the HTML carries, Portuguese sits next to it in data-pt,
