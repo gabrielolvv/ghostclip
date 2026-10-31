@@ -21,6 +21,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Hotkeys for screenshots and sessions in Settings; two actions can't share one.
 - When Ghostclip can't record (no hardware encoder works, FFmpeg missing), the
   library says why at the top, instead of only "NOT RECORDING".
+- When an update is downloaded, the library shows it in the sidebar with an
+  "Update now" button and a link to what's new, besides the tray menu.
 
 ### Changed
 

@@ -14,6 +14,9 @@ internal static class Program
     /// <summary>Set by the installer before uninstalling or updating: the running instance shuts down cleanly.</summary>
     public const string ExitEventName = @"Local\Ghostclip.Exit";
 
+    /// <summary>Set by the library's "Update now": the tray restarts into the update it has downloaded.</summary>
+    public const string UpdateEventName = @"Local\Ghostclip.Update";
+
     /// <summary>
     /// Ghostclip.exe                         tray app
     /// Ghostclip.exe --save                  the running instance saves a clip

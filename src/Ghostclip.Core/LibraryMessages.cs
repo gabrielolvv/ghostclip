@@ -7,7 +7,8 @@ namespace Ghostclip.Core;
 /// <summary>
 /// What the library page asks for: list, meta, trim, compress, copy, reveal,
 /// delete, favorite (Favorite) or rename (Name) for clips (Path is a clip's full
-/// path as the page received it), and openFolder; settings, saveSettings
+/// path as the page received it), openFolder, update (restart into the
+/// downloaded update) and releaseNotes (Name is its version); settings, saveSettings
 /// (Config, Confirmed once the page has warned that saving restarts recording),
 /// pickFolder and pickFfmpeg for the settings page.
 /// </summary>

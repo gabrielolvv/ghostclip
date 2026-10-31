@@ -43,4 +43,15 @@ public class HotkeyAndStatusTests
         Assert.NotEqual(RecorderStatus.From(1, new WorkerStatus { State = WorkerState.Stopped }, 60, why),
             RecorderStatus.From(1, new WorkerStatus { State = WorkerState.Stopped }, 60, "FFmpeg was not found."));
     }
+
+    // The library offers the downloaded update whatever the recorder is doing, and learns of it through a new write.
+    [Fact]
+    public void A_ready_update_travels_in_any_state()
+    {
+        var recording = new WorkerStatus { State = WorkerState.Recording };
+        Assert.Null(RecorderStatus.From(1, recording, 60).UpdateVersion);
+        Assert.Equal("0.7.0", RecorderStatus.From(1, recording, 60, updateVersion: "0.7.0").UpdateVersion);
+        Assert.Equal("0.7.0", RecorderStatus.From(1, new WorkerStatus { State = WorkerState.Stopped }, 60, "x", "0.7.0").UpdateVersion);
+        Assert.NotEqual(RecorderStatus.From(1, recording, 60), RecorderStatus.From(1, recording, 60, updateVersion: "0.7.0"));
+    }
 }
