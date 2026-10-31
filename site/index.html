@@ -57,7 +57,7 @@
     <p id="not-windows" class="meta note" data-i18n="hero.notWindows" hidden>Ghostclip runs on Windows. Open this page on your gaming PC to download it.</p>
 
     <figure class="shot">
-      <img src="img/library.png" width="1280" height="800" data-i18n-alt="img.library" alt="The Ghostclip library: clips grouped by game, with thumbnails, durations and a recording badge in the sidebar.">
+      <img src="img/library.png" width="1280" height="800" data-i18n-alt="img.library" alt="The Ghostclip library: clips and screenshots by day, with thumbnails, durations, starred favorites and a session with three bookmarks; the sidebar lists the games, the favorites and a recording badge.">
     </figure>
   </section>
 
@@ -69,20 +69,32 @@
         <p data-i18n="f1.text">Ghostclip keeps a rolling buffer of your screen and sound. The hotkey saves it as an MP4 in a folder per game: safe in milliseconds, written in under two seconds, never re-encoded.</p>
       </article>
       <article>
+        <h3 data-i18n="f7.title">Whole sessions and screenshots</h3>
+        <p data-i18n="f7.text"><kbd>Alt</kbd>+<kbd>F9</kbd> records from start to stop, and the clip key drops bookmarks on the timeline. It keeps the replay buffer instead of running a second encoder, so the game pays nothing extra. <kbd>Alt</kbd>+<kbd>F11</kbd> saves a screenshot next to your clips.</p>
+      </article>
+      <article>
         <h3 data-i18n="f2.title">Only your game's sound</h3>
         <p data-i18n="f2.text">Record everything you hear, or just the game: no Discord call, no music. It follows the game you play, not whatever window is in front.</p>
       </article>
       <article>
-        <h3 data-i18n="f3.title">Your mic on its own track</h3>
-        <p data-i18n="f3.text">The microphone is a separate audio track, so you can turn yourself down later. Mute it per game with a profile.</p>
+        <h3 data-i18n="f3.title">Mic and Discord on their own tracks</h3>
+        <p data-i18n="f3.text">The microphone is a separate audio track, so you can turn yourself down later, or mute it per game with a profile. The Discord app's sound can get a track of its own too, so a call can be muted after the fact.</p>
       </article>
       <article>
         <h3 data-i18n="f4.title">A library to find the good part</h3>
-        <p data-i18n="f4.text">Every clip by game, with thumbnails and a player. Trim by dragging over the audio waveform: the cut starts on a keyframe, so what you see is what you get.</p>
+        <p data-i18n="f4.text">Every clip and screenshot by game, with thumbnails, a player, favorites and renaming. Trim by dragging over the audio waveform: the cut starts on a keyframe, so what you see is what you get.</p>
       </article>
       <article>
         <h3 data-i18n="f5.title">Ready for Discord</h3>
         <p data-i18n="f5.text">Compress any clip to fit Discord's upload limit, on the GPU, with game and mic mixed. Or copy the file and paste it straight into a chat.</p>
+      </article>
+      <article>
+        <h3 data-i18n="f8.title">A folder that doesn't fill your disk</h3>
+        <p data-i18n="f8.text">Set a space limit, and past it the oldest clips and screenshots are deleted after each save. Favorites, clips you renamed and files Ghostclip didn't make are never touched. Off by default.</p>
+      </article>
+      <article>
+        <h3 data-i18n="f9.title">In English or Portuguese</h3>
+        <p data-i18n="f9.text">The tray, notifications, library and settings follow the language Windows uses, or the one you pick, and switch as soon as you save, without restarting recording.</p>
       </article>
       <article>
         <h3 data-i18n="f6.title">Gone when you don't need it</h3>
@@ -93,7 +105,7 @@
 
   <section class="split">
     <figure class="shot">
-      <img src="img/clip.png" width="1280" height="800" data-i18n-alt="img.clip" alt="A clip open in the library: video player, a timeline over the audio waveform with the trim range in cyan, and buttons to save the trim, compress for Discord, copy and delete." loading="lazy">
+      <img src="img/clip.png" width="1280" height="800" data-i18n-alt="img.clip" alt="A session open in the library: video player, a timeline over the audio waveform with three bookmarks, and buttons to save a trim, compress for Discord, copy, favorite, rename, show in folder and delete." loading="lazy">
     </figure>
     <div>
       <h2 class="label mono" data-i18n="points.label">BUILT TO COST YOUR GAME NOTHING</h2>
@@ -132,8 +144,8 @@
       <p data-i18n="faq.3a">Windows 10 2004 or later, or Windows 11, and a GPU with a hardware encoder: NVIDIA (NVENC), AMD (AMF) or Intel (QuickSync). The installer brings everything else, including .NET and FFmpeg, and needs no admin rights.</p>
     </details>
     <details>
-      <summary data-i18n="faq.4q">Where do my clips go?</summary>
-      <p data-i18n="faq.4a">To <code>Videos\Ghostclip\&lt;Game&gt;</code>, one folder per game. You can pick another folder in Settings.</p>
+      <summary data-i18n="faq.4q">Where do my clips and screenshots go?</summary>
+      <p data-i18n="faq.4a">To <code>Videos\Ghostclip\&lt;Game&gt;</code>, one folder per game, with screenshots next to the clips. You can pick another folder in Settings, and set a space limit there so the oldest clips make room for new ones.</p>
     </details>
     <details>
       <summary data-i18n="faq.5q">Does it phone home?</summary>
