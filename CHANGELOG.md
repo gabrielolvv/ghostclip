@@ -3,7 +3,7 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
-## Unreleased
+## 0.8.1
 
 ### Changed
 
