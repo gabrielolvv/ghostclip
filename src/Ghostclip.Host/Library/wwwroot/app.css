@@ -53,6 +53,12 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .game.on { color: var(--text); background: rgba(255, 255, 255, 0.05); box-shadow: inset 2px 0 0 var(--accent); }
 .game .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-foot { margin-top: auto; padding: 12px 10px 0; font-size: 11px; line-height: 1.7; }
+.update-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 -2px 12px; padding: 10px 12px;
+  border-radius: 8px; background: var(--accent-wash); border: 1px solid rgba(92, 225, 230, 0.35); font-size: 12px; line-height: 1.4;
+}
+.update-head { font-size: 10px; letter-spacing: 0.14em; color: var(--accent); }
+.update-card .act { align-self: stretch; justify-content: center; }
 .side-foot #total { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link { color: var(--muted); font-size: 11px; transition: color var(--fast); }
 .link:hover { color: var(--accent); }

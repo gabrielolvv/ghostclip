@@ -439,7 +439,25 @@ const Settings = (() => {
     const problem = status && status.state === 'Stopped' && status.problem;
     $('problem').hidden = !problem;
     $('problem-text').textContent = problem || '';
+    // A newer Ghostclip the tray has downloaded: offered here with a button, not only in its menu.
+    const update = status && status.updateVersion;
+    $('update').hidden = !update;
+    $('update-text').textContent = update
+      ? L(`Ghostclip ${update} is ready to install. It restarts in a few seconds; recording picks up again.`,
+        `O Ghostclip ${update} está pronto para instalar. Ele reinicia em alguns segundos e volta a gravar.`)
+      : '';
   }
+
+  $('update-now').addEventListener('click', () => {
+    const b = $('update-now');
+    if (b.classList.contains('busy')) return;
+    b.classList.add('busy');
+    b.textContent = L('Updating…', 'Atualizando…');
+    post({ type: 'update' });
+  });
+  $('update-notes').addEventListener('click', () => {
+    if (s.status && s.status.updateVersion) post({ type: 'releaseNotes', name: s.status.updateVersion });
+  });
 
   // The page's language changed (or the page just opened): the badge and the form are built again,
   // keeping any edits in progress.
@@ -533,6 +551,12 @@ const Settings = (() => {
         toast(L('Settings saved', 'Configurações salvas'));
         return true;
       case 'error':
+        if (message.op === 'update') {
+          // The page's toast says why; the button can be tried again.
+          $('update-now').classList.remove('busy');
+          $('update-now').textContent = L('Update now', 'Atualizar agora');
+          return false;
+        }
         if (message.op === 'settings') {
           // Nothing is shown or saved from a file that can't be read: saving would replace it with defaults.
           s.saved = null;

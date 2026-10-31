@@ -132,6 +132,29 @@ internal sealed class LibraryBridge : IDisposable
                 await ListAsync().ConfigureAwait(true);
                 return;
             }
+            if (r.Type == "update")
+            {
+                // The tray applies it: it owns the recorder and must stop it cleanly first. The installer closes this window.
+                if (EventWaitHandle.TryOpenExisting(Program.UpdateEventName, out var update))
+                {
+                    using (update) update.Set();
+                }
+                else
+                {
+                    _window.Post(new LibraryEvent("error", Op: r.Type,
+                        Message: L("Ghostclip isn't running in the tray, so there is nothing to update from.", "O Ghostclip não está rodando na bandeja, então não há de onde atualizar.")));
+                }
+                return;
+            }
+            if (r.Type == "releaseNotes")
+            {
+                // Only a version number goes into the address: the page never chooses where the browser goes.
+                if (r.Name is { } version && Version.TryParse(version, out _))
+                {
+                    Process.Start(new ProcessStartInfo($"{UpdateService.RepositoryUrl}/releases/tag/v{version}") { UseShellExecute = true });
+                }
+                return;
+            }
             if (r.Type == "openFolder")
             {
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });

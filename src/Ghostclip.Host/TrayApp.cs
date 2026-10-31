@@ -43,6 +43,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly RegisteredWaitHandle _saveRequestWait;
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
     private readonly RegisteredWaitHandle _exitRequestWait;
+    private readonly EventWaitHandle _updateRequest = new(false, EventResetMode.AutoReset, Program.UpdateEventName);
+    private readonly RegisteredWaitHandle _updateRequestWait;
     private bool _shuttingDown;
     private GhostclipConfig _config;
     private WorkerStatus _status = new() { State = WorkerState.Starting };
@@ -132,6 +134,11 @@ internal sealed class TrayApp : ApplicationContext
             _saveRequest, (_, _) => _ui.Post(_ => SaveClip(), null), null, Timeout.Infinite, executeOnlyOnce: false);
         _exitRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _exitRequest, (_, _) => _ui.Post(_ => Exit(), null), null, Timeout.Infinite, executeOnlyOnce: true);
+        // The library's "Update now" button, the same as "Restart to update" in this menu.
+        _updateRequest.Reset();
+        _updateRequestWait = ThreadPool.RegisterWaitForSingleObject(
+            _updateRequest, (_, _) => _ui.Post(_ => { if (_updateVersion is not null && !_shuttingDown) RestartToUpdate(); }, null),
+            null, Timeout.Infinite, executeOnlyOnce: false);
 
         RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
@@ -190,7 +197,7 @@ internal sealed class TrayApp : ApplicationContext
     // Only when the badge would change: a recording session writes a handful of times, not every second.
     private void PublishStatus(WorkerStatus status)
     {
-        var published = RecorderStatus.From(Environment.ProcessId, status, _config.Fps, _problem);
+        var published = RecorderStatus.From(Environment.ProcessId, status, _config.Fps, _problem, _updateVersion);
         if (published == _published) return;
         try
         {
@@ -276,9 +283,11 @@ internal sealed class TrayApp : ApplicationContext
         _updateVersion = version;
         _updateItem.Visible = true;
         ApplyTexts();
+        // The library offers it too, with a button.
+        PublishStatus(_status);
         Notify(L("Update ready", "Atualização pronta"),
-            L($"Ghostclip {version} is downloaded. Restart from the tray menu when you're not playing.",
-                $"O Ghostclip {version} foi baixado. Reinicie pelo menu da bandeja quando não estiver jogando."), ToolTipIcon.Info);
+            L($"Ghostclip {version} is downloaded. Update from the library or the tray menu when you're not playing.",
+                $"O Ghostclip {version} foi baixado. Atualize pela biblioteca ou pelo menu da bandeja quando não estiver jogando."), ToolTipIcon.Info);
     }
 
     private void RestartToUpdate()
@@ -586,6 +595,8 @@ internal sealed class TrayApp : ApplicationContext
         _saveRequest.Dispose();
         _exitRequestWait.Unregister(null);
         _exitRequest.Dispose();
+        _updateRequestWait.Unregister(null);
+        _updateRequest.Dispose();
         _configWatcher.Dispose();
         _configReload.Dispose();
         StatusFile.Delete(_paths.StatusFile);
