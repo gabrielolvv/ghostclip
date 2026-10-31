@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Clips save on AMD GPUs. AMD's encoder made no keyframes on its own (seen on
+  a Radeon RX 6600), so the replay buffer never split into segments and every
+  save said "Nothing recorded yet". Keyframes are now forced every 2 s, as
+  they already were for NVIDIA and Intel.
+
 ## 0.6.0
 
 ### Added
