@@ -19,6 +19,28 @@ public class FfmpegArgsTests
         Assert.Equal("0", ValueAfter(args, "-bf"));
     }
 
+    // The segment muxer only cuts on a keyframe. On a Radeon RX 6600, AMF's GOP alone gave none,
+    // so the buffer stayed one open file that looked empty, and every save said "nothing recorded".
+    [Theory]
+    [InlineData(EncoderKind.Nvenc)]
+    [InlineData(EncoderKind.Amf)]
+    [InlineData(EncoderKind.Qsv)]
+    public void Every_encoder_forces_a_keyframe_per_segment(EncoderKind encoder)
+    {
+        var args = FfmpegArgs.Record(Qsv() with { Encoder = encoder }, @"C:\buf", 0, [], 0);
+        Assert.Equal("expr:gte(t,n_forced*2)", ValueAfter(args, "-force_key_frames"));
+    }
+
+    [Fact]
+    public void Amf_forces_idr_and_sets_headers_only_where_the_encoder_has_the_option()
+    {
+        var h264 = Qsv() with { Encoder = EncoderKind.Amf };
+        var args = FfmpegArgs.Record(h264, @"C:\b", 0, [], 0);
+        Assert.Equal("1", ValueAfter(args, "-forced_idr"));
+        Assert.DoesNotContain("-header_insertion_mode", args);
+        Assert.Equal("idr", ValueAfter(FfmpegArgs.Record(h264 with { Codec = VideoCodec.Hevc }, @"C:\b", 0, [], 0), "-header_insertion_mode"));
+    }
+
     [Fact]
     public void Captures_at_clip_rate_with_constant_frame_rate()
     {

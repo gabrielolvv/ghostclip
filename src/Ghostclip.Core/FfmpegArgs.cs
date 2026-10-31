@@ -85,7 +85,12 @@ public static class FfmpegArgs
                 codec.AddRange(forceKey);
                 break;
             case EncoderKind.Amf:
-                codec.AddRange(["-usage", "lowlatency", "-quality", "speed", "-rc", "cbr", "-header_insertion_mode", "idr"]);
+                codec.AddRange(["-usage", "lowlatency", "-quality", "speed", "-rc", "cbr", "-forced_idr", "1"]);
+                // Only hevc_amf has this option; h264_amf ignores it with a warning.
+                if (s.Codec == VideoCodec.Hevc) codec.AddRange(["-header_insertion_mode", "idr"]);
+                // The GOP alone gave no keyframe at all on a Radeon RX 6600, so the segment muxer
+                // never cut and the buffer was one ever-growing file: force them like the others.
+                codec.AddRange(forceKey);
                 break;
             case EncoderKind.Qsv:
                 codec.AddRange(["-preset", "veryfast", "-forced_idr", "1", "-async_depth", Inv($"{s.QsvAsyncDepth}")]);
