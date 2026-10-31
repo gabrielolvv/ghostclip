@@ -51,7 +51,8 @@ public static class LibraryOrigin
 /// thumbnail), open (show this clip), done and error (an action's result),
 /// changed (the clips folder changed), settings (Config, Encoders this PC
 /// supports, Games for profile names, HotkeyLabels: each hotkey setting's
-/// value as this keyboard prints it), confirm (saving restarts recording:
+/// value as this keyboard prints it, StorageBytes: what the clips the space
+/// limit counts take now), confirm (saving restarts recording or deletes clips:
 /// Message says what it clears), picked (a chosen Path for Op), status (the
 /// recorder badge, Status null when the tray isn't running), showSettings and
 /// language (Language is "en" or "pt"; the page opens with ?lang= and this
@@ -60,7 +61,8 @@ public static class LibraryOrigin
 public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = null, string? Root = null, string? Path = null,
     ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null,
     GhostclipConfig? Config = null, IReadOnlyList<string>? Encoders = null, IReadOnlyList<string>? Games = null,
-    RecorderStatus? Status = null, IReadOnlyDictionary<string, string>? HotkeyLabels = null, string? Language = null);
+    RecorderStatus? Status = null, IReadOnlyDictionary<string, string>? HotkeyLabels = null, string? Language = null,
+    long? StorageBytes = null);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

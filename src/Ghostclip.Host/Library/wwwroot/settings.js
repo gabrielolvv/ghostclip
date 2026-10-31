@@ -33,6 +33,11 @@ const Settings = (() => {
       { key: 'confirmationSound', label: L('Sound when a clip is saved', 'Som ao salvar um clipe'), type: 'switch' },
       { key: 'discordLimitMB', label: L('Discord size limit', 'Limite de tamanho do Discord'), hint: L('10 MB on a free account.', '10 MB numa conta gratuita.'),
         type: 'number', unit: 'MB', min: 1, max: 4096 },
+      { key: 'storageLimitGB', label: L('Space for clips', 'Espaço para clipes'),
+        hint: L('0 keeps everything. Past the limit the oldest are deleted for good; favorites and clips you renamed never are.',
+          '0 guarda tudo. Passando do limite, os mais antigos são apagados de vez; favoritos e clipes renomeados nunca.')
+          + (s.storageBytes != null ? L(` Using ${fmtSize(s.storageBytes)} now.`, ` Usando ${fmtSize(s.storageBytes)} agora.`) : ''),
+        type: 'number', unit: 'GB', min: 0, max: 100000 },
     ] },
     { title: L('VIDEO', 'VÍDEO'), note: L('Changing these restarts recording and clears the replay buffer.', 'Mudar estas opções reinicia a gravação e limpa o buffer de replay.'), fields: [
       { key: 'fps', label: L('Frame rate', 'Taxa de quadros'), hint: L('Capturing below the monitor’s refresh rate costs less.', 'Capturar abaixo da taxa de atualização do monitor custa menos.'),
@@ -102,7 +107,8 @@ const Settings = (() => {
     bar.hidden = !dirty();
     bar.classList.toggle('warn', s.confirming);
     $('savebar-text').textContent = s.confirming ? s.confirmText : L('Unsaved changes', 'Alterações não salvas');
-    $('s-save').textContent = s.confirming ? L('Save and restart', 'Salvar e reiniciar') : L('Save', 'Salvar');
+    // The bar's text says what saving costs (a restart, deleted clips); the button only confirms it.
+    $('s-save').textContent = s.confirming ? L('Save anyway', 'Salvar mesmo assim') : L('Save', 'Salvar');
   }
 
   // Controls
@@ -506,6 +512,7 @@ const Settings = (() => {
     switch (message.type) {
       case 'settings':
         s.encoders = message.encoders || [];
+        s.storageBytes = message.storageBytes;
         s.games = message.games || [];
         s.unreadable = null;
         badge(message.status);

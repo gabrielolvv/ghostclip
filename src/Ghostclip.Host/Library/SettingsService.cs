@@ -58,11 +58,11 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         var config = read!;
         saved(config);
         var root = clipsRoot();
-        var games = await Task.Run(() => ClipLibrary.Scan(root).Select(c => c.Game)).ConfigureAwait(true);
+        var clips = await Task.Run(() => ClipLibrary.Scan(root)).ConfigureAwait(true);
         window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(), HotkeyLabels: HotkeyLabels(config),
-            Games: games.Concat(config.Profiles.Select(p => p.Game)).Distinct(StringComparer.OrdinalIgnoreCase)
+            Games: clips.Select(c => c.Game).Concat(config.Profiles.Select(p => p.Game)).Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            Status: status.Current));
+            Status: status.Current, StorageBytes: StorageLimit.Used(root, clips)));
     }
 
     private void Save(LibraryRequest r)
@@ -81,12 +81,29 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: Unreadable(error)));
             return;
         }
-        if (!r.Confirmed && !config.SameCaptureAs(before!))
+        // Anything saving loses is said first, all of it in one question.
+        var warnings = new List<string>();
+        if (!config.SameCaptureAs(before!))
         {
             // Segments in two formats can't be joined: the buffer starts over.
-            window.Post(new LibraryEvent("confirm", Op: r.Type,
-                Message: L($"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay.",
-                    $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay.")));
+            warnings.Add(L($"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay.",
+                $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay."));
+        }
+        if (!r.Confirmed && config.StorageLimitGB > 0)
+        {
+            var root = config.ResolvedClipsFolder;
+            var deleting = StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), LibraryStore.Read(paths.LibraryFile),
+                config.StorageLimitGB * StorageLimit.BytesPerGB);
+            if (deleting.Count > 0)
+            {
+                var gb = deleting.Sum(c => c.Bytes) / (double)StorageLimit.BytesPerGB;
+                warnings.Add(L($"To fit in {config.StorageLimitGB} GB, your {deleting.Count} oldest clips ({gb:0.0} GB) are deleted for good. Favorites stay.",
+                    $"Para caber em {config.StorageLimitGB} GB, seus {deleting.Count} clipes mais antigos ({gb:0.0} GB) são apagados de vez. Os favoritos ficam."));
+            }
+        }
+        if (!r.Confirmed && warnings.Count > 0)
+        {
+            window.Post(new LibraryEvent("confirm", Op: r.Type, Message: string.Join(" ", warnings)));
             return;
         }
         ConfigStore.Save(paths.ConfigFile, config);

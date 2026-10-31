@@ -105,6 +105,13 @@ public sealed record GhostclipConfig
     /// <summary>Size limit for "Compress for Discord" (10 MB on a free account).</summary>
     public int DiscordLimitMB { get; set; } = 10;
 
+    /// <summary>
+    /// Space the clips folder may take; past it the oldest clips and screenshots are
+    /// deleted (<see cref="StorageLimit"/>). 0 keeps everything, the default: nothing
+    /// is ever deleted unless people chose a limit.
+    /// </summary>
+    public int StorageLimitGB { get; set; }
+
     public GameProfileList Profiles { get; set; } = [];
 
     /// <summary>Shifts audio against video to fix a constant lip-sync offset.</summary>
@@ -146,6 +153,7 @@ public sealed record GhostclipConfig
         AudioOffsetMs = Math.Clamp(AudioOffsetMs, -1000, 1000),
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
+        StorageLimitGB = Math.Clamp(StorageLimitGB, 0, 100_000),
         Profiles = new GameProfileList((Profiles ?? [])
             .Where(p => !string.IsNullOrWhiteSpace(p.Game))
             .Select(p => p with
