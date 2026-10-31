@@ -119,12 +119,14 @@ internal sealed partial class LibraryWindow : Form
             MapClips();
             core.SetVirtualHostNameToFolderMapping(CacheHost, _bridge.ThumbsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += _bridge.OnMessage;
-            core.Navigate($"https://{AppHost}/index.html");
+            // In the right language from the first paint; a change later arrives as a "language" event.
+            core.Navigate($"https://{AppHost}/index.html?lang={UiText.Code}");
         }
         catch (Exception ex) when (ex is COMException or WebView2RuntimeNotFoundException or IOException or UnauthorizedAccessException)
         {
             _log.Error(ex, "Could not start the library page");
-            MessageBox.Show($"The clip library couldn't start: {ex.Message}", "Ghostclip", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(L($"The clip library couldn't start: {ex.Message}", $"A biblioteca de clipes não conseguiu abrir: {ex.Message}"),
+                "Ghostclip", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             Close();
         }
     }
@@ -132,7 +134,8 @@ internal sealed partial class LibraryWindow : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         if (e.CloseReason == CloseReason.UserClosing && _bridge.HasRunningJobs &&
-            MessageBox.Show(this, "A trim or compression is still running. Close and stop it?", "Ghostclip",
+            MessageBox.Show(this, L("A trim or compression is still running. Close and stop it?",
+                    "Um corte ou compressão ainda está rodando. Fechar e interromper?"), "Ghostclip",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             e.Cancel = true;

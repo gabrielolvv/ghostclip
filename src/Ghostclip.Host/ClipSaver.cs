@@ -35,7 +35,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
         if (plan.IsEmpty)
         {
-            throw new InvalidOperationException("Nothing recorded yet: the replay buffer is empty.");
+            throw new InvalidOperationException(L("Nothing recorded yet: the replay buffer is empty.", "Nada gravado ainda: o buffer de replay está vazio."));
         }
 
         var dir = Path.Combine(paths.PendingDir, now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture));
@@ -54,7 +54,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (names.Count == 0)
         {
             Directory.Delete(dir, recursive: true);
-            throw new InvalidOperationException("The buffer segments disappeared before they could be saved.");
+            throw new InvalidOperationException(L("The buffer segments disappeared before they could be saved.", "Os segmentos do buffer sumiram antes de serem salvos."));
         }
 
         // The newest segment's session decides the audio shift: that's the part people watch.
@@ -79,7 +79,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             var cfg = config();
             var ffmpeg = FfmpegLocator.Find(cfg.FfmpegPath, AppContext.BaseDirectory)
-                ?? throw new InvalidOperationException("FFmpeg was not found.");
+                ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
             var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, snapshot.Game, snapshot.Time, File.Exists);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
 
@@ -90,7 +90,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             {
                 PartFile.Discard(output);
                 // The snapshot stays in Pending and is retried on the next start.
-                throw new InvalidOperationException($"Could not write the clip: {result.FirstError}");
+                throw new InvalidOperationException(L($"Could not write the clip: {result.FirstError}", $"Não foi possível gravar o clipe: {result.FirstError}"));
             }
             PartFile.Commit(output);
             Directory.Delete(snapshot.Dir, recursive: true);

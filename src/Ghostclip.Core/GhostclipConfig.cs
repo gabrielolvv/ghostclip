@@ -19,6 +19,10 @@ public enum EncoderInput { Auto, Nv12, Direct }
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }
 
+/// <summary>The language of Ghostclip's own texts. Auto follows Windows: Portuguese on a Portuguese Windows, English otherwise.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<UiLanguage>))]
+public enum UiLanguage { Auto, English, Portuguese }
+
 /// <summary>What the main audio track records.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AudioSourceMode>))]
 public enum AudioSourceMode
@@ -103,6 +107,9 @@ public sealed record GhostclipConfig
 
     /// <summary>Starts Ghostclip at sign-in (installed copies only).</summary>
     public bool StartWithWindows { get; set; } = true;
+
+    /// <summary>Applies live to the tray and the library; never touches recording.</summary>
+    public UiLanguage Language { get; set; } = UiLanguage.Auto;
     public GhostclipLogLevel LogLevel { get; set; } = GhostclipLogLevel.Information;
 
     public string ResolvedClipsFolder =>

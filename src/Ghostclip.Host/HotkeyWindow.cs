@@ -26,7 +26,7 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         }
         if (!Native.RegisterHotKey(Handle, HotkeyId, modifiers | Native.MOD_NOREPEAT, (uint)key))
         {
-            error = $"{gesture} is already taken by another program.";
+            error = L($"{gesture} is already taken by another program.", $"{gesture} já está em uso por outro programa.");
             return false;
         }
         _registered = true;
@@ -53,19 +53,22 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
             if (key != Keys.None || int.TryParse(token, out _) || !Enum.TryParse(token, ignoreCase: true, out key) ||
                 key is Keys.ShiftKey or Keys.ControlKey or Keys.Menu or Keys.LWin or Keys.RWin)
             {
-                error = $"\"{gesture}\" is not a valid hotkey. Use something like Alt+F10.";
+                error = L($"\"{gesture}\" is not a valid hotkey. Use something like Alt+F10.",
+                    $"\"{gesture}\" não é uma hotkey válida. Use algo como Alt+F10.");
                 key = Keys.None;
                 return false;
             }
         }
         if (key == Keys.None)
         {
-            error = $"\"{gesture}\" has no main key. Use something like Alt+F10.";
+            error = L($"\"{gesture}\" has no main key. Use something like Alt+F10.",
+                $"\"{gesture}\" não tem uma tecla principal. Use algo como Alt+F10.");
             return false;
         }
         if (modifiers == 0 && !HotkeyRules.AllowedWithoutModifier(key.ToString()))
         {
-            error = $"\"{gesture}\" alone would stop working in every other program. Add Ctrl, Alt, Shift or Win, or use an F key.";
+            error = L($"\"{gesture}\" alone would stop working in every other program. Add Ctrl, Alt, Shift or Win, or use an F key.",
+                $"\"{gesture}\" sozinha deixaria de funcionar em todos os outros programas. Adicione Ctrl, Alt, Shift ou Win, ou use uma tecla F.");
             key = Keys.None;
             return false;
         }

@@ -166,6 +166,7 @@ internal static class Program
         }
         paths.EnsureCreated();
         var config = ConfigStore.Load(paths.ConfigFile, out var problem);
+        UiText.Use(config.Language);
         var level = new LoggingLevelSwitch(ToSerilog(config.LogLevel));
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(level)

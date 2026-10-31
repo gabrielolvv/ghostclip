@@ -96,17 +96,20 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 ## Uso
 
 - **Alt+F10** salva em `Vídeos\Ghostclip\<Jogo>\<Jogo>_AAAA-MM-DD_HH-MM-SS.mp4`.
-- Clique duas vezes no ícone da bandeja, ou numa notificação "Clip saved",
+- Clique duas vezes no ícone da bandeja, ou numa notificação "Clipe salvo",
   para abrir a biblioteca. O menu da bandeja também mostra o que está sendo
   gravado e tem configurações e pastas. O ponto do ícone fica vermelho
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira.
 - As configurações são uma página da biblioteca (a engrenagem na barra
-  lateral, ou Settings no menu da bandeja). Elas ficam em
+  lateral, ou Configurações no menu da bandeja). Elas ficam em
   `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão, a bandeja aplica
   na hora. Salvar pela página reescreve o arquivo e apaga os comentários que
   você tiver escrito nele. Os logs ficam em `%LOCALAPPDATA%\GhostclipData\Logs`.
+- O app fala português ou inglês. Por padrão segue o idioma do Windows;
+  Configurações > Geral > Idioma escolhe um, e a bandeja e a biblioteca
+  trocam assim que você salva, sem mexer na gravação.
 - Linha de comando, para scripts, macros ou Stream Deck:
 
 | Comando | Faz |

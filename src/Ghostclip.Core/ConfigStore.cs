@@ -30,7 +30,10 @@ public static class ConfigStore
         {
             var aside = path + ".invalid";
             File.Copy(path, aside, overwrite: true);
-            problem = $"{Path.GetFileName(path)} is invalid ({ex.Message}). Using defaults; the old file was kept as {Path.GetFileName(aside)}.";
+            // Shown in the language Windows uses: the file that says otherwise is the one that can't be read.
+            problem = UiText.L(
+                $"{Path.GetFileName(path)} is invalid ({ex.Message}). Using defaults; the old file was kept as {Path.GetFileName(aside)}.",
+                $"{Path.GetFileName(path)} é inválido ({ex.Message}). Usando os padrões; o arquivo antigo foi guardado como {Path.GetFileName(aside)}.");
             return new GhostclipConfig();
         }
     }

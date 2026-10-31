@@ -15,6 +15,10 @@
     <ProjectReference Include="..\Ghostclip.Worker\Ghostclip.Worker.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
+    <!-- L("English", "Português") for every text people see. -->
+    <Using Include="Ghostclip.Core.UiText" Static="true" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Velopack" />

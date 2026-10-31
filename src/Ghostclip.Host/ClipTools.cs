@@ -19,7 +19,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
             "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-        if (!r.Succeeded) throw new InvalidOperationException($"Could not read the clip: {r.FirstError}");
+        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}"));
 
         using var json = JsonDocument.Parse(r.StdOut);
         var duration = double.Parse(json.RootElement.GetProperty("format").GetProperty("duration").GetString()!, CultureInfo.InvariantCulture);
@@ -65,7 +65,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException($"Could not trim the clip: {r.FirstError}");
+            throw new InvalidOperationException(L($"Could not trim the clip: {r.FirstError}", $"Não foi possível cortar o clipe: {r.FirstError}"));
         }
         PartFile.Commit(output);
         log.Information("Trimmed {Clip} to {Start:0.0}-{End:0.0} s: {Output}", clip, start, end, output);
@@ -86,7 +86,8 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (plan is null)
         {
             var max = limit * 8.0 * 1024 * 0.92 / (CompressionPlanner.MinVideoKbps + CompressionPlanner.AudioKbps);
-            throw new InvalidOperationException($"{info.Duration:0} s is too long for {limit} MB. Trim it to {max:0} s or less first.");
+            throw new InvalidOperationException(L($"{info.Duration:0} s is too long for {limit} MB. Trim it to {max:0} s or less first.",
+                $"{info.Duration:0} s é longo demais para {limit} MB. Corte para {max:0} s ou menos antes."));
         }
 
         var encoder = HardwareEncoder(cfg);
@@ -124,7 +125,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException($"Could not compress the clip: {r.FirstError}");
+            throw new InvalidOperationException(L($"Could not compress the clip: {r.FirstError}", $"Não foi possível comprimir o clipe: {r.FirstError}"));
         }
         return new FileInfo(PartFile.For(output)).Length;
     }
@@ -139,16 +140,17 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             cache = JsonSerializer.Deserialize(stream, CoreJson.Default.ProbeCache);
         }
         var choice = cache?.Choose(cfg.Encoder, EncoderInput.Auto)
-            ?? throw new InvalidOperationException("No hardware encoder has been detected yet. Let Ghostclip record for a moment first.");
+            ?? throw new InvalidOperationException(L("No hardware encoder has been detected yet. Let Ghostclip record for a moment first.",
+                "Nenhum encoder de hardware foi detectado ainda. Deixe o Ghostclip gravar por um momento antes."));
         return CaptureSettings.From(cfg with { Codec = VideoCodec.H264 }, choice.Encoder, choice.Input).EncoderName;
     }
 
     internal string Ffmpeg() => FfmpegLocator.Find(config().FfmpegPath, AppContext.BaseDirectory)
-        ?? throw new InvalidOperationException("FFmpeg was not found.");
+        ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
 
     internal string Ffprobe()
     {
         var probe = Path.Combine(Path.GetDirectoryName(Ffmpeg())!, "ffprobe.exe");
-        return File.Exists(probe) ? probe : throw new InvalidOperationException("ffprobe.exe was not found next to FFmpeg.");
+        return File.Exists(probe) ? probe : throw new InvalidOperationException(L("ffprobe.exe was not found next to FFmpeg.", "O ffprobe.exe não foi encontrado ao lado do FFmpeg."));
     }
 }

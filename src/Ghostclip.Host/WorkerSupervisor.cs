@@ -29,9 +29,13 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
 
     public void Start(GhostclipConfig config)
     {
-        _config = config;
+        _config = ForWorker(config);
         _loop = Task.Run(() => LoopAsync(_cts.Token));
     }
+
+    // The worker runs without culture data, so it can't tell what Windows speaks: it gets the language already decided.
+    private static GhostclipConfig ForWorker(GhostclipConfig config) =>
+        config with { Language = UiText.Portuguese ? UiLanguage.Portuguese : UiLanguage.English };
 
     private volatile IpcMessage _foreground = new() { Type = IpcType.Foreground, Game = ClipNaming.FallbackGame };
 
@@ -47,10 +51,10 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
 
     public void UpdateConfig(GhostclipConfig config)
     {
-        _config = config;
+        _config = ForWorker(config);
         if (_channel is { } channel)
         {
-            _ = SendQuietlyAsync(channel, new IpcMessage { Type = IpcType.Config, Config = config });
+            _ = SendQuietlyAsync(channel, new IpcMessage { Type = IpcType.Config, Config = _config });
         }
     }
 
@@ -62,7 +66,8 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
         {
             if (!File.Exists(exe))
             {
-                ErrorReported?.Invoke($"The capture worker is missing ({exe}). Reinstall Ghostclip.", true);
+                ErrorReported?.Invoke(L($"The capture worker is missing ({exe}). Reinstall Ghostclip.",
+                    $"O processo de captura não foi encontrado ({exe}). Reinstale o Ghostclip."), true);
                 return;
             }
 

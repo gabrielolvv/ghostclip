@@ -11,43 +11,60 @@ const Settings = (() => {
     games: [],        // names for profile suggestions
     confirming: false,
     listening: null,  // hotkey button waiting for a key combination
+    status: undefined, // recorder status once the app sent it; null while the tray isn't running
   };
 
-  const SECTIONS = [
-    { title: 'CLIPS', fields: [
-      { key: 'hotkey', label: 'Save a clip', hint: 'Click, then press the keys.', type: 'hotkey' },
-      { key: 'clipSeconds', label: 'Clip length', hint: 'Seconds before the hotkey that go into the clip.', type: 'number', unit: 'S', min: 10, max: 600 },
-      { key: 'clipsFolder', label: 'Clips folder', hint: 'A folder per game goes inside.', type: 'path', pick: 'pickFolder', empty: () => s.saved && s.saved.resolvedClipsFolder, reset: 'Default' },
-      { key: 'confirmationSound', label: 'Sound when a clip is saved', type: 'switch' },
-      { key: 'discordLimitMB', label: 'Discord size limit', hint: '10 MB on a free account.', type: 'number', unit: 'MB', min: 1, max: 4096 },
+  // Built on every render, in the page's language.
+  const sections = () => [
+    { title: L('GENERAL', 'GERAL'), fields: [
+      // Each language is named in itself, so it can be found whichever one the page is in.
+      { key: 'language', label: L('Language', 'Idioma'), hint: L('Changes when you save, without touching recording.', 'Muda ao salvar, sem mexer na gravação.'), type: 'select',
+        options: [['Auto', L('Same as Windows', 'Igual ao Windows')], ['English', 'English'], ['Portuguese', 'Português']] },
     ] },
-    { title: 'VIDEO', note: 'Changing these restarts recording and clears the replay buffer.', fields: [
-      { key: 'fps', label: 'Frame rate', hint: 'Capturing below the monitor’s refresh rate costs less.', type: 'number', unit: 'FPS', min: 24, max: 144 },
-      { key: 'bitrateMbps', label: 'Bitrate', hint: '20 Mbps at 1080p60 is about 150 MB a minute.', type: 'number', unit: 'MBPS', min: 2, max: 150 },
-      { key: 'codec', label: 'Codec', hint: 'H.264 plays everywhere. HEVC looks better at the same size.', type: 'segmented', options: [['H264', 'H.264'], ['Hevc', 'HEVC']] },
-      { key: 'encoder', label: 'Encoder', hint: 'Always the GPU; never a CPU encoder.', type: 'select', detected: true,
+    { title: L('CLIPS', 'CLIPES'), fields: [
+      { key: 'hotkey', label: L('Save a clip', 'Salvar um clipe'), hint: L('Click, then press the keys.', 'Clique e aperte as teclas.'), type: 'hotkey' },
+      { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
+        type: 'number', unit: 'S', min: 10, max: 600 },
+      { key: 'clipsFolder', label: L('Clips folder', 'Pasta de clipes'), hint: L('A folder per game goes inside.', 'Dentro dela fica uma pasta por jogo.'),
+        type: 'path', pick: 'pickFolder', empty: () => s.saved && s.saved.resolvedClipsFolder, reset: L('Default', 'Padrão') },
+      { key: 'confirmationSound', label: L('Sound when a clip is saved', 'Som ao salvar um clipe'), type: 'switch' },
+      { key: 'discordLimitMB', label: L('Discord size limit', 'Limite de tamanho do Discord'), hint: L('10 MB on a free account.', '10 MB numa conta gratuita.'),
+        type: 'number', unit: 'MB', min: 1, max: 4096 },
+    ] },
+    { title: L('VIDEO', 'VÍDEO'), note: L('Changing these restarts recording and clears the replay buffer.', 'Mudar estas opções reinicia a gravação e limpa o buffer de replay.'), fields: [
+      { key: 'fps', label: L('Frame rate', 'Taxa de quadros'), hint: L('Capturing below the monitor’s refresh rate costs less.', 'Capturar abaixo da taxa de atualização do monitor custa menos.'),
+        type: 'number', unit: 'FPS', min: 24, max: 144 },
+      { key: 'bitrateMbps', label: 'Bitrate', hint: L('20 Mbps at 1080p60 is about 150 MB a minute.', '20 Mbps em 1080p60 dá uns 150 MB por minuto.'),
+        type: 'number', unit: 'MBPS', min: 2, max: 150 },
+      { key: 'codec', label: 'Codec', hint: L('H.264 plays everywhere. HEVC looks better at the same size.', 'H.264 toca em qualquer lugar. HEVC fica melhor no mesmo tamanho.'),
+        type: 'segmented', options: [['H264', 'H.264'], ['Hevc', 'HEVC']] },
+      { key: 'encoder', label: 'Encoder', hint: L('Always the GPU; never a CPU encoder.', 'Sempre a GPU; nunca um encoder de CPU.'), type: 'select', detected: true,
         options: [['Auto', 'Auto'], ['Nvenc', 'NVIDIA NVENC'], ['Amf', 'AMD AMF'], ['Qsv', 'Intel QuickSync']] },
-      { key: 'outputHeight', label: 'Resolution', hint: 'Scaling down happens on the GPU.', type: 'select', number: true,
+      { key: 'outputHeight', label: L('Resolution', 'Resolução'), hint: L('Scaling down happens on the GPU.', 'A redução de escala acontece na GPU.'), type: 'select', number: true,
         options: [[0, 'Monitor'], [2160, '2160p'], [1440, '1440p'], [1080, '1080p'], [720, '720p']] },
-      { key: 'monitor', label: 'Monitor', hint: '0 is the first monitor of the GPU.', type: 'number', min: 0, max: 16 },
+      { key: 'monitor', label: 'Monitor', hint: L('0 is the first monitor of the GPU.', '0 é o primeiro monitor da GPU.'), type: 'number', min: 0, max: 16 },
     ], more: [
-      { key: 'input', label: 'Color conversion', hint: 'Auto uses what was measured to cost least.', type: 'select',
-        options: [['Auto', 'Auto'], ['Direct', 'In the encoder'], ['Nv12', 'On the GPU first']] },
-      { key: 'qsvAsyncDepth', label: 'QuickSync queue', hint: '1 uses the least memory. Raise it if clips drop frames.', type: 'number', min: 1, max: 8 },
+      { key: 'input', label: L('Color conversion', 'Conversão de cor'), hint: L('Auto uses what was measured to cost least.', 'Auto usa o que foi medido como mais barato.'), type: 'select',
+        options: [['Auto', 'Auto'], ['Direct', L('In the encoder', 'No encoder')], ['Nv12', L('On the GPU first', 'Na GPU antes')]] },
+      { key: 'qsvAsyncDepth', label: L('QuickSync queue', 'Fila do QuickSync'), hint: L('1 uses the least memory. Raise it if clips drop frames.', '1 usa menos memória. Aumente se os clipes perderem quadros.'),
+        type: 'number', min: 1, max: 8 },
     ] },
-    { title: 'AUDIO', fields: [
-      { key: 'systemAudio', label: 'Record sound', hint: 'Turning it off restarts recording.', type: 'switch' },
-      { key: 'audioSource', label: 'Sound to record', hint: 'Game only leaves Discord and music out. Switches without a restart.', type: 'segmented',
-        options: [['System', 'Everything'], ['GameOnly', 'Game only']] },
-      { key: 'microphone', label: 'Microphone', hint: 'On its own track. Turning it on or off restarts recording.', type: 'switch' },
-      { key: 'audioOffsetMs', label: 'Audio offset', hint: 'Positive delays the sound. For a constant lip-sync error.', type: 'number', unit: 'MS', min: -1000, max: 1000 },
+    { title: L('AUDIO', 'ÁUDIO'), fields: [
+      { key: 'systemAudio', label: L('Record sound', 'Gravar som'), hint: L('Turning it off restarts recording.', 'Desligar reinicia a gravação.'), type: 'switch' },
+      { key: 'audioSource', label: L('Sound to record', 'Som a gravar'),
+        hint: L('Game only leaves Discord and music out. Switches without a restart.', 'Só o jogo deixa Discord e música de fora. Troca sem reiniciar.'), type: 'segmented',
+        options: [['System', L('Everything', 'Tudo')], ['GameOnly', L('Game only', 'Só o jogo')]] },
+      { key: 'microphone', label: L('Microphone', 'Microfone'), hint: L('On its own track. Turning it on or off restarts recording.', 'Numa faixa separada. Ligar ou desligar reinicia a gravação.'),
+        type: 'switch' },
+      { key: 'audioOffsetMs', label: L('Audio offset', 'Atraso do áudio'), hint: L('Positive delays the sound. For a constant lip-sync error.', 'Positivo atrasa o som. Para um erro constante de sincronia labial.'),
+        type: 'number', unit: 'MS', min: -1000, max: 1000 },
     ] },
-    { title: 'GAME PROFILES', profiles: true },
-    { title: 'ADVANCED', fields: [
-      { key: 'startWithWindows', label: 'Start with Windows', hint: 'Installed copies only.', type: 'switch' },
-      { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => 'Bundled', reset: 'Use bundled' },
-      { key: 'logLevel', label: 'Log detail', type: 'select',
-        options: [['Error', 'Errors'], ['Warning', 'Warnings'], ['Information', 'Normal'], ['Debug', 'Everything']] },
+    { title: L('GAME PROFILES', 'PERFIS POR JOGO'), profiles: true },
+    { title: L('ADVANCED', 'AVANÇADO'), fields: [
+      { key: 'startWithWindows', label: L('Start with Windows', 'Iniciar com o Windows'), hint: L('Installed copies only.', 'Só em cópias instaladas.'), type: 'switch' },
+      { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído'), reset: L('Use bundled', 'Usar o incluído') },
+      { key: 'logLevel', label: L('Log detail', 'Detalhe do log'), type: 'select',
+        options: [['Error', L('Errors', 'Erros')], ['Warning', L('Warnings', 'Avisos')], ['Information', 'Normal'], ['Debug', L('Everything', 'Tudo')]] },
     ] },
   ];
 
@@ -76,8 +93,8 @@ const Settings = (() => {
     const bar = $('savebar');
     bar.hidden = !dirty();
     bar.classList.toggle('warn', s.confirming);
-    $('savebar-text').textContent = s.confirming ? s.confirmText : 'Unsaved changes';
-    $('s-save').textContent = s.confirming ? 'Save and restart' : 'Save';
+    $('savebar-text').textContent = s.confirming ? s.confirmText : L('Unsaved changes', 'Alterações não salvas');
+    $('s-save').textContent = s.confirming ? L('Save and restart', 'Salvar e reiniciar') : L('Save', 'Salvar');
   }
 
   // Controls
@@ -158,7 +175,7 @@ const Settings = (() => {
         if (!options.some(([v]) => v === value)) options.push([value, String(value)]);
         for (const [v, text] of options) {
           const detected = field.detected && v !== 'Auto' && s.encoders.includes(v);
-          const o = el('option', '', detected ? `${text} · detected` : text);
+          const o = el('option', '', detected ? `${text} · ${L('detected', 'detectado')}` : text);
           o.value = String(v);
           o.selected = v === value;
           select.append(o);
@@ -172,7 +189,7 @@ const Settings = (() => {
       case 'path': {
         const shown = el('span', 'path' + (value ? '' : ' placeholder'), value || field.empty() || '');
         shown.title = shown.textContent;
-        const change = el('button', 'act small', 'Change');
+        const change = el('button', 'act small', L('Change', 'Alterar'));
         change.type = 'button';
         change.addEventListener('click', () => post({ type: field.pick }));
         const parts = [shown, change];
@@ -227,7 +244,7 @@ const Settings = (() => {
     stopListening();
     s.listening = { button, key, before: button.textContent };
     button.classList.add('listening');
-    button.textContent = 'Press keys…';
+    button.textContent = L('Press keys…', 'Aperte as teclas…');
   }
 
   function stopListening(text) {
@@ -246,7 +263,7 @@ const Settings = (() => {
     const main = keyName(e);
     if (!main) return; // only modifiers so far
     if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && !ALONE.test(main)) {
-      s.listening.button.textContent = 'Add Ctrl, Alt or Shift';
+      s.listening.button.textContent = L('Add Ctrl, Alt or Shift', 'Adicione Ctrl, Alt ou Shift');
       return;
     }
     const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
@@ -267,10 +284,12 @@ const Settings = (() => {
     const box = el('div', 'profiles');
     const list = s.draft.profiles || (s.draft.profiles = []);
     if (list.length === 0) {
-      box.append(el('div', 'empty-row', 'No game profiles. A profile changes clip length, sound or the microphone for one game.'));
+      box.append(el('div', 'empty-row', L('No game profiles. A profile changes clip length, sound or the microphone for one game.',
+        'Nenhum perfil de jogo. Um perfil muda a duração do clipe, o som ou o microfone de um jogo.')));
     } else {
       const head = el('div', 'profile profile-head');
-      head.append(el('span', '', 'GAME'), el('span', '', 'LENGTH (S)'), el('span', '', 'SOUND'), el('span', '', 'MICROPHONE'), el('span'));
+      head.append(el('span', '', L('GAME', 'JOGO')), el('span', '', L('LENGTH (S)', 'DURAÇÃO (S)')), el('span', '', L('SOUND', 'SOM')),
+        el('span', '', L('MICROPHONE', 'MICROFONE')), el('span'));
       box.append(head);
     }
     const options = (select, pairs, value) => {
@@ -285,9 +304,9 @@ const Settings = (() => {
       const line = el('div', 'profile');
       const game = el('input', 'field');
       game.value = p.game || '';
-      game.placeholder = 'Game name';
+      game.placeholder = L('Game name', 'Nome do jogo');
       game.setAttribute('list', 'games-list');
-      game.setAttribute('aria-label', 'Game');
+      game.setAttribute('aria-label', L('Game', 'Jogo'));
       game.addEventListener('input', () => { p.game = game.value; changed(); });
 
       const length = el('input', 'field');
@@ -296,7 +315,7 @@ const Settings = (() => {
       length.max = 600;
       length.placeholder = String(s.draft.clipSeconds);
       length.value = p.clipSeconds ?? '';
-      length.setAttribute('aria-label', 'Clip length');
+      length.setAttribute('aria-label', L('Clip length', 'Duração do clipe'));
       length.addEventListener('input', () => {
         if (length.value === '') delete p.clipSeconds; else p.clipSeconds = Math.round(Number(length.value));
         changed();
@@ -308,16 +327,16 @@ const Settings = (() => {
       });
 
       const sound = el('select', 'field');
-      sound.setAttribute('aria-label', 'Sound');
-      options(sound, [['', 'Default'], ['System', 'Everything'], ['GameOnly', 'Game only']], p.audioSource || '');
+      sound.setAttribute('aria-label', L('Sound', 'Som'));
+      options(sound, [['', L('Default', 'Padrão')], ['System', L('Everything', 'Tudo')], ['GameOnly', L('Game only', 'Só o jogo')]], p.audioSource || '');
       sound.addEventListener('change', () => {
         if (sound.value === '') delete p.audioSource; else p.audioSource = sound.value;
         changed();
       });
 
       const mic = el('select', 'field');
-      mic.setAttribute('aria-label', 'Microphone');
-      options(mic, [['', 'Default'], ['true', 'Muted'], ['false', 'Not muted']], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
+      mic.setAttribute('aria-label', L('Microphone', 'Microfone'));
+      options(mic, [['', L('Default', 'Padrão')], ['true', L('Muted', 'Mudo')], ['false', L('Not muted', 'Ativo')]], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
       mic.addEventListener('change', () => {
         if (mic.value === '') delete p.muteMicrophone; else p.muteMicrophone = mic.value === 'true';
         changed();
@@ -325,14 +344,14 @@ const Settings = (() => {
 
       const remove = el('button', 'icon');
       remove.type = 'button';
-      remove.setAttribute('aria-label', `Remove ${p.game || 'profile'}`);
+      remove.setAttribute('aria-label', L(`Remove ${p.game || 'profile'}`, `Remover ${p.game || 'perfil'}`));
       remove.append(icon('<path d="M6 6l12 12M18 6L6 18"/>'));
       remove.addEventListener('click', () => { list.splice(i, 1); changed(); render(); });
 
       line.append(game, length, sound, mic, remove);
       box.append(line);
     });
-    const add = el('button', 'act small', 'Add a game');
+    const add = el('button', 'act small', L('Add a game', 'Adicionar um jogo'));
     add.type = 'button';
     add.addEventListener('click', () => {
       list.push({ game: '' });
@@ -354,11 +373,11 @@ const Settings = (() => {
     const scroll = $('settings').scrollTop;
     form.replaceChildren();
     if (!s.draft) {
-      form.append(el('p', 'muted', s.unreadable || 'Loading…'));
+      form.append(el('p', 'muted', s.unreadable || L('Loading…', 'Carregando…')));
       $('savebar').hidden = true;
       return;
     }
-    for (const section of SECTIONS) {
+    for (const section of sections()) {
       const card = el('section', 'card-s');
       card.append(el('h2', '', section.title));
       if (section.note) card.append(el('p', 'note', section.note));
@@ -366,7 +385,7 @@ const Settings = (() => {
       for (const field of section.fields || []) card.append(row(field, control(field)));
       if (section.more) {
         const more = el('details', 'more');
-        more.append(el('summary', '', 'Encoder options'));
+        more.append(el('summary', '', L('Encoder options', 'Opções do encoder')));
         for (const field of section.more) more.append(row(field, control(field)));
         card.append(more);
       }
@@ -379,8 +398,9 @@ const Settings = (() => {
   // Badge
 
   function badge(status) {
+    s.status = status || null;
     const box = $('badge');
-    let text = 'NOT RUNNING';
+    let text = L('NOT RUNNING', 'DESLIGADO');
     let kind = '';
     if (status) {
       switch (status.state) {
@@ -388,14 +408,22 @@ const Settings = (() => {
           text = ['REC', status.encoder, status.fps ? `${status.fps} FPS` : null].filter(Boolean).join(' · ');
           kind = 'rec';
           break;
-        case 'WaitingForDesktop': text = 'PAUSED · SCREEN LOCKED'; kind = 'wait'; break;
-        case 'Probing': text = 'DETECTING ENCODER'; kind = 'wait'; break;
-        case 'Stopped': text = 'NOT RECORDING'; break;
-        default: text = 'STARTING'; kind = 'wait'; break;
+        case 'WaitingForDesktop': text = L('PAUSED · SCREEN LOCKED', 'PAUSADO · TELA BLOQUEADA'); kind = 'wait'; break;
+        case 'Probing': text = L('DETECTING ENCODER', 'DETECTANDO ENCODER'); kind = 'wait'; break;
+        case 'Stopped': text = L('NOT RECORDING', 'SEM GRAVAR'); break;
+        default: text = L('STARTING', 'INICIANDO'); kind = 'wait'; break;
       }
     }
     box.className = `badge mono ${kind}`;
     $('badge-text').textContent = text;
+  }
+
+  // The page's language changed (or the page just opened): the badge and the form are built again,
+  // keeping any edits in progress.
+  function translate() {
+    if (s.status === undefined) $('badge-text').textContent = L('CHECKING', 'VERIFICANDO');
+    else badge(s.status);
+    render();
   }
 
   // Wiring
@@ -418,8 +446,8 @@ const Settings = (() => {
     const seen = new Set();
     for (const p of s.draft.profiles || []) {
       const name = (p.game || '').trim().toLowerCase();
-      if (!name) return 'Give each game profile a name, or remove it.';
-      if (seen.has(name)) return `There are two profiles for ${p.game.trim()}. Keep one.`;
+      if (!name) return L('Give each game profile a name, or remove it.', 'Dê um nome a cada perfil de jogo ou remova-o.');
+      if (seen.has(name)) return L(`There are two profiles for ${p.game.trim()}. Keep one.`, `Há dois perfis para ${p.game.trim()}. Mantenha um.`);
       seen.add(name);
     }
     return null;
@@ -478,7 +506,7 @@ const Settings = (() => {
         s.recordedLabel = null;
         s.confirming = false;
         render();
-        toast('Settings saved');
+        toast(L('Settings saved', 'Configurações salvas'));
         return true;
       case 'error':
         if (message.op === 'settings') {
@@ -493,11 +521,11 @@ const Settings = (() => {
         $('s-save').classList.remove('busy');
         s.confirming = false;
         updateBar();
-        toast(message.message || 'Settings not saved.', true);
+        toast(message.message || L('Settings not saved.', 'Configurações não salvas.'), true);
         return true;
     }
     return false;
   }
 
-  return { open, onMessage, isOpen: () => !$('settings').hidden, stopListening };
+  return { open, onMessage, translate, isOpen: () => !$('settings').hidden, stopListening };
 })();

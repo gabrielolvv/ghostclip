@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Ghostclip in Portuguese. Settings > General > Language picks English,
+  Portuguese or the language Windows uses (the default); the tray menu,
+  notifications, library and settings switch as soon as you save, without
+  restarting recording. Logs stay in English.
+
 ## 0.5.2
 
 ### Changed

@@ -2,13 +2,47 @@
 
 // The clip library page. It talks to the app with JSON messages (see
 // LibraryMessages.cs): it asks with {type, path, start, end} and listens for
-// clips, meta, open, done, error and changed.
+// clips, meta, open, done, error, changed and language.
 
 const $ = id => document.getElementById(id);
 const MIN_RANGE = 0.5;
 
+// "en" or "pt": the window opens the page with ?lang=, and a "language" message changes it live.
+// Texts built here carry both translations where they are used: L('Settings', 'Configurações').
+let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
+function L(en, pt) { return lang === 'pt' ? pt : en; }
+
+// The page's fixed texts: English is what the HTML carries, Portuguese sits next to it in data-pt,
+// data-pt-label (aria-label), data-pt-placeholder and data-pt-title. Never on an element code rewrites.
+function translatePage() {
+  document.documentElement.lang = L('en', 'pt-BR');
+  for (const node of document.querySelectorAll('[data-pt]')) {
+    if (node.dataset.en === undefined) node.dataset.en = node.textContent;
+    node.textContent = L(node.dataset.en, node.dataset.pt);
+  }
+  for (const [name, attribute] of [['Label', 'aria-label'], ['Placeholder', 'placeholder'], ['Title', 'title']]) {
+    for (const node of document.querySelectorAll(`[data-pt-${name.toLowerCase()}]`)) {
+      if (node.dataset['en' + name] === undefined) node.dataset['en' + name] = node.getAttribute(attribute);
+      node.setAttribute(attribute, L(node.dataset['en' + name], node.dataset['pt' + name]));
+    }
+  }
+}
+
+function setLanguage(next) {
+  lang = next === 'pt' ? 'pt' : 'en';
+  translatePage();
+  // Texts built by code are built again; the open clip and the settings draft stay as they are.
+  if (state.listed) {
+    renderSidebar();
+    renderGrid();
+  }
+  if (state.current) setupTimeline();
+  Settings.translate();
+}
+
 const state = {
   clips: [],
+  listed: false,         // the first list arrived
   meta: new Map(),       // path -> { meta, thumb }
   requested: new Set(),  // paths whose meta was asked for
   versions: new Map(),   // path -> version: a replaced file (same name, new trim) must not keep the old details
@@ -47,11 +81,11 @@ function dayLabel(date) {
   const today = new Date();
   const start = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((start(today) - start(date)) / 86400000);
-  if (days === 0) return 'TODAY';
-  if (days === 1) return 'YESTERDAY';
+  if (days === 0) return L('TODAY', 'HOJE');
+  if (days === 1) return L('YESTERDAY', 'ONTEM');
   const options = { month: 'short', day: 'numeric' };
   if (date.getFullYear() !== today.getFullYear()) options.year = 'numeric';
-  return date.toLocaleDateString('en-US', options).toUpperCase();
+  return date.toLocaleDateString(L('en-US', 'pt-BR'), options).toUpperCase();
 }
 
 function clockLabel(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
@@ -63,7 +97,7 @@ function codecLabel(codec) {
 }
 
 function tracksLabel(count) {
-  return count >= 2 ? 'GAME + MIC' : count === 1 ? 'GAME' : 'NO AUDIO';
+  return count >= 2 ? L('GAME + MIC', 'JOGO + MIC') : count === 1 ? L('GAME', 'JOGO') : L('NO AUDIO', 'SEM ÁUDIO');
 }
 
 function el(tag, className, text) {
@@ -124,7 +158,7 @@ function renderSidebar() {
     });
     nav.append(b);
   };
-  row('All clips', state.clips.length, null);
+  row(L('All clips', 'Todos os clipes'), state.clips.length, null);
   for (const [game, count] of games) row(game, count, game);
 
   const bytes = state.clips.reduce((sum, c) => sum + c.bytes, 0);
@@ -153,7 +187,7 @@ function renderCard(clip) {
   card.append(thumb);
   if (clip.derived) {
     const name = fileName(clip.path);
-    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : 'TRIM'));
+    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : L('TRIM', 'CORTE')));
   }
   const quick = el('div', 'quick');
   const quickButton = (paths, label, type) => {
@@ -164,8 +198,8 @@ function renderCard(clip) {
     b.addEventListener('click', e => { e.stopPropagation(); post({ type, path: clip.path }); });
     quick.append(b);
   };
-  quickButton(ICON_COPY, 'Copy file', 'copy');
-  quickButton(ICON_FOLDER, 'Show in folder', 'reveal');
+  quickButton(ICON_COPY, L('Copy file', 'Copiar arquivo'), 'copy');
+  quickButton(ICON_FOLDER, L('Show in folder', 'Mostrar na pasta'), 'reveal');
   thumb.append(quick);
 
   const text = el('div', 'card-text');
@@ -198,7 +232,8 @@ function renderGrid() {
   const clips = visibleClips();
   $('empty').hidden = state.clips.length > 0;
   $('no-match').hidden = state.clips.length === 0 || clips.length > 0;
-  $('count').textContent = state.clips.length ? `${clips.length} ${clips.length === 1 ? 'CLIP' : 'CLIPS'}` : '';
+  $('count').textContent = state.clips.length
+    ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE') : L('CLIPS', 'CLIPES')}` : '';
 
   let label = null;
   let cards = null;
@@ -234,7 +269,7 @@ function showView(name) {
 function openClip(path) {
   const clip = state.clips.find(c => c.path.toLowerCase() === path.toLowerCase());
   if (!clip) {
-    toast('That clip is no longer in your clips folder.', true);
+    toast(L('That clip is no longer in your clips folder.', 'Esse clipe não está mais na sua pasta de clipes.'), true);
     return;
   }
   state.current = clip;
@@ -298,7 +333,7 @@ function layoutRange() {
   $('h-start').style.left = pct(state.start);
   $('h-end').style.left = pct(state.end);
   const length = state.end - state.start;
-  const hint = dragging === 'start' ? ' · STARTS ON A KEYFRAME' : '';
+  const hint = dragging === 'start' ? L(' · STARTS ON A KEYFRAME', ' · COMEÇA NUM KEYFRAME') : '';
   $('t-range').textContent = `${fmtTime(state.start)} → ${fmtTime(state.end)} · ${Math.round(length)} S${hint}`;
   drawWave();
   placePlayhead();
@@ -356,7 +391,7 @@ function togglePlay() {
     if (video.currentTime < state.start || video.currentTime >= state.end) video.currentTime = state.start;
     video.play().catch(err => {
       if (err && err.name === 'AbortError') return;
-      toast("This clip can't be played here.", true);
+      toast(L("This clip can't be played here.", 'Este clipe não pode ser reproduzido aqui.'), true);
     });
   } else {
     video.pause();
@@ -450,13 +485,13 @@ $('back').addEventListener('click', closeClip);
 $('a-trim').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-trim').classList.contains('busy')) return;
   busy($('a-trim'), true);
-  toast('Saving trim…');
+  toast(L('Saving trim…', 'Salvando corte…'));
   post({ type: 'trim', path: state.current.path, start: state.start, end: state.end });
 });
 $('a-discord').addEventListener('click', () => {
   if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
-  toast('Compressing on the GPU…');
+  toast(L('Compressing on the GPU…', 'Comprimindo na GPU…'));
   post({ type: 'compress', path: state.current.path });
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
@@ -506,17 +541,17 @@ function onDone(message) {
   switch (message.op) {
     case 'trim':
       busy($('a-trim'), false);
-      toast('Trim saved', false, open);
+      toast(L('Trim saved', 'Corte salvo'), false, open);
       break;
     case 'compress':
       busy($('a-discord'), false);
-      toast(`Compressed to ${message.message}`, false, open);
+      toast(L(`Compressed to ${message.message}`, `Comprimido para ${message.message}`), false, open);
       break;
     case 'copy':
-      toast('Copied. Paste it in Discord.');
+      toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
       break;
     case 'delete':
-      toast('Moved to the Recycle Bin');
+      toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
       if (state.current && state.current.path === message.path) {
         state.current = null;
         showView('library');
@@ -538,6 +573,7 @@ function onMessage(message) {
   switch (message.type) {
     case 'clips': {
       state.clips = message.clips || [];
+      state.listed = true;
       const listed = new Map(state.clips.map(c => [c.path, c.version]));
       let reopen = null;
       for (const [path, version] of state.versions) {
@@ -583,15 +619,20 @@ function onMessage(message) {
       // changes (a clip still being copied in, say); only say so when it's open.
       if (message.op === 'meta') state.requested.delete(message.path);
       if (message.op === 'meta' && !(state.current && state.current.path === message.path)) break;
-      toast(message.message || 'Something went wrong.', true);
+      toast(message.message || L('Something went wrong.', 'Algo deu errado.'), true);
       break;
     case 'changed':
       post({ type: 'list' });
+      break;
+    case 'language':
+      setLanguage(message.language);
       break;
   }
 }
 
 function start() {
+  translatePage();
+  Settings.translate();
   if (!host) return;
   host.addEventListener('message', e => onMessage(JSON.parse(e.data)));
   post({ type: 'list' });
