@@ -25,8 +25,6 @@ internal sealed partial class LibraryWindow : Form
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Canvas };
     private readonly LibraryBridge _bridge;
     private readonly string _boundsFile;
-    // Windows 11's acrylic behind the window: the page's translucent panels show the desktop blurred through.
-    private bool _glass;
 
     public LibraryWindow(GhostclipPaths paths, GhostclipConfig config, ILogger log, string? clip)
     {
@@ -90,31 +88,11 @@ internal sealed partial class LibraryWindow : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // Dark caption on Windows 10 20H1+.
+        // Dark caption on Windows 10 20H1+; the exact canvas color on Windows 11.
         var on = 1;
         _ = DwmSetWindowAttribute(Handle, DwmUseImmersiveDarkMode, ref on, sizeof(int));
-        // The desktop behind the window, blurred and lightly tinted (Windows 10 1803+ and 11). Windows 11's own
-        // acrylic backdrop (DWMWA_SYSTEMBACKDROP_TYPE) was tried first: in dark mode it covers about 96% of what's
-        // behind with gray, so it barely reads as glass. Older Windows keeps the solid look.
-        var build = Environment.OSVersion.Version.Build;
-        _glass = build >= 17134 && SetAccent(Handle, new AccentPolicy
-        {
-            // Windows 10's acrylic accent lags while the window is dragged; its plain blur doesn't.
-            AccentState = build >= 22000 ? AccentAcrylicBlurBehind : AccentBlurBehind,
-            AccentFlags = 2, // use GradientColor
-            GradientColor = GlassTint,
-        });
-        if (_glass)
-        {
-            // GDI leaves black see-through to the blur; the page paints its own translucent panels on top.
-            BackColor = Color.Black;
-            _web.DefaultBackgroundColor = Color.Transparent;
-        }
-        else
-        {
-            var caption = 0x00100D0B; // COLORREF of #0B0D10: the caption matches the canvas
-            _ = DwmSetWindowAttribute(Handle, DwmCaptionColor, ref caption, sizeof(int));
-        }
+        var caption = 0x00100D0B; // COLORREF of #0B0D10
+        _ = DwmSetWindowAttribute(Handle, DwmCaptionColor, ref caption, sizeof(int));
     }
 
     protected override async void OnLoad(EventArgs e)
@@ -142,7 +120,7 @@ internal sealed partial class LibraryWindow : Form
             core.SetVirtualHostNameToFolderMapping(CacheHost, _bridge.ThumbsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += _bridge.OnMessage;
             // In the right language from the first paint; a change later arrives as a "language" event.
-            core.Navigate($"https://{AppHost}/index.html?lang={UiText.Code}{(_glass ? "&glass=1" : "")}");
+            core.Navigate($"https://{AppHost}/index.html?lang={UiText.Code}");
         }
         catch (Exception ex) when (ex is COMException or WebView2RuntimeNotFoundException or IOException or UnauthorizedAccessException)
         {
@@ -178,53 +156,7 @@ internal sealed partial class LibraryWindow : Form
 
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmCaptionColor = 35;
-    private const int AccentBlurBehind = 3;
-    private const int AccentAcrylicBlurBehind = 4;
-    private const int WcaAccentPolicy = 19;
-    // ABGR: the canvas (#0B0D10) at about 45%: dark enough for the text, light enough to see the desktop through.
-    private const int GlassTint = 0x73100D0B;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Margins
-    {
-        public int Left, Right, Top, Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct AccentPolicy
-    {
-        public int AccentState, AccentFlags, GradientColor, AnimationId;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct CompositionAttributeData
-    {
-        public int Attribute;
-        public nint Data;
-        public int SizeOfData;
-    }
-
-    // SetWindowCompositionAttribute is undocumented but stable since Windows 10 1803; on failure the window stays solid.
-    private static unsafe bool SetAccent(nint hwnd, AccentPolicy accent)
-    {
-        var data = new CompositionAttributeData { Attribute = WcaAccentPolicy, Data = (nint)(&accent), SizeOfData = sizeof(AccentPolicy) };
-        try
-        {
-            return SetWindowCompositionAttribute(hwnd, ref data);
-        }
-        catch (EntryPointNotFoundException)
-        {
-            return false;
-        }
-    }
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetWindowCompositionAttribute(nint hwnd, ref CompositionAttributeData data);
 
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
-
-    [LibraryImport("dwmapi.dll")]
-    private static partial int DwmExtendFrameIntoClientArea(nint hwnd, ref Margins margins);
 }

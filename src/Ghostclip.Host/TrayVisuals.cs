@@ -44,10 +44,10 @@ internal static class TrayIcons
 }
 
 /// <summary>
-/// The tray menu in the library's look: dark, rounded corners on Windows 11, a
-/// cyan wash on the item under the pointer, and a touch of the desktop showing
-/// through. WinForms menus can't take the system's blurred acrylic, so the glass
-/// here is the layered window's opacity.
+/// The tray menu in the library's look: dark, a cyan wash on the item under the
+/// pointer, and a touch of the desktop showing through. WinForms menus can't take
+/// the system's blurred acrylic, so the glass here is the layered window's opacity;
+/// seen on screen, that also keeps Windows 11 from rounding the corners.
 /// </summary>
 internal static class TrayMenuStyle
 {
@@ -64,6 +64,12 @@ internal static class TrayMenuStyle
         menu.ForeColor = Text;
         menu.ShowImageMargin = false;
         menu.Padding = new Padding(4, 6, 4, 6);
+        // Room around each item, as Windows 11's own menus have; items are added after this runs.
+        menu.ItemAdded += (_, e) =>
+        {
+            if (e.Item is ToolStripMenuItem item) item.Padding = new Padding(4, 4, 4, 4);
+        };
+        // Layered for the see-through; Windows doesn't round a layered window's corners, so this costs those.
         menu.Opacity = 0.96;
         menu.HandleCreated += (_, _) =>
         {

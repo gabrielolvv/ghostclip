@@ -11,9 +11,6 @@ const MIN_RANGE = 0.5;
 // Texts built here carry both translations where they are used: L('Settings', 'Configurações').
 let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
 
-// The window has Windows 11's acrylic behind it: panels turn translucent to show it (app.css, html.glass).
-if (new URLSearchParams(location.search).get('glass') === '1') document.documentElement.classList.add('glass');
-
 // A soft light follows the pointer (app.css, "Light"): --mx/--my over the window, --lx/--ly inside
 // the card, button or sidebar item it's over. One write per frame, however fast the pointer moves.
 const LIT = '.card, .card-s, .act, .game, .update-card';
