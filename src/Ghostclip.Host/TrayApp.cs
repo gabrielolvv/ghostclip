@@ -15,8 +15,16 @@ internal sealed class TrayApp : ApplicationContext
     private readonly SynchronizationContext _ui;
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _saveItem;
-    private readonly ToolStripMenuItem _statusItem = new("Starting...") { Enabled = false };
-    private readonly ToolStripMenuItem _updateItem = new("Restart to update") { Visible = false };
+    private readonly ToolStripMenuItem _statusItem = new() { Enabled = false };
+    private readonly ToolStripMenuItem _updateItem = new() { Visible = false };
+    private readonly ToolStripMenuItem _libraryItem;
+    private readonly ToolStripMenuItem _clipsFolderItem;
+    private readonly ToolStripMenuItem _settingsItem;
+    private readonly ToolStripMenuItem _logsItem;
+    private readonly ToolStripMenuItem _exitItem;
+    // The registered hotkey as the menu names it (null when none is), and the update waiting to be applied.
+    private string? _hotkeyLabel;
+    private string? _updateVersion;
     private readonly UpdateService _updates = new(Log.ForContext<UpdateService>());
     private readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 2 * 60 * 1000 };
     private readonly HotkeyWindow _hotkey = new();
@@ -51,21 +59,27 @@ internal sealed class TrayApp : ApplicationContext
         _ui = new WindowsFormsSynchronizationContext();
         SynchronizationContext.SetSynchronizationContext(_ui);
 
-        _saveItem = new ToolStripMenuItem("Save clip", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
+        // Texts come from ApplyTexts, in the chosen language.
+        _saveItem = new ToolStripMenuItem("", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
+        _libraryItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary());
+        _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
+        _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
+        _logsItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_paths.LogsDir));
+        _exitItem = new ToolStripMenuItem("", null, (_, _) => Exit());
         var menu = new ContextMenuStrip();
         menu.Items.Add(_statusItem);
         menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
-        menu.Items.Add("Open library", null, (_, _) => OpenLibrary());
-        menu.Items.Add("Open clips folder", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
+        menu.Items.Add(_libraryItem);
+        menu.Items.Add(_clipsFolderItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Settings...", null, (_, _) => OpenLibrary(settings: true));
+        menu.Items.Add(_settingsItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Open logs folder", null, (_, _) => OpenFolder(_paths.LogsDir));
-        menu.Items.Add("Exit", null, (_, _) => Exit());
+        menu.Items.Add(_logsItem);
+        menu.Items.Add(_exitItem);
 
-        _icon = new NotifyIcon { Icon = TrayIcons.Waiting, Text = "Ghostclip: starting", ContextMenuStrip = menu, Visible = true };
+        _icon = new NotifyIcon { Icon = TrayIcons.Waiting, ContextMenuStrip = menu, Visible = true };
         _icon.DoubleClick += (_, _) => OpenLibrary();
         _icon.BalloonTipClicked += (_, _) => OpenLibrary(_lastClip);
 
@@ -97,7 +111,7 @@ internal sealed class TrayApp : ApplicationContext
             _exitRequest, (_, _) => _ui.Post(_ => Exit(), null), null, Timeout.Infinite, executeOnlyOnce: true);
 
         RegisterHotkey();
-        if (configProblem is not null) Notify("Settings reset", configProblem, ToolTipIcon.Warning);
+        if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
         _worker.Start(_config);
         PublishStatus(_status);
         _ = RecoverPendingAsync();
@@ -138,7 +152,9 @@ internal sealed class TrayApp : ApplicationContext
             {
                 _configError = error;
                 _log.Warning("config.json can't be read; keeping the current settings: {Error}", error);
-                Notify("Settings not applied", $"config.json can't be read ({error}). Ghostclip keeps the current settings.", ToolTipIcon.Warning);
+                Notify(L("Settings not applied", "Configurações não aplicadas"),
+                    L($"config.json can't be read ({error}). Ghostclip keeps the current settings.",
+                        $"Não foi possível ler o config.json ({error}). O Ghostclip mantém as configurações atuais."), ToolTipIcon.Warning);
             }
             return;
         }
@@ -169,18 +185,36 @@ internal sealed class TrayApp : ApplicationContext
     {
         if (_hotkey.TryRegister(_config.Hotkey, out var error))
         {
-            _saveItem.Text = $"Save clip ({KeyLabels.Describe(_config.Hotkey)})";
+            _hotkeyLabel = KeyLabels.Describe(_config.Hotkey);
         }
         else if (previous is not null && _hotkey.TryRegister(previous, out _))
         {
-            _saveItem.Text = $"Save clip ({KeyLabels.Describe(previous)})";
-            Notify("Hotkey not changed", $"{error} Still using {KeyLabels.Describe(previous)}. Pick another one in Settings.", ToolTipIcon.Warning);
+            _hotkeyLabel = KeyLabels.Describe(previous);
+            Notify(L("Hotkey not changed", "Hotkey não alterada"),
+                L($"{error} Still using {_hotkeyLabel}. Pick another one in Settings.",
+                    $"{error} Continua valendo {_hotkeyLabel}. Escolha outra em Configurações."), ToolTipIcon.Warning);
         }
         else
         {
-            _saveItem.Text = "Save clip";
-            Notify("Hotkey not available", $"{error} Pick another one in Settings.", ToolTipIcon.Warning);
+            _hotkeyLabel = null;
+            Notify(L("Hotkey not available", "Hotkey indisponível"),
+                L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
         }
+        ApplyTexts();
+    }
+
+    // Every text the tray shows; again whenever the language changes.
+    private void ApplyTexts()
+    {
+        _saveItem.Text = _hotkeyLabel is null ? L("Save clip", "Salvar clipe") : L($"Save clip ({_hotkeyLabel})", $"Salvar clipe ({_hotkeyLabel})");
+        _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}");
+        _libraryItem.Text = L("Open library", "Abrir biblioteca");
+        _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes");
+        _settingsItem.Text = L("Settings...", "Configurações...");
+        _logsItem.Text = L("Open logs folder", "Abrir pasta de logs");
+        _exitItem.Text = L("Exit", "Sair");
+        UpdateIconText();
+        UpdateStatusItem();
     }
 
     // Game-only audio follows the game, not whatever is in front: alt-tabbing to
@@ -201,9 +235,12 @@ internal sealed class TrayApp : ApplicationContext
 
     private void OnUpdateReady(string version)
     {
-        _updateItem.Text = $"Restart to update to {version}";
+        _updateVersion = version;
         _updateItem.Visible = true;
-        Notify("Update ready", $"Ghostclip {version} is downloaded. Restart from the tray menu when you're not playing.", ToolTipIcon.Info);
+        ApplyTexts();
+        Notify(L("Update ready", "Atualização pronta"),
+            L($"Ghostclip {version} is downloaded. Restart from the tray menu when you're not playing.",
+                $"O Ghostclip {version} foi baixado. Reinicie pelo menu da bandeja quando não estiver jogando."), ToolTipIcon.Info);
     }
 
     private void RestartToUpdate()
@@ -248,16 +285,43 @@ internal sealed class TrayApp : ApplicationContext
     {
         var state = _status.State switch
         {
-            WorkerState.Recording => "Recording",
-            WorkerState.Stopped => "Not recording",
-            WorkerState.Probing => "Detecting encoder",
-            WorkerState.WaitingForDesktop => "Paused (screen locked)",
-            _ => "Starting",
+            WorkerState.Recording => L("Recording", "Gravando"),
+            WorkerState.Stopped => L("Not recording", "Sem gravar"),
+            WorkerState.Probing => L("Detecting encoder", "Detectando o encoder"),
+            WorkerState.WaitingForDesktop => L("Paused (screen locked)", "Pausado (tela bloqueada)"),
+            _ => L("Starting", "Iniciando"),
         };
-        var audio = _status.AudioRoute is { } route ? $" · audio: {route}" : "";
+        var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}") : "";
         var mic = _status.Microphone ? " · mic" : "";
         var game = _gamePid != 0 ? _game : _foreground;
         _statusItem.Text = $"{state} · {game}{audio}{mic}";
+    }
+
+    // The worker names the audio route in English, for its log as well.
+    private static string PortugueseRoute(string route) => route switch
+    {
+        "system" => "sistema",
+        "microphone" => "microfone",
+        "silence" => "silêncio",
+        "starting" => "iniciando",
+        _ when route.StartsWith("game ", StringComparison.Ordinal) => "jogo " + route["game ".Length..],
+        _ => route,
+    };
+
+    private void UpdateIconText()
+    {
+        var s = _status;
+        var text = s.State switch
+        {
+            WorkerState.Recording => L($"Ghostclip: recording ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", audio" : "")})",
+                $"Ghostclip: gravando ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", áudio" : "")})"),
+            WorkerState.Stopped => L("Ghostclip: not recording", "Ghostclip: sem gravar"),
+            WorkerState.Probing => L("Ghostclip: detecting the encoder", "Ghostclip: detectando o encoder"),
+            WorkerState.WaitingForDesktop => L("Ghostclip: paused while the screen is locked", "Ghostclip: pausado enquanto a tela está bloqueada"),
+            _ => L("Ghostclip: starting", "Ghostclip: iniciando"),
+        };
+        // NotifyIcon.Text is capped at 127 characters.
+        _icon.Text = text.Length > 127 ? text[..127] : text;
     }
 
     private void SaveClip()
@@ -273,7 +337,7 @@ internal sealed class TrayApp : ApplicationContext
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Warning("Save failed: {Error}", ex.Message);
-            Notify("Clip not saved", ex.Message, ToolTipIcon.Warning);
+            Notify(L("Clip not saved", "Clipe não salvo"), ex.Message, ToolTipIcon.Warning);
             return;
         }
         // The clip is safe from here on: confirm right away, the MP4 follows.
@@ -287,12 +351,13 @@ internal sealed class TrayApp : ApplicationContext
         {
             var path = await Task.Run(() => _saver.RemuxAsync(snapshot)).ConfigureAwait(true);
             _lastClip = path;
-            Notify("Clip saved", $"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", ToolTipIcon.None);
+            Notify(L("Clip saved", "Clipe salvo"),
+                L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Error("Remux failed: {Error}", ex.Message);
-            Notify("Clip not saved", ex.Message, ToolTipIcon.Error);
+            Notify(L("Clip not saved", "Clipe não salvo"), ex.Message, ToolTipIcon.Error);
         }
     }
 
@@ -311,17 +376,14 @@ internal sealed class TrayApp : ApplicationContext
         // A status posted just before shutdown arrives after the icon is gone.
         if (_shuttingDown) return;
         _status = status;
-        var (icon, text) = status.State switch
+        var icon = status.State switch
         {
-            WorkerState.Recording => (TrayIcons.Recording, $"Ghostclip: recording ({status.Encoder}, {status.Fps:0} fps{(status.Audio ? ", audio" : "")})"),
-            WorkerState.Stopped => (TrayIcons.Stopped, "Ghostclip: not recording"),
-            WorkerState.Probing => (TrayIcons.Waiting, "Ghostclip: detecting the encoder"),
-            WorkerState.WaitingForDesktop => (TrayIcons.Waiting, "Ghostclip: paused while the screen is locked"),
-            _ => (TrayIcons.Waiting, "Ghostclip: starting"),
+            WorkerState.Recording => TrayIcons.Recording,
+            WorkerState.Stopped => TrayIcons.Stopped,
+            _ => TrayIcons.Waiting,
         };
         if (_icon.Icon != icon) _icon.Icon = icon;
-        // NotifyIcon.Text is capped at 127 characters.
-        _icon.Text = text.Length > 127 ? text[..127] : text;
+        UpdateIconText();
         UpdateStatusItem();
         PublishStatus(status);
     }
@@ -330,13 +392,14 @@ internal sealed class TrayApp : ApplicationContext
     {
         if (fatal)
         {
-            Notify("Ghostclip is not recording", message, ToolTipIcon.Error);
+            Notify(L("Ghostclip is not recording", "O Ghostclip não está gravando"), message, ToolTipIcon.Error);
             return;
         }
         // Restarts can come in bursts (monitor unplugged): one balloon a minute.
         if (DateTime.UtcNow - _lastWarningUtc < TimeSpan.FromMinutes(1)) return;
         _lastWarningUtc = DateTime.UtcNow;
-        Notify("Recording interrupted", "Ghostclip is restarting the recorder. The buffer is kept.", ToolTipIcon.Warning);
+        Notify(L("Recording interrupted", "Gravação interrompida"),
+            L("Ghostclip is restarting the recorder. The buffer is kept.", "O Ghostclip está reiniciando o gravador. O buffer foi mantido."), ToolTipIcon.Warning);
     }
 
     // The worker restarts recording only when the capture settings changed (GhostclipConfig.SameCaptureAs).
@@ -345,7 +408,10 @@ internal sealed class TrayApp : ApplicationContext
         var previousHotkey = _config.Hotkey;
         _config = config;
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
+        UiText.Use(config.Language);
+        // Both redo the menu's texts, in the language just set.
         if (config.Hotkey != previousHotkey) RegisterHotkey(previousHotkey);
+        else ApplyTexts();
         ApplyAutostart();
         _worker.UpdateConfig(config);
         _log.Information("Settings applied");

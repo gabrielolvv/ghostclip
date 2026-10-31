@@ -24,7 +24,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 Save(r);
                 break;
             case "pickFolder":
-                using (var dialog = new FolderBrowserDialog { Description = "Where Ghostclip saves clips", UseDescriptionForTitle = true, ShowNewFolderButton = true })
+                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip saves clips", "Onde o Ghostclip salva os clipes"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
                 {
                     var folder = current().ResolvedClipsFolder;
                     if (Directory.Exists(folder)) dialog.InitialDirectory = folder;
@@ -32,7 +32,12 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 }
                 break;
             case "pickFfmpeg":
-                using (var dialog = new OpenFileDialog { Title = "Choose ffmpeg.exe", Filter = "FFmpeg|ffmpeg.exe|Programs|*.exe", CheckFileExists = true })
+                using (var dialog = new OpenFileDialog
+                {
+                    Title = L("Choose ffmpeg.exe", "Escolha o ffmpeg.exe"),
+                    Filter = L("FFmpeg|ffmpeg.exe|Programs|*.exe", "FFmpeg|ffmpeg.exe|Programas|*.exe"),
+                    CheckFileExists = true,
+                })
                 {
                     if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "ffmpegPath", Path: dialog.FileName));
                 }
@@ -62,7 +67,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 
     private void Save(LibraryRequest r)
     {
-        var config = (r.Config ?? throw new InvalidOperationException("No settings to save.")).Normalize();
+        var config = (r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar."))).Normalize();
         if (!HotkeyWindow.TryParse(config.Hotkey, out _, out _, out var hotkeyError))
         {
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
@@ -78,7 +83,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         {
             // Segments in two formats can't be joined: the buffer starts over.
             window.Post(new LibraryEvent("confirm", Op: r.Type,
-                Message: $"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay."));
+                Message: L($"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay.",
+                    $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay.")));
             return;
         }
         ConfigStore.Save(paths.ConfigFile, config);
@@ -86,8 +92,9 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         window.Post(new LibraryEvent("done", Op: r.Type, Config: config, HotkeyLabel: KeyLabels.Describe(config.Hotkey)));
     }
 
-    private static string Unreadable(string? error) =>
-        $"config.json can't be read ({error}). Fix the file, or delete it to start from the defaults; nothing is saved from here until then.";
+    private static string Unreadable(string? error) => L(
+        $"config.json can't be read ({error}). Fix the file, or delete it to start from the defaults; nothing is saved from here until then.",
+        $"Não foi possível ler o config.json ({error}). Corrija o arquivo ou apague-o para começar dos padrões; nada é salvo daqui até lá.");
 
     // What the recorder measured working on this PC, for marking the encoder choices.
     private IReadOnlyList<string> DetectedEncoders()

@@ -45,7 +45,12 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _prober = new EncoderProber(paths, log);
     }
 
-    public void ApplyConfig(GhostclipConfig config) => _configs.Writer.TryWrite(config);
+    public void ApplyConfig(GhostclipConfig config)
+    {
+        // The messages the tray shows from here follow the language too.
+        UiText.Use(config.Language);
+        _configs.Writer.TryWrite(config);
+    }
 
     /// <summary>The host saw a different program in the foreground.</summary>
     public void SetForeground(string? game, uint processId)
@@ -83,7 +88,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 var ffmpeg = FfmpegLocator.Find(_config.FfmpegPath, AppContext.BaseDirectory);
                 if (ffmpeg is null)
                 {
-                    await FailAsync("FFmpeg was not found. Put it in the ffmpeg folder next to Ghostclip or set ffmpegPath in config.json.", ct).ConfigureAwait(false);
+                    await FailAsync(UiText.L(
+                        "FFmpeg was not found. Put it in the ffmpeg folder next to Ghostclip or set ffmpegPath in config.json.",
+                        "O FFmpeg não foi encontrado. Coloque-o na pasta ffmpeg ao lado do Ghostclip ou defina ffmpegPath no config.json."), ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -102,7 +109,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 if (choice is null)
                 {
                     // Never fall back to a CPU encoder: it would cost far more FPS than promised.
-                    await FailAsync("No hardware encoder (NVENC, AMF or QuickSync) works on this PC. Ghostclip does not record with a CPU encoder.", ct).ConfigureAwait(false);
+                    await FailAsync(UiText.L(
+                        "No hardware encoder (NVENC, AMF or QuickSync) works on this PC. Ghostclip does not record with a CPU encoder.",
+                        "Nenhum encoder de hardware (NVENC, AMF ou QuickSync) funciona neste PC. O Ghostclip não grava com encoder de CPU."), ct).ConfigureAwait(false);
                     continue;
                 }
 

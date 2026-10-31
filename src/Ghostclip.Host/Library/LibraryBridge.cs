@@ -139,7 +139,8 @@ internal sealed class LibraryBridge : IDisposable
             }
             if (r.Path is not { } path || !RootAvailable || !ClipLibrary.IsInside(Root, path))
             {
-                _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path, Message: "That file isn't in your clips folder."));
+                _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path,
+                    Message: L("That file isn't in your clips folder.", "Esse arquivo não está na sua pasta de clipes.")));
                 return;
             }
 
@@ -216,7 +217,8 @@ internal sealed class LibraryBridge : IDisposable
         else
         {
             _window.Post(new LibraryEvent("clips", Clips: [], Root: Root));
-            _window.Post(new LibraryEvent("error", Op: "list", Message: $"Your clips folder isn't available: {_rootError}"));
+            _window.Post(new LibraryEvent("error", Op: "list",
+                Message: L($"Your clips folder isn't available: {_rootError}", $"Sua pasta de clipes não está disponível: {_rootError}")));
         }
         if (!_listed) _status.Push(always: true);
         _listed = true;
@@ -227,11 +229,14 @@ internal sealed class LibraryBridge : IDisposable
         }
     }
 
-    // A new clips folder from the settings page shows up in this window right away.
+    // A new clips folder or language from the settings page shows up in this window right away.
     private void OnSettingsSaved(GhostclipConfig config)
     {
         var root = config.ResolvedClipsFolder;
         _config = config;
+        var language = UiText.Code;
+        UiText.Use(config.Language);
+        if (UiText.Code != language) _window.Post(new LibraryEvent("language", Language: UiText.Code));
         if (string.Equals(Path.GetFullPath(root), Path.GetFullPath(Root), StringComparison.OrdinalIgnoreCase)) return;
         Root = root;
         UseRoot();

@@ -44,12 +44,14 @@ public static class LibraryOrigin
 /// changed (the clips folder changed), settings (Config, Encoders this PC
 /// supports, Games for profile names), confirm (saving restarts recording:
 /// Message says what it clears), picked (a chosen Path for Op), status (the
-/// recorder badge, Status null when the tray isn't running) and showSettings.
+/// recorder badge, Status null when the tray isn't running), showSettings and
+/// language (Language is "en" or "pt"; the page opens with ?lang= and this
+/// switches it live).
 /// </summary>
 public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = null, string? Root = null, string? Path = null,
     ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null,
     GhostclipConfig? Config = null, IReadOnlyList<string>? Encoders = null, IReadOnlyList<string>? Games = null,
-    RecorderStatus? Status = null, string? HotkeyLabel = null);
+    RecorderStatus? Status = null, string? HotkeyLabel = null, string? Language = null);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

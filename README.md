@@ -108,6 +108,9 @@ installer and the minimal FFmpeg is described in
   edit that by hand and the tray applies it right away. Saving from the page
   rewrites the file and drops any comments you added. Logs are in
   `%LOCALAPPDATA%\GhostclipData\Logs`.
+- The app speaks English or Portuguese. By default it follows Windows;
+  Settings > General > Language picks one, and the tray and library switch
+  as soon as you save, without touching recording.
 - Command line, for scripts, macros or a Stream Deck:
 
 | Command | Does |
