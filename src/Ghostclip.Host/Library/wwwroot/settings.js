@@ -31,8 +31,8 @@ const Settings = (() => {
         options: [[0, 'Monitor'], [2160, '2160p'], [1440, '1440p'], [1080, '1080p'], [720, '720p']] },
       { key: 'monitor', label: 'Monitor', hint: '0 is the first monitor of the GPU.', type: 'number', min: 0, max: 16 },
     ], more: [
-      { key: 'input', label: 'Color conversion', hint: 'Auto uses what was measured to cost least.', type: 'select',
-        options: [['Auto', 'Auto'], ['Direct', 'In the encoder'], ['Nv12', 'On the GPU first']] },
+      { key: 'input', label: 'Color conversion', hint: 'Auto uses what was measured to cost least. Through memory is a last resort for drivers where neither works; NVIDIA and AMD only.', type: 'select',
+        options: [['Auto', 'Auto'], ['Direct', 'In the encoder'], ['Nv12', 'On the GPU first'], ['Memory', 'Through memory']] },
       { key: 'qsvAsyncDepth', label: 'QuickSync queue', hint: '1 uses the least memory. Raise it if clips drop frames.', type: 'number', min: 1, max: 8 },
     ] },
     { title: 'AUDIO', fields: [

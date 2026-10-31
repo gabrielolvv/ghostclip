@@ -66,7 +66,9 @@ Ghostclip.exe (bandeja)           Ghostclip.Worker.exe (sem UI)          ffmpeg.
   Se ele travar ou parar de responder, o host o reinicia. O buffer está em
   disco, então nada se perde; um job object garante que o FFmpeg morra junto.
 - **Os frames ficam na GPU.** Capturados na taxa do clipe (60 fps), não na do
-  monitor, e convertidos e codificados na GPU.
+  monitor, e convertidos e codificados na GPU. Só quando um driver recusa os
+  frames capturados (visto com o encoder da AMD numa Radeon RX 6600) cada
+  frame passa uma vez pela memória do sistema; a codificação continua na GPU.
 - **Buffer.** Segmentos de 2 s, cada um começando num keyframe, numerados e
   rotacionados para manter em disco só o equivalente a um clipe.
 - **Salvar.** A hotkey cria hard links dos segmentos numa pasta pendente

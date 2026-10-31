@@ -25,21 +25,20 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
         log.Information("Probing hardware encoders with {Ffmpeg}", ffmpeg);
         var list = await ProcessRunner.RunAsync(ffmpeg, ["-hide_banner", "-encoders"], TimeSpan.FromSeconds(15), ct: ct).ConfigureAwait(false);
         var results = new List<ProbeResult>();
-        foreach (var encoder in EncoderProbe.Candidates(config.Encoder))
+        foreach (var (encoder, input) in EncoderProbe.Pairs(config.Encoder, config.Input))
         {
-            foreach (var input in EncoderProbe.Candidates(config.Input))
+            // The pairs through memory come last and are only tried when none on the GPU works.
+            if (input == EncoderInput.Memory && results.Any(r => r.Ok)) break;
+            var settings = CaptureSettings.From(config, encoder, input);
+            if (!list.StdOut.Contains($" {settings.EncoderName} ", StringComparison.Ordinal))
             {
-                var settings = CaptureSettings.From(config, encoder, input);
-                if (!list.StdOut.Contains($" {settings.EncoderName} ", StringComparison.Ordinal))
-                {
-                    results.Add(new ProbeResult(encoder, input, false, 0, $"{settings.EncoderName} is not in this FFmpeg build"));
-                    continue;
-                }
-                var r = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Probe(settings, ProbeFrames), TimeSpan.FromSeconds(20), ct: ct).ConfigureAwait(false);
-                var result = new ProbeResult(encoder, input, r.Succeeded, Math.Round(r.Elapsed.TotalSeconds, 2), r.Succeeded ? null : r.FirstError);
-                log.Information("Probe {Encoder} ({Input}): {Outcome}", settings.EncoderName, input, result.Ok ? "ok" : result.Error);
-                results.Add(result);
+                results.Add(new ProbeResult(encoder, input, false, 0, $"{settings.EncoderName} is not in this FFmpeg build"));
+                continue;
             }
+            var r = await ProcessRunner.RunAsync(ffmpeg, FfmpegArgs.Probe(settings, ProbeFrames), TimeSpan.FromSeconds(20), ct: ct).ConfigureAwait(false);
+            var result = new ProbeResult(encoder, input, r.Succeeded, Math.Round(r.Elapsed.TotalSeconds, 2), r.Succeeded ? null : r.FirstError);
+            log.Information("Probe {Encoder} ({Input}): {Outcome}", settings.EncoderName, input, result.Ok ? "ok" : result.Error);
+            results.Add(result);
         }
 
         if (EncoderProbe.DesktopUnavailable(results))

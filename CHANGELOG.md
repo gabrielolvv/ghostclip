@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Ghostclip records on PCs whose GPU driver refuses the captured frames, as
+  AMD's encoder did on a Radeon RX 6600 ("SubmitInput() failed with error 18"):
+  the frames then go through system memory and are still encoded on the GPU.
+  This is tried only when nothing on the GPU works, and can also be picked in
+  Settings > Video > Encoder options > Color conversion.
+
 ## 0.5.2
 
 ### Changed

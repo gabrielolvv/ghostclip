@@ -8,13 +8,10 @@ public sealed record ProbeCache(string FfmpegId, VideoCodec Codec, int Monitor, 
     /// <summary>The first working pair that matches the request, in preference order.</summary>
     public ProbeResult? Choose(EncoderKind encoder, EncoderInput input)
     {
-        foreach (var e in EncoderProbe.Candidates(encoder))
+        foreach (var (e, i) in EncoderProbe.Pairs(encoder, input))
         {
-            foreach (var i in EncoderProbe.Candidates(input))
-            {
-                var hit = Results.FirstOrDefault(r => r.Ok && r.Encoder == e && r.Input == i);
-                if (hit is not null) return hit;
-            }
+            var hit = Results.FirstOrDefault(r => r.Ok && r.Encoder == e && r.Input == i);
+            if (hit is not null) return hit;
         }
         return null;
     }
@@ -35,7 +32,21 @@ public static class EncoderProbe
     /// instead of 3D. It also avoids scale_d3d11, which fails on that GPU.
     /// </summary>
     public static IReadOnlyList<EncoderInput> Candidates(EncoderInput requested) =>
-        requested == EncoderInput.Auto ? [EncoderInput.Direct, EncoderInput.Nv12] : [requested];
+        requested == EncoderInput.Auto ? [EncoderInput.Direct, EncoderInput.Nv12, EncoderInput.Memory] : [requested];
+
+    /// <summary>
+    /// Encoder and input pairs in preference order. Every pair that stays on the GPU
+    /// comes before any that goes through memory: that copy of each frame is only
+    /// worth paying when nothing else works. QuickSync never goes through memory;
+    /// it takes frames by hwmap.
+    /// </summary>
+    public static IReadOnlyList<(EncoderKind Encoder, EncoderInput Input)> Pairs(EncoderKind encoder, EncoderInput input)
+    {
+        var all = Candidates(encoder).SelectMany(e => Candidates(input).Select(i => (Encoder: e, Input: i)))
+            .Where(p => !(p.Encoder == EncoderKind.Qsv && p.Input == EncoderInput.Memory))
+            .ToList();
+        return [.. all.Where(p => p.Input != EncoderInput.Memory), .. all.Where(p => p.Input == EncoderInput.Memory)];
+    }
 
     /// <summary>
     /// True when every encoder that was actually tried failed because Windows

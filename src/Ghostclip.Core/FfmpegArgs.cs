@@ -43,7 +43,14 @@ public static class FfmpegArgs
         // ddagrab captures at the clip rate, never at the monitor's refresh rate.
         var filter = new StringBuilder(Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"));
         var nv12 = s.Input == EncoderInput.Nv12 || s.OutputHeight > 0;
-        if (s.Encoder == EncoderKind.Qsv)
+        if (s.Input == EncoderInput.Memory)
+        {
+            // One copy of each frame to system memory. NVENC and AMF take BGRA as it is and convert
+            // the colors on the GPU, so the CPU only copies; scaling down here is done by the CPU.
+            filter.Append(",hwdownload,format=bgra");
+            if (s.OutputHeight > 0) filter.Append(Inv($",scale=-2:{s.OutputHeight}"));
+        }
+        else if (s.Encoder == EncoderKind.Qsv)
         {
             filter.Append(",hwmap=derive_device=qsv,format=qsv");
             if (nv12)
