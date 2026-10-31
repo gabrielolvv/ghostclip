@@ -7,7 +7,9 @@ namespace Ghostclip.Core;
 /// favorites, and the bookmarks a session recording left in its clip. Keyed by
 /// full path; renaming or deleting through the library carries them along. A
 /// clip found under another clips folder (the folder moved, or Settings points
-/// elsewhere) is still recognized by its game folder and name.
+/// elsewhere) is still recognized by its game folder and name, but only as a
+/// fallback: changes go to the exact entry when there is one, so deleting or
+/// renaming a same-named copy never takes the original's star.
 /// </summary>
 public sealed record LibraryState
 {
@@ -24,9 +26,13 @@ public sealed record LibraryState
 
     public void SetFavorite(string path, bool favorite)
     {
-        Favorites.RemoveAll(p => SameClip(p, path));
+        // Unstarring a clip known only by its old place takes that entry; otherwise only its own.
+        if (favorite || Favorites.Any(p => SamePath(p, path))) Favorites.RemoveAll(p => SamePath(p, path));
+        else Favorites.RemoveAll(p => SameClip(p, path));
         if (favorite) Favorites.Add(path);
     }
+
+    private static bool SamePath(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The same path, or the same game folder and file name under another clips folder.</summary>
     public static bool SameClip(string a, string b) =>
@@ -53,19 +59,20 @@ public sealed record LibraryState
         var favorite = IsFavorite(from);
         var bookmarks = BookmarksFor(from).ToList();
         Forget(from);
-        SetFavorite(to, favorite);
+        if (favorite) SetFavorite(to, true);
         SetBookmarks(to, bookmarks);
     }
 
+    /// <summary>A file deleted: its own entries go; another clip's, matched only by name, stay.</summary>
     public void Forget(string path)
     {
-        SetFavorite(path, false);
+        Favorites.RemoveAll(p => SamePath(p, path));
         RemoveBookmarks(path);
     }
 
     private void RemoveBookmarks(string path)
     {
-        foreach (var key in Bookmarks.Keys.Where(k => SameClip(k, path)).ToList())
+        foreach (var key in Bookmarks.Keys.Where(k => SamePath(k, path)).ToList())
         {
             Bookmarks.Remove(key);
         }

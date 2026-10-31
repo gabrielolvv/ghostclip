@@ -34,9 +34,9 @@ internal sealed class SessionRecorder : IDisposable
     private string _game = ClipNaming.FallbackGame;
     private long _from;
     private DateTime? _resumedAfterUtc;
+    private long? _runStart;
     private DateTime _startedLocal;
     private DateTime _partStartedLocal;
-    private DateTime? _originUtc;
     private RecordingSession? _audio;
 
     public SessionRecorder(GhostclipPaths paths, ClipSaver saver, ILogger log)
@@ -73,8 +73,6 @@ internal sealed class SessionRecorder : IDisposable
         // From the segment being written now: the session starts at most 2 s early, never late.
         var segments = SegmentRing.Scan(_paths.BufferDir);
         BeginPart(segments.Count > 0 ? segments[^1].Sequence : 0, resumedAfterUtc: null);
-        // The joined file starts where that segment does: bookmarks count from there.
-        _originUtc = segments.Count > 0 ? File.GetCreationTimeUtc(segments[^1].Path) : null;
         _timer.Start();
         _log.Information("Session recording started for {Game} from segment {From}", game, _from);
     }
@@ -84,8 +82,15 @@ internal sealed class SessionRecorder : IDisposable
     {
         if (_dir is not { } dir) return;
         Collect();
-        // Only segments of this part's run are in it, back to back, so time since its first one is time in the file.
-        var at = _originUtc is { } origin ? Math.Max(0, (DateTime.UtcNow - origin).TotalSeconds) : 0;
+        // Only segments of this part's run are in it, back to back: counted, not timed from file dates.
+        var segments = SegmentRing.Scan(_paths.BufferDir);
+        var at = 0.0;
+        if (_from >= 0 && segments.Count > 0)
+        {
+            var writing = segments[^1].Sequence;
+            DateTime? begun = segments.Count > 1 && segments[^2].Sequence == writing - 1 ? segments[^2].LastWriteUtc : null;
+            at = SessionPlan.OffsetAt(_from, writing, begun, DateTime.UtcNow, GhostclipConfig.SegmentSeconds);
+        }
         _bookmarks.Add(Math.Round(at, 1));
         // A full disk must not cost the clip being saved along with the bookmark.
         TryWrite(() => File.WriteAllLines(Path.Combine(dir, ClipSaver.BookmarksFile), _bookmarks.Select(b => b.ToString(CultureInfo.InvariantCulture))));
@@ -114,7 +119,11 @@ internal sealed class SessionRecorder : IDisposable
     public void RecorderResumed(long? runStart = null)
     {
         if (!Running || _dir is not null || _resumedAfterUtc is not { } after) return;
-        BeginPart(from: runStart ?? -1, resumedAfterUtc: after);
+        // A stop seen late (the tray busy for a second) can have let the last part take this run's first
+        // segments: this one starts after them, never on a segment already saved.
+        var from = runStart ?? -1;
+        if (runStart is { } start && _linked.Contains(start)) from = _linked.Max + 1;
+        BeginPart(from, resumedAfterUtc: after, runStart);
         _log.Information("Session continues in a new part");
     }
 
@@ -130,12 +139,12 @@ internal sealed class SessionRecorder : IDisposable
         return part;
     }
 
-    private void BeginPart(long from, DateTime? resumedAfterUtc)
+    private void BeginPart(long from, DateTime? resumedAfterUtc, long? runStart = null)
     {
+        _runStart = runStart;
         _from = from;
         _resumedAfterUtc = resumedAfterUtc;
         _partStartedLocal = DateTime.Now;
-        _originUtc = null;
         _audio = null;
         _linked.Clear();
         _bookmarks.Clear();
@@ -185,11 +194,16 @@ internal sealed class SessionRecorder : IDisposable
             var ok = sequence == writing ? _saver.CopyGrowing(segment.Path, target) : _saver.LinkOrCopy(segment.Path, target);
             if (!ok) continue;
             _linked.Add(sequence);
-            _originUtc ??= File.GetCreationTimeUtc(segment.Path);
             added = true;
         }
         // The audio shift is measured a moment after recording starts; read it while the buffer still has it.
-        _audio ??= AudioSync.ForSequence(AudioSync.Scan(_paths.BufferDir), _from);
+        // Once a segment is in: the run's own measurement, which its recorder writes a moment after starting.
+        // With the run known, an earlier run's is not taken for it.
+        if (_audio is null && _linked.Count > 0)
+        {
+            var audio = AudioSync.ForSequence(AudioSync.Scan(_paths.BufferDir), _from);
+            if (_runStart is not { } run || audio?.StartSequence == run) _audio = audio;
+        }
         if (!added) return;
         TryWrite(() =>
         {

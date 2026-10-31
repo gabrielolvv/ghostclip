@@ -174,6 +174,30 @@ public sealed class LibraryFeaturesTests : IDisposable
         Assert.Empty(state.Favorites);
     }
 
+    // A copy with the same game folder and name (a backup folder inside the clips folder) shows as starred, but
+    // deleting or renaming it must leave the original's star, or the space limit could take the original.
+    [Fact]
+    public void Deleting_or_renaming_a_copy_keeps_the_original_s_star()
+    {
+        const string original = @"C:\Clips\G\G_2026-10-01_12-00-00.mp4";
+        const string copy = @"C:\Clips\Backup\G\G_2026-10-01_12-00-00.mp4";
+        var state = new LibraryState();
+        state.SetFavorite(original, true);
+        Assert.True(state.IsFavorite(copy));
+
+        state.Forget(copy);
+        Assert.True(state.IsFavorite(original));
+
+        state.Move(copy, @"C:\Clips\Backup\G\Ace.mp4");
+        Assert.True(state.IsFavorite(original));
+        Assert.True(state.IsFavorite(@"C:\Clips\Backup\G\Ace.mp4"));
+
+        // Unstarring the original itself takes its own entry only.
+        state.SetFavorite(original, false);
+        Assert.False(state.IsFavorite(original));
+        Assert.True(state.IsFavorite(@"C:\Clips\Backup\G\Ace.mp4"));
+    }
+
     // The space limit reads favorites, then deletes: a star set in between must wait for the pass, not be lost to it.
     [Fact]
     public void A_favorite_set_during_a_locked_pass_waits_for_it()

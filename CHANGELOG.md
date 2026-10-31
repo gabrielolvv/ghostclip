@@ -16,6 +16,12 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   (another drive, or another folder in Settings): a clip is also recognized
   by its game folder and name. Before, they were lost and favorites stopped
   protecting clips from the space limit.
+- A session's bookmarks no longer land minutes off when the recorder had
+  just cleared an old buffer: Windows can give a new segment the creation
+  time of a deleted one with the same name, so a bookmark's place is now
+  counted in segments instead.
+- Deleting or renaming a same-named copy of a starred clip (a backup folder
+  inside the clips folder) no longer takes the original's star.
 - Cleaning up cut-off saves follows the space limit's rule: only a .part file
   named after its game's folder is Ghostclip's, so a browser's paused
   download with a date in its name is left alone.

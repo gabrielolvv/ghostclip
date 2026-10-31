@@ -21,6 +21,19 @@ public static class SessionPlan
     }
 
     /// <summary>
+    /// Seconds into a part's joined file at <paramref name="nowUtc"/>: the segments before the one being
+    /// written, plus how long that one has been written, from when the previous segment was last written
+    /// (when this one began). File creation times can't be used: Windows gives a segment created under a
+    /// recently deleted name that file's creation time (file system tunneling).
+    /// </summary>
+    public static double OffsetAt(long from, long writing, DateTime? previousClosedUtc, DateTime nowUtc, int segmentSeconds)
+    {
+        var whole = Math.Max(0, writing - from) * (double)segmentSeconds;
+        var into = previousClosedUtc is { } begun ? Math.Clamp((nowUtc - begun).TotalSeconds, 0, segmentSeconds) : 0;
+        return whole + into;
+    }
+
+    /// <summary>
     /// Where a part that began at <paramref name="afterUtc"/> starts: the oldest segment created since,
     /// whatever its number; null while the new run hasn't written one.
     /// </summary>
