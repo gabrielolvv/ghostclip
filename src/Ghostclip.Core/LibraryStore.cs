@@ -62,22 +62,45 @@ public static class LibraryStore
 {
     private const string MutexName = @"Local\Ghostclip.LibraryStore";
 
-    /// <summary>The file as it is now; empty when it's missing or unreadable (it only holds conveniences).</summary>
-    public static LibraryState Read(string file)
+    /// <summary>The file as it is now, for showing; empty when it's missing or unreadable.</summary>
+    public static LibraryState Read(string file) => TryRead(file, out var state) ? state : new LibraryState();
+
+    /// <summary>
+    /// The file as it is now. False when it exists but can't be read: its favorites are unknown,
+    /// which is not the same as none, so nothing may be deleted or written over on the strength of it.
+    /// </summary>
+    public static bool TryRead(string file, out LibraryState state)
     {
-        try
+        state = new LibraryState();
+        // Only a file that isn't there means no favorites; File.Exists also says false when it can't tell.
+        // A lock (antivirus, the indexer, the other process writing) gets about a second, as writing does.
+        for (var attempt = 1; ; attempt++)
         {
-            if (!File.Exists(file)) return new LibraryState();
-            using var stream = File.OpenRead(file);
-            return JsonSerializer.Deserialize(stream, CoreJson.Default.LibraryState) ?? new LibraryState();
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            return new LibraryState();
+            try
+            {
+                using var stream = File.OpenRead(file);
+                state = JsonSerializer.Deserialize(stream, CoreJson.Default.LibraryState) ?? new LibraryState();
+                return true;
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 20)
+            {
+                Thread.Sleep(50);
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
         }
     }
 
-    /// <summary>Reads, applies <paramref name="change"/> and writes back atomically; returns the new state.</summary>
+    /// <summary>
+    /// Reads, applies <paramref name="change"/> and writes back atomically; returns the new state.
+    /// Throws <see cref="IOException"/> rather than write over a file it can't read, or write without the lock.
+    /// </summary>
     public static LibraryState Update(string file, Action<LibraryState> change)
     {
         using var mutex = new Mutex(false, MutexName);
@@ -93,13 +116,19 @@ public static class LibraryStore
                 // The other process died holding it; the file is still whole thanks to the atomic write.
                 owned = true;
             }
-            var state = Read(file);
+            if (!owned) throw new IOException(UiText.L($"{Path.GetFileName(file)} is busy in another Ghostclip window. Try again.", $"O {Path.GetFileName(file)} está ocupado em outra janela do Ghostclip. Tente de novo."));
+            if (!TryRead(file, out var state))
+            {
+                throw new IOException(UiText.L($"{Path.GetFileName(file)}, where favorites are kept, can't be read. Until it can, favorites can't change and the space limit deletes nothing.", $"Não foi possível ler o {Path.GetFileName(file)}, onde ficam os favoritos. Até que seja possível, os favoritos não mudam e o limite de espaço não apaga nada."));
+            }
             change(state);
             Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             var temp = $"{file}.{Environment.ProcessId}.tmp";
             using (var stream = File.Create(temp))
             {
                 JsonSerializer.Serialize(stream, state, CoreJson.Indented.LibraryState);
+                // On disk before the rename: a power cut must leave the old file or the new one, never a hole.
+                stream.Flush(flushToDisk: true);
             }
             // The lock keeps writers apart, not readers: the other process listing clips can hold the file
             // for a moment. Up to about a second, as ConfigStore.Save does.

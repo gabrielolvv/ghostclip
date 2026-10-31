@@ -17,6 +17,16 @@ internal static class Program
     /// <summary>Set by the library's "Update now": the tray restarts into the update it has downloaded.</summary>
     public const string UpdateEventName = @"Local\Ghostclip.Update";
 
+    /// <summary>Held by the tray for as long as it runs: one per user session.</summary>
+    private const string HostMutexName = @"Local\Ghostclip.Host";
+
+    private static bool IsRunning(string mutexName)
+    {
+        if (!Mutex.TryOpenExisting(mutexName, out var mutex)) return false;
+        mutex.Dispose();
+        return true;
+    }
+
     /// <summary>
     /// Ghostclip.exe                         tray app
     /// Ghostclip.exe --save                  the running instance saves a clip
@@ -28,6 +38,7 @@ internal static class Program
     {
         // Installer hooks run first and exit on their own; normal launches fall through.
         Velopack.VelopackApp.Build()
+            .SetAutoApplyOnStartup(UpdatePolicy.ApplyOnStartup(args, IsRunning(HostMutexName), Library.LibraryProgram.IsOpen()))
             .OnBeforeUninstallFastCallback(_ =>
             {
                 StopRunningInstance();
@@ -51,7 +62,7 @@ internal static class Program
         }
 
         // One host per user session. A second launch only forwards --save.
-        using var single = new Mutex(initiallyOwned: true, @"Local\Ghostclip.Host", out var first);
+        using var single = new Mutex(initiallyOwned: true, HostMutexName, out var first);
         if (!first)
         {
             if (command == "--save" && EventWaitHandle.TryOpenExisting(SaveEventName, out var save))

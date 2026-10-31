@@ -43,9 +43,11 @@ QuickSync). There is no CPU encoder fallback.
 Download `Ghostclip-win-Setup.exe` from the
 [latest release](https://github.com/gabrielolvv/ghostclip/releases/latest) and
 run it. It installs for your user only, with no admin prompt, starts in the
-tray and updates itself from GitHub Releases: you get a "Restart to update"
-item when a new version is downloaded, never a restart in the middle of a
-game. It needs Windows 10 2004 or later and a GPU with NVENC, AMF or
+tray and updates itself from GitHub Releases: a new version downloads in the
+background and installs when you exit Ghostclip or the next time it starts
+(when you sign in, by default), or right away from "Update now" in the
+library, never in the middle of a game. It
+needs Windows 10 2004 or later and a GPU with NVENC, AMF or
 QuickSync. Everything else, including .NET and FFmpeg, comes with it.
 
 ## Status

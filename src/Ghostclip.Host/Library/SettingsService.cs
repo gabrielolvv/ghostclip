@@ -92,8 +92,17 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         if (!r.Confirmed && config.StorageLimitGB > 0)
         {
             var root = config.ResolvedClipsFolder;
-            var deleting = StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), LibraryStore.Read(paths.LibraryFile),
-                config.StorageLimitGB * StorageLimit.BytesPerGB);
+            // Same rule as the tray's StorageKeeper: with favorites unknown, nothing is deleted, and saying so
+            // beats a limit that silently does nothing.
+            var readable = LibraryStore.TryRead(paths.LibraryFile, out var state);
+            var deleting = readable
+                ? StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), state, config.StorageLimitGB * StorageLimit.BytesPerGB)
+                : [];
+            if (!readable)
+            {
+                warnings.Add(L("The space limit is paused: the file that keeps your favorites can't be read, so nothing is deleted.",
+                    "O limite de espaço está pausado: o arquivo dos favoritos não pode ser lido, então nada é apagado."));
+            }
             if (deleting.Count > 0)
             {
                 var gb = deleting.Sum(c => c.Bytes) / (double)StorageLimit.BytesPerGB;

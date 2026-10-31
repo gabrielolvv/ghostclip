@@ -38,8 +38,14 @@ internal sealed class StorageKeeper(GhostclipPaths paths, Func<GhostclipConfig> 
     {
         var cfg = config();
         var root = cfg.ResolvedClipsFolder;
+        // Unknown favorites are not "no favorites": nothing goes until the file reads again.
+        if (!LibraryStore.TryRead(paths.LibraryFile, out var state))
+        {
+            log.Warning("Storage limit paused: {File} can't be read, so favorites are unknown", paths.LibraryFile);
+            return;
+        }
         var clips = ClipLibrary.Scan(root);
-        var victims = StorageLimit.SelectForDeletion(root, clips, LibraryStore.Read(paths.LibraryFile), cfg.StorageLimitGB * StorageLimit.BytesPerGB);
+        var victims = StorageLimit.SelectForDeletion(root, clips, state, cfg.StorageLimitGB * StorageLimit.BytesPerGB);
         if (victims.Count == 0) return;
 
         var deleted = new List<string>();
@@ -59,11 +65,11 @@ internal sealed class StorageKeeper(GhostclipPaths paths, Func<GhostclipConfig> 
             }
         }
         if (deleted.Count == 0) return;
+        log.Information("Storage limit of {Limit} GB: deleted the {Count} oldest clips ({MB:0} MB)",
+            cfg.StorageLimitGB, deleted.Count, freed / 1024.0 / 1024);
         LibraryStore.Update(paths.LibraryFile, s =>
         {
             foreach (var path in deleted) s.Forget(path);
         });
-        log.Information("Storage limit of {Limit} GB: deleted the {Count} oldest clips ({MB:0} MB)",
-            cfg.StorageLimitGB, deleted.Count, freed / 1024.0 / 1024);
     }
 }
