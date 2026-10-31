@@ -13,6 +13,33 @@ let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'e
 
 // The window has Windows 11's acrylic behind it: panels turn translucent to show it (app.css, html.glass).
 if (new URLSearchParams(location.search).get('glass') === '1') document.documentElement.classList.add('glass');
+
+// A soft light follows the pointer (app.css, "Light"): --mx/--my over the window, --lx/--ly inside
+// the card, button or sidebar item it's over. One write per frame, however fast the pointer moves.
+const LIT = '.card, .card-s, .act, .game, .update-card';
+let pointer = null;
+document.addEventListener('pointermove', e => {
+  const first = pointer === null;
+  pointer = e;
+  if (first) requestAnimationFrame(() => {
+    const p = pointer;
+    pointer = null;
+    const root = document.documentElement.style;
+    root.setProperty('--mx', `${p.clientX}px`);
+    root.setProperty('--my', `${p.clientY}px`);
+    const lit = p.target instanceof Element && p.target.closest(LIT);
+    if (lit) {
+      const r = lit.getBoundingClientRect();
+      lit.style.setProperty('--lx', `${p.clientX - r.left}px`);
+      lit.style.setProperty('--ly', `${p.clientY - r.top}px`);
+    }
+  });
+}, { passive: true });
+// Leaving the window takes the light with it.
+document.documentElement.addEventListener('pointerleave', () => {
+  document.documentElement.style.setProperty('--mx', '-1000px');
+  document.documentElement.style.setProperty('--my', '-1000px');
+});
 function L(en, pt) { return lang === 'pt' ? pt : en; }
 
 // The page's fixed texts: English is what the HTML carries, Portuguese sits next to it in data-pt,

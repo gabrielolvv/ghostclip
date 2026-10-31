@@ -93,15 +93,20 @@ internal sealed partial class LibraryWindow : Form
         // Dark caption on Windows 10 20H1+.
         var on = 1;
         _ = DwmSetWindowAttribute(Handle, DwmUseImmersiveDarkMode, ref on, sizeof(int));
-        // Windows 11 22H2+: acrylic under the whole window, caption included. Older Windows keeps the solid look.
-        var acrylic = DwmBackdropAcrylic;
-        _glass = Environment.OSVersion.Version.Build >= 22621 &&
-            DwmSetWindowAttribute(Handle, DwmSystemBackdropType, ref acrylic, sizeof(int)) == 0;
+        // The desktop behind the window, blurred and lightly tinted (Windows 10 1803+ and 11). Windows 11's own
+        // acrylic backdrop (DWMWA_SYSTEMBACKDROP_TYPE) was tried first: in dark mode it covers about 96% of what's
+        // behind with gray, so it barely reads as glass. Older Windows keeps the solid look.
+        var build = Environment.OSVersion.Version.Build;
+        _glass = build >= 17134 && SetAccent(Handle, new AccentPolicy
+        {
+            // Windows 10's acrylic accent lags while the window is dragged; its plain blur doesn't.
+            AccentState = build >= 22000 ? AccentAcrylicBlurBehind : AccentBlurBehind,
+            AccentFlags = 2, // use GradientColor
+            GradientColor = GlassTint,
+        });
         if (_glass)
         {
-            var whole = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
-            _ = DwmExtendFrameIntoClientArea(Handle, ref whole);
-            // Over the extended frame, black is what lets the acrylic through; the page paints its own panels on top.
+            // GDI leaves black see-through to the blur; the page paints its own translucent panels on top.
             BackColor = Color.Black;
             _web.DefaultBackgroundColor = Color.Transparent;
         }
@@ -173,14 +178,49 @@ internal sealed partial class LibraryWindow : Form
 
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmCaptionColor = 35;
-    private const int DwmSystemBackdropType = 38;
-    private const int DwmBackdropAcrylic = 3; // DWMSBT_TRANSIENTWINDOW
+    private const int AccentBlurBehind = 3;
+    private const int AccentAcrylicBlurBehind = 4;
+    private const int WcaAccentPolicy = 19;
+    // ABGR: the canvas (#0B0D10) at about 45%: dark enough for the text, light enough to see the desktop through.
+    private const int GlassTint = 0x73100D0B;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Margins
     {
         public int Left, Right, Top, Bottom;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct AccentPolicy
+    {
+        public int AccentState, AccentFlags, GradientColor, AnimationId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CompositionAttributeData
+    {
+        public int Attribute;
+        public nint Data;
+        public int SizeOfData;
+    }
+
+    // SetWindowCompositionAttribute is undocumented but stable since Windows 10 1803; on failure the window stays solid.
+    private static unsafe bool SetAccent(nint hwnd, AccentPolicy accent)
+    {
+        var data = new CompositionAttributeData { Attribute = WcaAccentPolicy, Data = (nint)(&accent), SizeOfData = sizeof(AccentPolicy) };
+        try
+        {
+            return SetWindowCompositionAttribute(hwnd, ref data);
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
+    }
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowCompositionAttribute(nint hwnd, ref CompositionAttributeData data);
 
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);

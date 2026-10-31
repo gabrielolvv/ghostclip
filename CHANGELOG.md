@@ -20,6 +20,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   system's acrylic behind it: the sidebar shows the desktop blurred through,
   and cards, settings and pop-ups are translucent. Windows 10 keeps the solid
   look. Cards lift and glow under the pointer, and the REC dot pulses.
+- A soft cyan light follows the pointer across the library: a halo over the
+  window, and inside the card, button or sidebar item under it, whose edge
+  lights up near the pointer. Off when Windows is set to reduce animations.
 - The tray menu matches the library: dark, rounded corners on Windows 11, a
   cyan highlight, slightly see-through.
 
