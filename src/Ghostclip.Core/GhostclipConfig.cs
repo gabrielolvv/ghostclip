@@ -134,9 +134,10 @@ public sealed record GhostclipConfig
     /// <summary>Clamps every value into a range the recorder can actually run with.</summary>
     public GhostclipConfig Normalize() => this with
     {
-        Hotkey = string.IsNullOrWhiteSpace(Hotkey) ? "Alt+F10" : Hotkey.Trim(),
-        ScreenshotHotkey = string.IsNullOrWhiteSpace(ScreenshotHotkey) ? "Alt+F11" : ScreenshotHotkey.Trim(),
-        SessionHotkey = string.IsNullOrWhiteSpace(SessionHotkey) ? "Alt+F9" : SessionHotkey.Trim(),
+        // A common shortcut (Ctrl+C) saved before they were refused goes back to the default: it broke copying everywhere.
+        Hotkey = string.IsNullOrWhiteSpace(Hotkey) || HotkeyRules.TakesCommonShortcut(Hotkey) ? "Alt+F10" : Hotkey.Trim(),
+        ScreenshotHotkey = string.IsNullOrWhiteSpace(ScreenshotHotkey) || HotkeyRules.TakesCommonShortcut(ScreenshotHotkey) ? "Alt+F11" : ScreenshotHotkey.Trim(),
+        SessionHotkey = string.IsNullOrWhiteSpace(SessionHotkey) || HotkeyRules.TakesCommonShortcut(SessionHotkey) ? "Alt+F9" : SessionHotkey.Trim(),
         ClipSeconds = Math.Clamp(ClipSeconds, 10, 600),
         Fps = Math.Clamp(Fps, 24, 144),
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),

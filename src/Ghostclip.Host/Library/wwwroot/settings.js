@@ -234,6 +234,10 @@ const Settings = (() => {
   // Mirrors HotkeyRules.AllowedWithoutModifier: a key alone would stop working in every other program.
   const ALONE = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scroll|NumPad[0-9])$/;
 
+  // Mirrors HotkeyRules.TakesCommonShortcut: as a hotkey, Ctrl+C would stop copying in every program.
+  const COMMON = new Set(['Ctrl+A', 'Ctrl+C', 'Ctrl+V', 'Ctrl+X', 'Ctrl+Z', 'Ctrl+Y', 'Ctrl+S', 'Ctrl+F', 'Ctrl+P',
+    'Ctrl+N', 'Ctrl+T', 'Ctrl+W', 'Ctrl+R', 'Ctrl+Shift+Z', 'Ctrl+Shift+T', 'Alt+F4', 'Alt+Tab']);
+
   // The hotkey is registered by virtual-key code, which follows the keyboard layout: in WebView2,
   // keyCode is that code, so a key records as the key Windows will match on any layout (AZERTY,
   // QWERTZ, ABNT2). Punctuation and numpad codes get the names of Windows' key list (WinForms Keys).
@@ -278,6 +282,10 @@ const Settings = (() => {
     }
     const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
     const combo = [...mods, main].join('+');
+    if (COMMON.has(combo)) {
+      s.listening.button.textContent = L('Programs use that one: pick another', 'Os programas usam essa: escolha outra');
+      return;
+    }
     // What the key prints ("´", "ç"), for people; the stored name is for Windows.
     const printed = e.key.length === 1 && e.key !== ' '
       ? (e.code.startsWith('Numpad') ? `Num ${e.key}` : e.key.toUpperCase())
@@ -427,6 +435,10 @@ const Settings = (() => {
     }
     box.className = `badge mono ${kind}`;
     $('badge-text').textContent = text;
+    // Why it isn't recording, where people look: the tray's balloon about it is long gone.
+    const problem = status && status.state === 'Stopped' && status.problem;
+    $('problem').hidden = !problem;
+    $('problem-text').textContent = problem || '';
   }
 
   // The page's language changed (or the page just opened): the badge and the form are built again,
@@ -511,6 +523,7 @@ const Settings = (() => {
       case 'done':
         if (message.op !== 'saveSettings') return false;
         $('s-save').classList.remove('busy');
+        if (message.hotkeyLabels && message.hotkeyLabels.hotkey) state.saveKey = message.hotkeyLabels.hotkey;
         s.saved = message.config;
         s.draft = clone(message.config);
         s.hotkeyLabels = message.hotkeyLabels || {};

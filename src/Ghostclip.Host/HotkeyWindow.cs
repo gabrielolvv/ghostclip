@@ -74,6 +74,13 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
                 $"\"{gesture}\" não tem uma tecla principal. Use algo como Alt+F10.");
             return false;
         }
+        if (HotkeyRules.TakesCommonShortcut(gesture))
+        {
+            error = L($"{gesture} is a shortcut programs use all the time; as a hotkey it would stop working in all of them. Use something like Alt+F10.",
+                $"{gesture} é um atalho que os programas usam o tempo todo; como hotkey, ele pararia de funcionar em todos. Use algo como Alt+F10.");
+            key = Keys.None;
+            return false;
+        }
         if (modifiers == 0 && !HotkeyRules.AllowedWithoutModifier(key.ToString()))
         {
             error = L($"\"{gesture}\" alone would stop working in every other program. Add Ctrl, Alt, Shift or Win, or use an F key.",

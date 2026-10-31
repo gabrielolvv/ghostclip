@@ -19,6 +19,15 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   turned down later. The library names each clip's tracks.
 - Favorites and renaming in the library, with a Favorites list in the sidebar.
 - Hotkeys for screenshots and sessions in Settings; two actions can't share one.
+- When Ghostclip can't record (no hardware encoder works, FFmpeg missing), the
+  library says why at the top, instead of only "NOT RECORDING".
+
+### Changed
+
+- Shortcuts programs use all the time (Ctrl+C, Ctrl+V, Ctrl+Z, Ctrl+S,
+  Alt+F4...) can't be a hotkey anymore: as one, Ctrl+C stopped copying in every
+  program. One saved before goes back to the default (Alt+F10 for clips).
+- The empty library shows the clip hotkey you set, not always Alt+F10.
 
 ## 0.6.1
 

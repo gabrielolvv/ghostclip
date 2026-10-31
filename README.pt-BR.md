@@ -52,9 +52,11 @@ o .NET e o FFmpeg, vem junto.
 
 ## Estado
 
-**0.5.** Funcionam gravação, save, roteamento de áudio, perfis, a biblioteca de
-clipes com corte e compressão, a página de configurações e o instalador com
-atualizações. Ainda falta: números de benchmark
+**0.6.** Funcionam gravação em NVIDIA, AMD e Intel, save, roteamento de áudio
+(com o Discord em faixa própria), perfis, prints, gravação da sessão com
+marcadores, a biblioteca de clipes com favoritos, corte e compressão, a página
+de configurações em português e inglês e o instalador com atualizações. Ainda
+falta: números de benchmark
 em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
 inglês) e um GIF para esta página (`assets\make-gif.ps1` gera um a partir de
 um clipe). O plano completo está em [docs/spec.md](docs/spec.md) (em inglês).

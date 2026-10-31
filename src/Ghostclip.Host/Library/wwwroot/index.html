@@ -29,10 +29,14 @@
         <input id="search" type="search" placeholder="Search clips" data-pt-placeholder="Buscar clipes" spellcheck="false" autocomplete="off">
         <span id="count" class="mono muted"></span>
       </header>
+      <div id="problem" class="problem" role="alert" hidden>
+        <strong data-pt="O Ghostclip não está gravando">Ghostclip isn't recording</strong>
+        <span id="problem-text"></span>
+      </div>
       <div id="grid"></div>
       <div id="empty" class="empty" hidden>
         <h1 data-pt="Seus clipes aparecem aqui">Your clips show up here</h1>
-        <p data-pt="Aperte Alt+F10 num jogo para salvar o último minuto.">Press Alt+F10 in a game to save the last minute.</p>
+        <p id="empty-hint"></p>
         <button id="empty-folder" class="act" type="button" data-pt="Abrir pasta">Open folder</button>
       </div>
       <p id="no-match" class="muted no-match" hidden data-pt="Nenhum clipe encontrado.">No clips match.</p>
