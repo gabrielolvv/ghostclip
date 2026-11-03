@@ -19,6 +19,14 @@ public enum EncoderKind { Auto, Nvenc, Amf, Qsv }
 [JsonConverter(typeof(JsonStringEnumConverter<EncoderInput>))]
 public enum EncoderInput { Auto, Nv12, Direct, Memory }
 
+/// <summary>
+/// How the screen is read. Desktop Duplication (ddagrab) is the default; Windows
+/// Graphics Capture (gfxcapture) is the alternative, since Desktop Duplication can
+/// take a game out of its fastest fullscreen path and cost it frames.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CaptureMethod>))]
+public enum CaptureMethod { DesktopDuplication, GraphicsCapture }
+
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }
 
@@ -120,6 +128,9 @@ public sealed record GhostclipConfig
     /// <summary>QuickSync frame queue. 1 saves RAM; higher absorbs GPU stalls.</summary>
     public int QsvAsyncDepth { get; set; } = 1;
 
+    /// <summary>How the screen is read (<see cref="CaptureMethod"/>). Changing it restarts recording.</summary>
+    public CaptureMethod Capture { get; set; } = CaptureMethod.DesktopDuplication;
+
     /// <summary>The recorder runs below normal priority on the CPU and GPU (<see cref="RecorderPriority"/>). Applies live.</summary>
     public bool GamePriority { get; set; } = true;
 
@@ -207,5 +218,5 @@ public sealed record GhostclipConfig
         Encoder == other.Encoder && Input == other.Input && OutputHeight == other.OutputHeight &&
         Monitor == other.Monitor && SystemAudio == other.SystemAudio && Microphone == other.Microphone &&
         DiscordTrack == other.DiscordTrack && AudioOffsetMs == other.AudioOffsetMs && QsvAsyncDepth == other.QsvAsyncDepth &&
-        FfmpegPath == other.FfmpegPath;
+        FfmpegPath == other.FfmpegPath && Capture == other.Capture;
 }

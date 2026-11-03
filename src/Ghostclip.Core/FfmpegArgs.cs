@@ -13,16 +13,18 @@ public sealed record CaptureSettings(
     int BitrateMbps,
     int OutputHeight,
     int QsvAsyncDepth,
-    bool LowPower = true)
+    bool LowPower = true,
+    CaptureMethod Capture = CaptureMethod.DesktopDuplication)
 {
     public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input) => new(
         encoder, input, config.Codec, config.Monitor, config.Fps, config.BitrateMbps,
-        config.OutputHeight, config.QsvAsyncDepth);
+        config.OutputHeight, config.QsvAsyncDepth, Capture: config.Capture);
 
     public string EncoderName =>
         $"{(Codec == VideoCodec.H264 ? "h264" : "hevc")}_{Encoder.ToString().ToLowerInvariant()}";
 
-    public string Describe() => $"{EncoderName} ({Input.ToString().ToLowerInvariant()})";
+    public string Describe() =>
+        $"{EncoderName} ({Input.ToString().ToLowerInvariant()}{(Capture == CaptureMethod.GraphicsCapture ? ", graphics capture" : "")})";
 }
 
 /// <summary>Builds FFmpeg command lines. Kept pure so the exact flags are unit tested.</summary>
@@ -40,8 +42,10 @@ public static class FfmpegArgs
             throw new ArgumentException("Encoder and input must be resolved before building arguments.", nameof(s));
         }
 
-        // ddagrab captures at the clip rate, never at the monitor's refresh rate.
-        var filter = new StringBuilder(Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"));
+        // Both capture at the clip rate, never at the monitor's refresh rate, and hand over D3D11 BGRA frames.
+        var filter = new StringBuilder(s.Capture == CaptureMethod.GraphicsCapture
+            ? Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1")
+            : Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"));
         var nv12 = s.Input == EncoderInput.Nv12 || s.OutputHeight > 0;
         if (s.Input == EncoderInput.Memory)
         {

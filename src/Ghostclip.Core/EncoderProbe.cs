@@ -3,7 +3,8 @@ namespace Ghostclip.Core;
 public sealed record ProbeResult(EncoderKind Encoder, EncoderInput Input, bool Ok, double Seconds, string? Error);
 
 /// <summary>Which encoder/input pairs worked with a given FFmpeg build, monitor and codec.</summary>
-public sealed record ProbeCache(string FfmpegId, VideoCodec Codec, int Monitor, DateTime ProbedUtc, IReadOnlyList<ProbeResult> Results)
+public sealed record ProbeCache(string FfmpegId, VideoCodec Codec, int Monitor, DateTime ProbedUtc, IReadOnlyList<ProbeResult> Results,
+    CaptureMethod Capture = CaptureMethod.DesktopDuplication)
 {
     /// <summary>The first working pair that matches the request, in preference order.</summary>
     public ProbeResult? Choose(EncoderKind encoder, EncoderInput input)
@@ -16,8 +17,8 @@ public sealed record ProbeCache(string FfmpegId, VideoCodec Codec, int Monitor, 
         return null;
     }
 
-    public bool Matches(string ffmpegId, VideoCodec codec, int monitor) =>
-        FfmpegId == ffmpegId && Codec == codec && Monitor == monitor;
+    public bool Matches(string ffmpegId, VideoCodec codec, int monitor, CaptureMethod capture) =>
+        FfmpegId == ffmpegId && Codec == codec && Monitor == monitor && Capture == capture;
 }
 
 public static class EncoderProbe
