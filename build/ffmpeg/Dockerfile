@@ -1,13 +1,14 @@
 # Minimal LGPL FFmpeg for Ghostclip, cross-compiled for Windows x64.
 #
-# Only what Ghostclip uses is enabled: Desktop Duplication capture, the three
+# Only what Ghostclip uses is enabled: Desktop Duplication and Windows Graphics Capture, the three
 # hardware encoders, AAC, MPEG-TS/MP4/concat and the filters the recorder,
 # save, trim and compress steps need. No --enable-gpl, no --enable-nonfree:
 # every dependency is MIT-licensed headers or libraries.
 #
 #   docker build -t ghostclip-ffmpeg build/ffmpeg   (see build.ps1)
 
-FROM ubuntu:24.04
+# 26.04 for mingw-w64 13: Windows Graphics Capture (gfxcapture) needs its WinRT capture headers.
+FROM ubuntu:26.04
 
 ARG FFMPEG_VERSION=n8.1.3
 # n12.2 headers run on NVIDIA drivers 551+; n13 would require 570+.

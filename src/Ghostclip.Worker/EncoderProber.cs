@@ -16,7 +16,7 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
     public async Task<ProbeResult?> ChooseAsync(string ffmpeg, GhostclipConfig config, bool force, CancellationToken ct)
     {
         var id = EncoderProbe.FfmpegId(ffmpeg);
-        if (!force && Load() is { } cached && cached.Matches(id, config.Codec, config.Monitor) &&
+        if (!force && Load() is { } cached && cached.Matches(id, config.Codec, config.Monitor, config.Capture) &&
             cached.Choose(config.Encoder, config.Input) is { } hit)
         {
             return hit;
@@ -46,7 +46,7 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
             // A locked screen: nothing was learned about the encoders, so nothing is cached.
             throw new DesktopUnavailableException();
         }
-        var cache = new ProbeCache(id, config.Codec, config.Monitor, DateTime.UtcNow, results);
+        var cache = new ProbeCache(id, config.Codec, config.Monitor, DateTime.UtcNow, results, config.Capture);
         Save(cache);
         return cache.Choose(config.Encoder, config.Input);
     }

@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Windows Graphics Capture as a second way to read the screen (Settings >
+  Video > Capture). Desktop Duplication stays the default; if a game loses
+  FPS while recording, Windows Graphics Capture may cost it less. On
+  Windows 10 it can show a yellow border around the screen while recording.
+  The bundled FFmpeg now includes it (the gfxcapture filter).
+
 ## 0.8.3
 
 ### Changed

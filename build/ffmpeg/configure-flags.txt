@@ -34,4 +34,4 @@
 --enable-hwaccel=h264_d3d11va,hevc_d3d11va,h264_d3d11va2,hevc_d3d11va2,h264_dxva2,hevc_dxva2
 
 # Filters: capture and GPU conversion, compress, and the measurement tools in spike/ and bench/
---enable-filter=ddagrab,hwmap,hwupload,hwdownload,format,vpp_qsv,scale_d3d11,scale,fps,null,anull,amix,aresample,aformat,pan,volumedetect,silencedetect,signalstats,astats,metadata,ametadata,asetnsamples,bandpass,showinfo
+--enable-filter=ddagrab,gfxcapture,hwmap,hwupload,hwdownload,format,vpp_qsv,scale_d3d11,scale,fps,null,anull,amix,aresample,aformat,pan,volumedetect,silencedetect,signalstats,astats,metadata,ametadata,asetnsamples,bandpass,showinfo
