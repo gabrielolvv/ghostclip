@@ -202,8 +202,12 @@ NVIDIA and AMD especially, are very welcome in an issue.
 
 ## Known limitations
 
-- Only QuickSync has been tested. NVENC and AMF are built in but have not run
-  on real hardware yet.
+- The measurements above are QuickSync only. AMF has run on a Radeon RX 6600,
+  where two driver problems were found and worked around (see the
+  [changelog](CHANGELOG.md)). NVENC records on NVIDIA cards too, but
+  there are no published numbers for it yet: an
+  [FPS report](https://github.com/gabrielolvv/ghostclip/issues/new?template=fps_report.yml)
+  from an NVIDIA or AMD card helps.
 - Trimming by stream copy starts at a keyframe, every 2 s; the library snaps
   the start there, and `--trim` cuts from the keyframe before the start.
 - The library's player needs the HEVC Video Extensions from the Microsoft

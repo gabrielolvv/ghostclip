@@ -205,8 +205,12 @@ GPUs, principalmente NVIDIA e AMD, são muito bem-vindos numa issue.
 
 ## Limitações conhecidas
 
-- Só o QuickSync foi testado. NVENC e AMF estão implementados, mas ainda não
-  rodaram em hardware real.
+- As medições acima são só do QuickSync. O AMF já rodou numa Radeon RX 6600,
+  onde dois problemas do driver foram encontrados e contornados (veja o
+  [changelog](CHANGELOG.md)). O NVENC também grava em placas NVIDIA, mas
+  ainda não há números publicados dele: um
+  [relato de FPS](https://github.com/gabrielolvv/ghostclip/issues/new?template=fps_report.yml)
+  de uma placa NVIDIA ou AMD ajuda.
 - O corte por stream copy começa num keyframe, a cada 2 s; a biblioteca
   encaixa o início ali, e o `--trim` corta a partir do keyframe anterior.
 - O player da biblioteca precisa das Extensões de Vídeo HEVC da Microsoft
