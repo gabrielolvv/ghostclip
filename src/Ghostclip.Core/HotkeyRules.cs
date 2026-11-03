@@ -23,9 +23,16 @@ public static partial class HotkeyRules
     /// registered hotkey takes it away from every one of them: as the clip hotkey,
     /// Ctrl+C stopped copying anywhere in Windows.
     /// </summary>
-    public static bool TakesCommonShortcut(string? gesture)
+    public static bool TakesCommonShortcut(string? gesture) =>
+        !string.IsNullOrWhiteSpace(gesture) && Common.Contains(Canonical(gesture));
+
+    /// <summary>
+    /// One spelling per key combination, to compare them: modifiers in a fixed order and their aliases
+    /// ("Control", "Windows") merged, the key upper-cased, a lone digit as its key name ("9" is D9).
+    /// "F8 + alt" and "Alt+F8" both give "Alt+F8".
+    /// </summary>
+    public static string Canonical(string gesture)
     {
-        if (string.IsNullOrWhiteSpace(gesture)) return false;
         bool ctrl = false, alt = false, shift = false, win = false;
         string? key = null;
         foreach (var token in gesture.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -36,13 +43,11 @@ public static partial class HotkeyRules
                 case "alt": alt = true; break;
                 case "shift": shift = true; break;
                 case "win" or "windows": win = true; break;
-                default: key = token; break;
+                default: key = token.Length == 1 && char.IsDigit(token[0]) ? "D" + token : token.ToUpperInvariant(); break;
             }
         }
-        if (key is null) return false;
-        var canonical = string.Join('+', new[] { ctrl ? "Ctrl" : null, alt ? "Alt" : null, shift ? "Shift" : null, win ? "Win" : null, key }
+        return string.Join('+', new[] { ctrl ? "Ctrl" : null, alt ? "Alt" : null, shift ? "Shift" : null, win ? "Win" : null, key }
             .Where(t => t is not null));
-        return Common.Contains(canonical);
     }
 
     /// <summary>

@@ -44,6 +44,9 @@ public sealed record WorkerStatus
 
     public bool Microphone { get; set; }
 
+    /// <summary>There is a microphone track and it records silence (the mute hotkey or the game's profile).</summary>
+    public bool MicrophoneMuted { get; set; }
+
     /// <summary>Discord is running and recorded on its own track.</summary>
     public bool Discord { get; set; }
 

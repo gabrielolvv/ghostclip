@@ -100,7 +100,7 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         base.WndProc(ref m);
     }
 
-    private void Unregister(HotkeyAction action)
+    public void Unregister(HotkeyAction action)
     {
         if (_registered.Remove(action))
         {

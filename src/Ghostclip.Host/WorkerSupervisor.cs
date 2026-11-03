@@ -129,8 +129,11 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
             await using var channel = new IpcChannel(server);
             await channel.SendAsync(new IpcMessage { Type = IpcType.Config, Config = _config }, ct).ConfigureAwait(false);
             await channel.SendAsync(_foreground, ct).ConfigureAwait(false);
-            await channel.SendAsync(_microphone, ct).ConfigureAwait(false);
+            var microphone = _microphone;
+            await channel.SendAsync(microphone, ct).ConfigureAwait(false);
             _channel = channel;
+            // A press while this worker connected went nowhere: it must not stay unheard.
+            if (!ReferenceEquals(microphone, _microphone)) await channel.SendAsync(_microphone, ct).ConfigureAwait(false);
 
             var lastMessage = Stopwatch.StartNew();
             using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(ct);

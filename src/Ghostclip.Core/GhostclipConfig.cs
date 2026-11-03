@@ -168,8 +168,9 @@ public sealed record GhostclipConfig
     // nothing else uses.
     private GhostclipConfig WithDistinctHotkeys()
     {
-        static bool Same(string a, string b) => string.Equals(a.Replace(" ", ""), b.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
-        string Spare(params string[] taken) => SpareHotkeys.FirstOrDefault(s => !taken.Any(t => Same(s, t))) ?? "Ctrl+Alt+F7";
+        static bool Same(string a, string b) => HotkeyRules.Canonical(a) == HotkeyRules.Canonical(b);
+        // Eight spares and at most three taken: there is always one.
+        string Spare(params string[] taken) => SpareHotkeys.First(s => !taken.Any(t => Same(s, t)));
         var screenshot = Same(ScreenshotHotkey, Hotkey) ? Spare(Hotkey, SessionHotkey, MicMuteHotkey) : ScreenshotHotkey;
         var session = Same(SessionHotkey, Hotkey) || Same(SessionHotkey, screenshot) ? Spare(Hotkey, screenshot, MicMuteHotkey) : SessionHotkey;
         var mute = Same(MicMuteHotkey, Hotkey) || Same(MicMuteHotkey, screenshot) || Same(MicMuteHotkey, session)
