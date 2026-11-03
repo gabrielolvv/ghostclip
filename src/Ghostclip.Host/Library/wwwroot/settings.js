@@ -74,6 +74,8 @@ const Settings = (() => {
     ] },
     { title: L('GAME PROFILES', 'PERFIS POR JOGO'), profiles: true },
     { title: L('ADVANCED', 'AVANÇADO'), fields: [
+      { key: 'gamePriority', label: L('Games first', 'Prioridade para os jogos'),
+        hint: L('Recording yields the CPU and GPU to the game. Turn it off if clips stutter.', 'A gravação cede a CPU e a GPU para o jogo. Desligue se os clipes travarem.'), type: 'switch' },
       { key: 'startWithWindows', label: L('Start with Windows', 'Iniciar com o Windows'), hint: L('Installed copies only.', 'Só em cópias instaladas.'), type: 'switch' },
       { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído'), reset: L('Use bundled', 'Usar o incluído') },
       { key: 'logLevel', label: L('Log detail', 'Detalhe do log'), type: 'select',

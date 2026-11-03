@@ -7,6 +7,12 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Changed
 
+- Games first: the recorder now runs below normal priority on the CPU and on
+  the GPU, so capture and encoding wait behind the game's frames instead of
+  competing with them. Testers lost about 20 FPS while recording. It is on
+  by default and can be turned off in Settings > Advanced if clips stutter on
+  a GPU loaded to the limit; switching it applies at once, without
+  restarting recording.
 - Looking up favorites keeps each favorite's game folder and name in a set,
   so a library with thousands of clips and favorites lists them without
   walking every favorite for every clip.

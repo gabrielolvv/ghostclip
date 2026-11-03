@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using Ghostclip.Core;
 using Ghostclip.Worker.Native;
 using Serilog;
 
@@ -97,6 +98,25 @@ internal sealed class FfmpegRunner : IDisposable
     public void Kill()
     {
         try { _process.Kill(); } catch (InvalidOperationException) { }
+    }
+
+    /// <summary>Sets FFmpeg's CPU and GPU priority (<see cref="RecorderPriority"/>); safe to call again while it runs.</summary>
+    public void ApplyPriority(RecorderPriority priority)
+    {
+        try
+        {
+            if (_process.HasExited) return;
+            _process.PriorityClass = priority.Cpu;
+            var gpu = GpuScheduling.TrySet(_process.Handle, priority.Gpu, out var status)
+                ? priority.Gpu.ToString()
+                : string.Create(CultureInfo.InvariantCulture, $"unchanged (0x{status:X8})");
+            _log.Information("Recorder priority: CPU {Cpu}, GPU {Gpu}", priority.Cpu, gpu);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Exited between the check and the call, or access denied: recording goes on at its current priority.
+            _log.Warning("Could not set the recorder's priority: {Error}", ex.Message);
+        }
     }
 
     public void Dispose()

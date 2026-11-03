@@ -235,6 +235,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         var args = FfmpegArgs.Record(settings, _paths.BufferDir, start, pipes, _config.AudioOffsetMs);
         _runner?.Dispose();
         _runner = FfmpegRunner.Start(ffmpeg, args, _job, _log);
+        // The game first: capture and encoding wait behind its frames on the CPU and GPU.
+        _runner.ApplyPriority(RecorderPriority.For(_config.GamePriority));
         _state = WorkerState.Recording;
         _log.Information("Recording with {Encoder}, {Fps} fps, {Bitrate} Mbps, audio tracks [{Tracks}], from segment {Start}",
             settings.Describe(), settings.Fps, settings.BitrateMbps, string.Join(", ", titles), start);
@@ -266,6 +268,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             {
                 var config = await nextConfig.ConfigureAwait(false);
                 var restart = !config.SameCaptureAs(_config);
+                if (config.GamePriority != _config.GamePriority) _runner.ApplyPriority(RecorderPriority.For(config.GamePriority));
                 _config = config;
                 SetLogLevel(config.LogLevel);
                 ApplyAudioRouting();
