@@ -84,6 +84,10 @@ const Settings = (() => {
       { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído'), reset: L('Use bundled', 'Usar o incluído') },
       { key: 'logLevel', label: L('Log detail', 'Detalhe do log'), type: 'select',
         options: [['Error', L('Errors', 'Erros')], ['Warning', L('Warnings', 'Avisos')], ['Information', 'Normal'], ['Debug', L('Everything', 'Tudo')]] },
+      { label: L('Diagnostics', 'Diagnóstico'),
+        hint: L('Copies your GPU, Windows and recording details, to paste in a bug report or an FPS test.',
+          'Copia sua placa de vídeo, o Windows e os detalhes da gravação, para colar num relato de problema ou teste de FPS.'),
+        type: 'action', text: L('Copy diagnostics', 'Copiar diagnóstico'), action: 'diagnostics' },
     ] },
   ];
 
@@ -220,6 +224,13 @@ const Settings = (() => {
           parts.push(reset);
         }
         return parts;
+      }
+      case 'action': {
+        // Not a setting: a button that asks the app for something.
+        const b = el('button', 'act small', field.text);
+        b.type = 'button';
+        b.addEventListener('click', () => post({ type: field.action }));
+        return b;
       }
       case 'hotkey': {
         // The saved hotkey as the app names it on this keyboard; a new one as you pressed it.

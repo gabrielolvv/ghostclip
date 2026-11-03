@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Settings > Advanced > Copy diagnostics: puts the Ghostclip and Windows
+  versions, each GPU with its driver and display mode, the capture and
+  priority settings and the latest recorder lines from the log on the
+  clipboard, ready to paste in a bug report or an FPS test.
+
 ## 0.8.4
 
 ### Added
