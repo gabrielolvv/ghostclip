@@ -9,6 +9,8 @@
     <!-- Per-user install and updates from GitHub Releases (host only; the worker has no network). -->
     <PackageVersion Include="Velopack" Version="1.2.161" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <!-- "Copy diagnostics" reads the GPUs, drivers and display modes from WMI (host only). -->
+    <PackageVersion Include="System.Management" Version="10.0.14" />
     <!-- Native capture (Phase 2): D3D11, DXGI Desktop Duplication, Media Foundation encoders. -->
     <PackageVersion Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />

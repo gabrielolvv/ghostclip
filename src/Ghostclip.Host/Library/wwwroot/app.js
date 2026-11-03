@@ -676,6 +676,9 @@ function onDone(message) {
       busy($('a-discord'), false);
       toast(L(`Compressed to ${message.message}`, `Comprimido para ${message.message}`), false, open);
       break;
+    case 'diagnostics':
+      toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.'));
+      break;
     case 'copy':
       toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
       break;

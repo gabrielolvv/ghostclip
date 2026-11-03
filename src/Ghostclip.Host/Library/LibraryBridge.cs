@@ -155,6 +155,13 @@ internal sealed class LibraryBridge : IDisposable
                 }
                 return;
             }
+            if (r.Type == "diagnostics")
+            {
+                var text = await Task.Run(() => Diagnostics.Collect(_paths, _config, _log)).ConfigureAwait(true);
+                Clipboard.SetText(text);
+                _window.Post(new LibraryEvent("done", Op: r.Type));
+                return;
+            }
             if (r.Type == "openFolder")
             {
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
