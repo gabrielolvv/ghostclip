@@ -62,7 +62,21 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         window.Post(new LibraryEvent("settings", Config: config, Encoders: DetectedEncoders(), HotkeyLabels: HotkeyLabels(config),
             Games: clips.Select(c => c.Game).Concat(config.Profiles.Select(p => p.Game)).Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            Status: status.Current, StorageBytes: StorageLimit.Used(root, clips)));
+            Status: status.Current, StorageBytes: StorageLimit.Used(root, clips), Monitors: Monitors()));
+    }
+
+    // The page falls back to a plain number when the list can't be read.
+    private static IReadOnlyList<MonitorInfo>? Monitors()
+    {
+        try
+        {
+            return Ghostclip.Native.Displays.List();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Could not list the monitors for settings: {Error}", ex.Message);
+            return null;
+        }
     }
 
     private void Save(LibraryRequest r)

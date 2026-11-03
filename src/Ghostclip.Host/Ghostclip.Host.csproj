@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ghostclip.Core\Ghostclip.Core.csproj" />
+    <Compile Include="..\Shared\Displays.cs" Link="Native\Displays.cs" />
     <!-- Builds the worker alongside the host; the host never loads its types. -->
     <ProjectReference Include="..\Ghostclip.Worker\Ghostclip.Worker.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>

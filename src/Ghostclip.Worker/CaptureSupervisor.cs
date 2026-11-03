@@ -135,7 +135,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     continue;
                 }
 
-                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input);
+                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input, CaptureMonitor.HandleFor(_config, _log));
                 _encoder = settings.Describe();
                 var outcome = await RecordOnceAsync(ffmpeg, settings, ct).ConfigureAwait(false);
                 if (outcome == Outcome.Reconfigured || ct.IsCancellationRequested)

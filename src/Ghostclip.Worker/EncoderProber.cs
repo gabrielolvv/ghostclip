@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Ghostclip.Core;
+using Ghostclip.Worker.Native;
 using Serilog;
 
 namespace Ghostclip.Worker;
@@ -25,11 +26,12 @@ internal sealed class EncoderProber(GhostclipPaths paths, ILogger log)
         log.Information("Probing hardware encoders with {Ffmpeg}", ffmpeg);
         var list = await ProcessRunner.RunAsync(ffmpeg, ["-hide_banner", "-encoders"], TimeSpan.FromSeconds(15), ct: ct).ConfigureAwait(false);
         var results = new List<ProbeResult>();
+        var monitor = CaptureMonitor.HandleFor(config, log);
         foreach (var (encoder, input) in EncoderProbe.Pairs(config.Encoder, config.Input))
         {
             // The pairs through memory come last and are only tried when none on the GPU works.
             if (input == EncoderInput.Memory && results.Any(r => r.Ok)) break;
-            var settings = CaptureSettings.From(config, encoder, input);
+            var settings = CaptureSettings.From(config, encoder, input, monitor);
             if (!list.StdOut.Contains($" {settings.EncoderName} ", StringComparison.Ordinal))
             {
                 results.Add(new ProbeResult(encoder, input, false, 0, $"{settings.EncoderName} is not in this FFmpeg build"));

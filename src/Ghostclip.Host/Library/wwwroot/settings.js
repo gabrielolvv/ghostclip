@@ -8,6 +8,7 @@ const Settings = (() => {
     saved: null,      // config as the app last sent it
     draft: null,      // what the page shows, edited in place
     encoders: [],     // encoder kinds the recorder measured working here
+    monitors: null,   // the screens Desktop Duplication can record; null when the app couldn't list them
     games: [],        // names for profile suggestions
     confirming: false,
     listening: null,  // hotkey button waiting for a key combination
@@ -50,7 +51,7 @@ const Settings = (() => {
         options: [['Auto', 'Auto'], ['Nvenc', 'NVIDIA NVENC'], ['Amf', 'AMD AMF'], ['Qsv', 'Intel QuickSync']] },
       { key: 'outputHeight', label: L('Resolution', 'Resolução'), hint: L('Scaling down happens on the GPU.', 'A redução de escala acontece na GPU.'), type: 'select', number: true,
         options: [[0, 'Monitor'], [2160, '2160p'], [1440, '1440p'], [1080, '1080p'], [720, '720p']] },
-      { key: 'monitor', label: 'Monitor', hint: L('0 is the first monitor of the GPU.', '0 é o primeiro monitor da GPU.'), type: 'number', min: 0, max: 16 },
+      { key: 'monitor', label: 'Monitor', hint: L('The screen to record, with either capture method.', 'A tela a gravar, com qualquer um dos métodos de captura.'), type: 'monitor', min: 0, max: 16 },
       { key: 'capture', label: L('Capture', 'Captura'),
         hint: L('Try Windows Graphics Capture if games lose FPS while recording. On Windows 10 it may show a yellow border.',
           'Experimente o Windows Graphics Capture se os jogos perderem FPS gravando. No Windows 10 pode aparecer uma borda amarela.'),
@@ -134,6 +135,34 @@ const Settings = (() => {
     return r;
   }
 
+  // "LG ULTRAGEAR · 2560×1440 · main". Two monitors with the same name are told apart by where they sit;
+  // the saved one stays listed when it is unplugged, so saving never moves recording to another screen.
+  // A monitor on another GPU is recorded by Windows Graphics Capture only.
+  function monitorOptions(value) {
+    const list = s.monitors.slice().sort((a, b) => a.index - b.index);
+    const named = m => m.name || (m.builtIn ? L('Built-in screen', 'Tela integrada') : `Monitor ${m.index + 1}`);
+    const options = list.map(m => {
+      const twins = list.filter(o => named(o) === named(m));
+      const parts = [named(m)];
+      if (twins.length > 1) parts.push(place(m, twins));
+      parts.push(`${m.width}×${m.height}`);
+      if (m.primary) parts.push(L('main', 'principal'));
+      if (m.otherGpu) parts.push(L('Windows Graphics Capture only', 'só Windows Graphics Capture'));
+      return [m.index, parts.join(' · ')];
+    });
+    if (!list.some(m => m.index === value)) options.push([value, L(`Monitor ${value + 1} (not connected)`, `Monitor ${value + 1} (desconectado)`)]);
+    return options;
+  }
+
+  function place(m, twins) {
+    const lefts = twins.map(t => t.left), tops = twins.map(t => t.top);
+    if (twins.length === 2 && lefts[0] !== lefts[1]) return m.left === Math.min(...lefts) ? L('on the left', 'à esquerda') : L('on the right', 'à direita');
+    if (twins.length === 2 && tops[0] !== tops[1]) return m.top === Math.min(...tops) ? L('on top', 'em cima') : L('below', 'embaixo');
+    // Three or more: numbered by where they sit, top to bottom, left to right.
+    const order = twins.slice().sort((a, b) => a.top - b.top || a.left - b.left);
+    return `#${order.indexOf(m) + 1}`;
+  }
+
   function control(field) {
     const value = s.draft[field.key];
     switch (field.type) {
@@ -192,6 +221,11 @@ const Settings = (() => {
         }
         return group;
       }
+      case 'monitor':
+        // Without the app's list, the output number as before.
+        return s.monitors && s.monitors.length
+          ? control({ ...field, type: 'select', number: true, options: monitorOptions(value) })
+          : control({ ...field, type: 'number' });
       case 'select': {
         const select = el('select', 'field');
         select.setAttribute('aria-label', field.label);
@@ -529,6 +563,7 @@ const Settings = (() => {
     switch (message.type) {
       case 'settings':
         s.encoders = message.encoders || [];
+        s.monitors = message.monitors || null;
         s.storageBytes = message.storageBytes;
         s.games = message.games || [];
         s.unreadable = null;
