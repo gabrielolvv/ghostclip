@@ -9,27 +9,15 @@ body:
       description: What you did, what you expected and what you got instead.
     validations:
       required: true
-  - type: input
-    id: version
+  - type: textarea
+    id: diagnostics
     attributes:
-      label: Ghostclip version
-      description: In the title of the Settings window.
-      placeholder: 0.4.0
-    validations:
-      required: true
-  - type: input
-    id: windows
-    attributes:
-      label: Windows version
-      placeholder: Windows 11 24H2
-    validations:
-      required: true
-  - type: input
-    id: gpu
-    attributes:
-      label: GPU and driver version
-      description: All GPUs if the PC has more than one (a laptop with integrated and dedicated graphics, for example).
-      placeholder: NVIDIA RTX 3060, driver 566.36
+      label: Diagnostics
+      description: |
+        Settings > Advanced > Copy diagnostics, then paste here: Ghostclip and Windows versions, GPUs and drivers,
+        capture settings. Before 0.8.5 there is no button: write the Ghostclip version (Windows Settings > Apps >
+        Installed apps), the Windows version and every GPU with its driver version instead.
+      render: text
     validations:
       required: true
   - type: input
