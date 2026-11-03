@@ -13,8 +13,8 @@ game as possible.
 ![The Ghostclip library: clips and screenshots by day, with thumbnails, durations, starred favorites and a session with bookmarks](site/img/library.png)
 
 Nothing runs inside the game: no DLL injection, no render hooks, no memory
-reads and no global keyboard hook. Capture uses Desktop Duplication, the
-hotkey uses `RegisterHotKey`, game-only audio uses Windows' own process
+reads and no global keyboard hook. Capture uses Desktop Duplication or
+Windows Graphics Capture, the hotkey uses `RegisterHotKey`, game-only audio uses Windows' own process
 loopback, and encoding runs on the GPU's hardware encoder (NVENC, AMF or
 QuickSync). There is no CPU encoder fallback.
 
@@ -136,6 +136,30 @@ installer and the minimal FFmpeg is described in
 | `Ghostclip.exe --save` | The running instance saves a clip |
 | `Ghostclip.exe --trim <clip> <start> <end>` | Writes `<clip>_trim.mp4` by stream copy |
 | `Ghostclip.exe --compress <clip>` | Writes `<clip>_discord.mp4` under the Discord limit |
+
+## If a game loses FPS
+
+Recording always costs the game something: the GPU copies each frame and its
+encoder compresses it. If the drop is more than you'd like, try these in
+order, one at a time, so you know which one helped:
+
+1. **Keep Games first on** (Settings > Advanced, on by default). The recorder
+   runs below normal priority on the CPU and the GPU, so it waits behind the
+   game's frames.
+2. **Switch the capture** to Windows Graphics Capture (Settings > Video >
+   Capture). On some GPUs and games it costs less than Desktop Duplication.
+3. **Record at 30 FPS** instead of 60 (Settings > Video > Frame rate): half
+   the frames to copy and encode.
+4. **Record at a lower resolution,** 1080p or 720p on a 1440p or 4K monitor
+   (Settings > Video > Resolution). The GPU scales the picture before it is
+   encoded.
+
+To report it, press **Copy diagnostics** (Settings > Advanced) and paste the
+result in an [issue](https://github.com/gabrielolvv/ghostclip/issues) with
+the game, its FPS with Ghostclip off and on, and which of the steps above you
+tried. It holds your GPUs and drivers, the Windows version, the capture and
+priority settings and the log lines saying which encoder and priority ran;
+no file names or personal data.
 
 ## Measurements
 
