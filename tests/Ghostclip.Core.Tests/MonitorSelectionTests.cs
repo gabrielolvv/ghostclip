@@ -31,9 +31,11 @@ public class MonitorSelectionTests
     }
 
     [Fact]
-    public void A_handle_with_the_high_bit_set_reaches_ffmpeg_as_the_same_unsigned_value()
+    public void A_sign_extended_handle_reaches_ffmpeg_as_its_32_significant_bits()
     {
-        Assert.Contains("hmonitor=18446744071562072628:", FfmpegArgs.Video(Qsv(CaptureMethod.GraphicsCapture, handle: unchecked((long)0xFFFFFFFF80001234))).Filter);
+        // FFmpeg reads the option through a double: a sign-extended handle would lose its low bits. Only the
+        // low 32 bits of a USER handle count.
+        Assert.Contains("hmonitor=2147488308:", FfmpegArgs.Video(Qsv(CaptureMethod.GraphicsCapture, handle: unchecked((long)0xFFFFFFFF80001234))).Filter);
     }
 
     [Fact]
@@ -72,10 +74,19 @@ public class MonitorSelectionTests
     }
 
     [Fact]
+    public void A_monitor_on_another_gpu_is_marked_for_graphics_capture_only()
+    {
+        // A gaming laptop's HDMI port often belongs to the dedicated GPU: Desktop Duplication on the first GPU
+        // can't record it, Graphics Capture can. Its outputs are numbered after the first GPU's.
+        var list = MonitorList.Build([Output(0, @"\\.\DISPLAY1"), Output(1, @"\\.\DISPLAY2") with { OtherGpu = true }], []);
+        Assert.Equal([false, true], list.Select(m => m.OtherGpu));
+    }
+
+    [Fact]
     public void The_settings_page_gets_the_monitors()
     {
         var message = new LibraryEvent("settings", Monitors: [new MonitorInfo(0, "DELL U2720Q", -1920, 0, 2560, 1440, Primary: true, BuiltIn: false)]);
-        Assert.Contains("\"monitors\":[{\"index\":0,\"name\":\"DELL U2720Q\",\"left\":-1920,\"top\":0,\"width\":2560,\"height\":1440,\"primary\":true,\"builtIn\":false}]",
+        Assert.Contains("\"monitors\":[{\"index\":0,\"name\":\"DELL U2720Q\",\"left\":-1920,\"top\":0,\"width\":2560,\"height\":1440,\"primary\":true,\"builtIn\":false,\"otherGpu\":false}]",
             JsonSerializer.Serialize(message, LibraryJson.Default.LibraryEvent));
     }
 }

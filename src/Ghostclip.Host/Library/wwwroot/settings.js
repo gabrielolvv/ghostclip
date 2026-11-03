@@ -137,6 +137,7 @@ const Settings = (() => {
 
   // "LG ULTRAGEAR · 2560×1440 · main". Two monitors with the same name are told apart by where they sit;
   // the saved one stays listed when it is unplugged, so saving never moves recording to another screen.
+  // A monitor on another GPU is recorded by Windows Graphics Capture only.
   function monitorOptions(value) {
     const list = s.monitors.slice().sort((a, b) => a.index - b.index);
     const named = m => m.name || (m.builtIn ? L('Built-in screen', 'Tela integrada') : `Monitor ${m.index + 1}`);
@@ -146,6 +147,7 @@ const Settings = (() => {
       if (twins.length > 1) parts.push(place(m, twins));
       parts.push(`${m.width}×${m.height}`);
       if (m.primary) parts.push(L('main', 'principal'));
+      if (m.otherGpu) parts.push(L('Windows Graphics Capture only', 'só Windows Graphics Capture'));
       return [m.index, parts.join(' · ')];
     });
     if (!list.some(m => m.index === value)) options.push([value, L(`Monitor ${value + 1} (not connected)`, `Monitor ${value + 1} (desconectado)`)]);
@@ -156,7 +158,9 @@ const Settings = (() => {
     const lefts = twins.map(t => t.left), tops = twins.map(t => t.top);
     if (twins.length === 2 && lefts[0] !== lefts[1]) return m.left === Math.min(...lefts) ? L('on the left', 'à esquerda') : L('on the right', 'à direita');
     if (twins.length === 2 && tops[0] !== tops[1]) return m.top === Math.min(...tops) ? L('on top', 'em cima') : L('below', 'embaixo');
-    return `#${twins.indexOf(m) + 1}`;
+    // Three or more: numbered by where they sit, top to bottom, left to right.
+    const order = twins.slice().sort((a, b) => a.top - b.top || a.left - b.left);
+    return `#${order.indexOf(m) + 1}`;
   }
 
   function control(field) {

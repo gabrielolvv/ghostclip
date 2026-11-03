@@ -48,11 +48,12 @@ public static class FfmpegArgs
 
         // Both capture at the clip rate, never at the monitor's refresh rate, and hand over D3D11 BGRA frames.
         // Graphics Capture's own monitor_idx counts monitors in another order than Desktop Duplication's
-        // outputs, so it gets the output's monitor when the worker could find it.
+        // outputs, so it gets the output's monitor when the worker could find it. Only the low 32 bits of a
+        // USER handle count, and FFmpeg parses the option through a double: a sign-extended one would round.
         var filter = new StringBuilder(s.Capture != CaptureMethod.GraphicsCapture
             ? Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}")
             : s.MonitorHandle != 0
-                ? Inv($"gfxcapture=hmonitor={unchecked((ulong)s.MonitorHandle)}:max_framerate={s.Fps}:capture_cursor=1")
+                ? Inv($"gfxcapture=hmonitor={unchecked((uint)s.MonitorHandle)}:max_framerate={s.Fps}:capture_cursor=1")
                 : Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1"));
         var nv12 = s.Input == EncoderInput.Nv12 || s.OutputHeight > 0;
         if (s.Input == EncoderInput.Memory)

@@ -5,9 +5,10 @@ using Ghostclip.Core;
 namespace Ghostclip.Native;
 
 // Compiled into both the tray (the settings page lists the monitors) and the worker (Graphics Capture needs
-// the monitor behind an output). The outputs come from DXGI's first adapter, the one FFmpeg's d3d11va device
-// and ddagrab open, so an index here is the index ddagrab records. Source-generated COM interop, like WASAPI;
-// methods are declared in vtable order and only the ones used are called.
+// the monitor behind an output). DXGI's first adapter is the one FFmpeg's d3d11va device and ddagrab open
+// (unless Windows' per-app GPU preference picks another for one of the programs), so its outputs keep the
+// indexes ddagrab records. Source-generated COM interop, like WASAPI; methods are declared in vtable order and
+// only the ones used are called.
 
 [GeneratedComInterface]
 [Guid("770aae78-f26f-4dba-a829-253c83d1b387")]
@@ -57,17 +58,21 @@ internal static unsafe partial class Displays
     private const int DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME = 2;
     private const int DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE = 1;
     private const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL = 0x80000000;
+    private const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_LVDS = 6;
     private const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED = 11;
     private const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED = 13;
 
     private static readonly StrategyBasedComWrappers Com = new();
 
-    /// <summary>The monitors ddagrab can record, named after what Windows calls them.</summary>
+    /// <summary>The monitors Ghostclip can record, named after what Windows calls them.</summary>
     public static IReadOnlyList<MonitorInfo> List() => MonitorList.Build(Outputs().Select(o => o.Output), Targets());
 
-    /// <summary>The HMONITOR of ddagrab output <paramref name="index"/>; 0 when there is no such output.</summary>
-    public static long Handle(int index) => Outputs().FirstOrDefault(o => o.Output.Index == index).Monitor;
+    /// <summary>The HMONITOR behind output <paramref name="index"/> (as <see cref="List"/> numbers them); 0 when there is none.</summary>
+    public static (long Handle, string? Device) Handle(int index) =>
+        Outputs().FirstOrDefault(o => o.Output.Index == index) is ({ DeviceName: { } device }, var monitor) ? (monitor, device) : (0, null);
 
+    // The first GPU's outputs, numbered as ddagrab numbers them, then every other GPU's, which only Graphics
+    // Capture can record (a gaming laptop's HDMI port often belongs to the dedicated GPU).
     private static List<(DisplayOutput Output, long Monitor)> Outputs()
     {
         var outputs = new List<(DisplayOutput, long)>();
@@ -82,31 +87,72 @@ internal static unsafe partial class Displays
         {
             Marshal.Release(ptr);
         }
-        var hr = factory.EnumAdapters(0, out var adapter);
-        if (hr == DXGI_ERROR_NOT_FOUND || adapter is null) return outputs;
-        Marshal.ThrowExceptionForHR(hr);
-        for (uint i = 0; adapter.EnumOutputs(i, out var output) == 0 && output is not null; i++)
+        try
         {
-            if (output.GetDesc(out var desc) != 0) continue;
-            var info = new MONITORINFO { cbSize = sizeof(MONITORINFO) };
-            var primary = GetMonitorInfoW(desc.Monitor, ref info) && (info.dwFlags & MONITORINFOF_PRIMARY) != 0;
-            var r = desc.DesktopCoordinates;
-            outputs.Add((new DisplayOutput((int)i, new string(desc.DeviceName), r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top, primary), desc.Monitor));
+            for (uint a = 0; ; a++)
+            {
+                var hr = factory.EnumAdapters(a, out var adapter);
+                if (hr == DXGI_ERROR_NOT_FOUND) break;
+                Marshal.ThrowExceptionForHR(hr);
+                try
+                {
+                    for (uint i = 0; adapter!.EnumOutputs(i, out var output) == 0 && output is not null; i++)
+                    {
+                        try
+                        {
+                            if (output.GetDesc(out var desc) != 0) continue;
+                            var info = new MONITORINFO { cbSize = sizeof(MONITORINFO) };
+                            var primary = GetMonitorInfoW(desc.Monitor, ref info) && (info.dwFlags & MONITORINFOF_PRIMARY) != 0;
+                            var r = desc.DesktopCoordinates;
+                            outputs.Add((new DisplayOutput(outputs.Count, new string(desc.DeviceName), r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top,
+                                primary, OtherGpu: a > 0), desc.Monitor));
+                        }
+                        finally
+                        {
+                            Release(output);
+                        }
+                    }
+                }
+                finally
+                {
+                    Release(adapter);
+                }
+            }
+        }
+        finally
+        {
+            Release(factory);
         }
         return outputs;
+    }
+
+    private static void Release(object? com)
+    {
+        if (com is ComObject c) c.FinalRelease();
     }
 
     // The monitors behind each GDI device, with their friendly names and current modes.
     private static List<DisplayTarget> Targets()
     {
+        const int ERROR_INSUFFICIENT_BUFFER = 122;
         var targets = new List<DisplayTarget>();
-        if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount) != 0) return targets;
-        var paths = new PathInfo[pathCount];
-        var modes = new ModeInfo[modeCount];
-        fixed (PathInfo* p = paths)
-        fixed (ModeInfo* m = modes)
+        PathInfo[] paths;
+        ModeInfo[] modes;
+        uint pathCount, modeCount;
+        // A screen plugged in between the two calls makes the buffers too small: ask again.
+        for (var attempt = 0; ; attempt++)
         {
-            if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref pathCount, p, ref modeCount, m, 0) != 0) return targets;
+            if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out pathCount, out modeCount) != 0) return targets;
+            paths = new PathInfo[pathCount];
+            modes = new ModeInfo[modeCount];
+            int result;
+            fixed (PathInfo* p = paths)
+            fixed (ModeInfo* m = modes)
+            {
+                result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref pathCount, p, ref modeCount, m, 0);
+            }
+            if (result == 0) break;
+            if (result != ERROR_INSUFFICIENT_BUFFER || attempt == 2) return targets;
         }
         foreach (var path in paths.AsSpan(0, (int)pathCount))
         {
@@ -115,7 +161,8 @@ internal static unsafe partial class Displays
             var target = new TargetDeviceName { Header = Header(DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME, sizeof(TargetDeviceName), path.TargetAdapter, path.TargetId) };
             var named = DisplayConfigGetDeviceInfo(&target.Header) == 0;
             var tech = path.OutputTechnology;
-            var builtIn = tech is DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL or DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED or DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED;
+            var builtIn = tech is DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL or DISPLAYCONFIG_OUTPUT_TECHNOLOGY_LVDS
+                or DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED or DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED;
             var (width, height) = path.SourceModeIndex < modeCount && modes[path.SourceModeIndex].InfoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE
                 ? ((int)modes[path.SourceModeIndex].Width, (int)modes[path.SourceModeIndex].Height)
                 : (0, 0);
