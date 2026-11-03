@@ -6,7 +6,8 @@ namespace Ghostclip.Host;
 /// <param name="Game">Name for the clip folder.</param>
 /// <param name="ProcessId">0 for the desktop and other non-programs.</param>
 /// <param name="Fullscreen">The window covers its whole monitor (fullscreen or borderless): most likely a game.</param>
-internal readonly record struct Foreground(string Game, uint ProcessId, bool Fullscreen);
+/// <param name="Window">The foreground window itself: the one a game-window capture records.</param>
+internal readonly record struct Foreground(string Game, uint ProcessId, bool Fullscreen, nint Window = 0);
 
 /// <summary>
 /// Looks at the program in the foreground. Reads only the window's process id,
@@ -37,7 +38,7 @@ internal static class ForegroundGame
         // The shell and other non-games carry no process: nothing to capture audio from.
         return _cachedName == ClipNaming.FallbackGame
             ? new(_cachedName, 0, false)
-            : new(_cachedName, pid, CoversMonitor(window));
+            : new(_cachedName, pid, CoversMonitor(window), window);
     }
 
     /// <summary>Cheap liveness check, so game-only audio can fall back when the game closes.</summary>

@@ -39,10 +39,10 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
 
     private volatile IpcMessage _foreground = new() { Type = IpcType.Foreground, Game = ClipNaming.FallbackGame };
 
-    /// <summary>Tells the worker which game is in front, for game-only audio and per-game mic mute.</summary>
-    public void SetForeground(string game, uint processId)
+    /// <summary>Tells the worker which game is in front, for game-only audio, per-game mic mute and game-window capture.</summary>
+    public void SetForeground(string game, uint processId, nint window = 0)
     {
-        _foreground = new IpcMessage { Type = IpcType.Foreground, Game = game, ProcessId = processId };
+        _foreground = new IpcMessage { Type = IpcType.Foreground, Game = game, ProcessId = processId, WindowHandle = window };
         if (_channel is { } channel)
         {
             _ = SendQuietlyAsync(channel, _foreground);

@@ -22,10 +22,24 @@ public enum EncoderInput { Auto, Nv12, Direct, Memory }
 /// <summary>
 /// How the screen is read. Desktop Duplication (ddagrab) is the default; Windows
 /// Graphics Capture (gfxcapture) is the alternative, since Desktop Duplication can
-/// take a game out of its fastest fullscreen path and cost it frames.
+/// take a game out of its fastest fullscreen path and cost it frames. GameWindow
+/// is Windows Graphics Capture of the game's window alone (the whole monitor while
+/// no game runs); a new game restarts recording with an empty buffer.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<CaptureMethod>))]
-public enum CaptureMethod { DesktopDuplication, GraphicsCapture }
+public enum CaptureMethod { DesktopDuplication, GraphicsCapture, GameWindow }
+
+/// <summary>When the recorder counts as hung: no new frame for this long.</summary>
+public static class CaptureStall
+{
+    /// <summary>
+    /// Desktop Duplication delivers frames at the capture rate whatever the screen does. Windows Graphics Capture
+    /// only delivers one when the picture changes, so a still screen can go minutes without one; FFmpeg's
+    /// constant frame rate fills the gap when the next one arrives.
+    /// </summary>
+    public static TimeSpan LimitFor(CaptureMethod capture) =>
+        capture == CaptureMethod.DesktopDuplication ? TimeSpan.FromSeconds(10) : TimeSpan.FromMinutes(5);
+}
 
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }

@@ -65,6 +65,9 @@ public sealed record IpcMessage
     public string? Game { get; set; }
     public uint ProcessId { get; set; }
 
+    /// <summary>The game's window (HWND), for capturing that window alone; 0 for none.</summary>
+    public long WindowHandle { get; set; }
+
     /// <summary>On an error: the worker can't record until the config changes.</summary>
     public bool Fatal { get; set; }
 }

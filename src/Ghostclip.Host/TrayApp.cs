@@ -39,6 +39,7 @@ internal sealed class TrayApp : ApplicationContext
     private string _foreground = ClipNaming.FallbackGame;
     private string _game = ClipNaming.FallbackGame;
     private uint _gamePid;
+    private nint _gameWindow;
     private readonly ConfirmationSound _sound = new();
     private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
     private readonly RegisteredWaitHandle _saveRequestWait;
@@ -313,9 +314,12 @@ internal sealed class TrayApp : ApplicationContext
         }
 
         var isGame = front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
-        if (isGame && front.ProcessId != _gamePid)
+        // The same game moving to another fullscreen window (a launcher, then the game) is news for game-window
+        // capture; a dialog of a windowed game is not.
+        var newWindow = isGame && front.ProcessId == _gamePid && front.Fullscreen && front.Window != _gameWindow;
+        if (isGame && (front.ProcessId != _gamePid || newWindow))
         {
-            SetGame(front.Game, front.ProcessId);
+            SetGame(front.Game, front.ProcessId, front.Window);
         }
         else if (_gamePid != 0 && !isGame && !ForegroundGame.IsRunning(_gamePid))
         {
@@ -323,12 +327,13 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
-    private void SetGame(string game, uint pid)
+    private void SetGame(string game, uint pid, nint window = 0)
     {
         _game = game;
         _gamePid = pid;
+        _gameWindow = window;
         _log.Information("Current game: {Game} (pid {Pid})", game, pid);
-        _worker.SetForeground(game, pid);
+        _worker.SetForeground(game, pid, window);
         UpdateStatusItem();
     }
 

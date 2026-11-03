@@ -55,7 +55,7 @@ try
             }
             else if (message.Type == IpcType.Foreground)
             {
-                supervisor.SetForeground(message.Game, message.ProcessId);
+                supervisor.SetForeground(message.Game, message.ProcessId, message.WindowHandle);
             }
         }
     }

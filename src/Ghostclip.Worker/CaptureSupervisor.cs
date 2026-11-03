@@ -17,7 +17,6 @@ namespace Ghostclip.Worker;
 /// </summary>
 internal sealed class CaptureSupervisor : IAsyncDisposable
 {
-    private static readonly TimeSpan StallLimit = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan StartGrace = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(10);
 
@@ -41,6 +40,10 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private string? _encoder;
     private string? _game;
     private uint _gamePid;
+    // Game-window capture: the window the tray reported, and the one FFmpeg is recording (0: the monitor).
+    private long _gameWindow;
+    private long _capturingWindow;
+    private volatile bool _windowChanged;
 
     public CaptureSupervisor(GhostclipPaths paths, IpcChannel channel, LoggingLevelSwitch level, ILogger log)
     {
@@ -59,10 +62,13 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     }
 
     /// <summary>The host saw a different program in the foreground.</summary>
-    public void SetForeground(string? game, uint processId)
+    public void SetForeground(string? game, uint processId, long window = 0)
     {
         _game = game;
         _gamePid = processId;
+        Interlocked.Exchange(ref _gameWindow, window);
+        // The recording loop decides whether this calls for another capture target.
+        _windowChanged = true;
         ApplyAudioRouting();
     }
 
@@ -135,7 +141,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     continue;
                 }
 
-                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input);
+                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input, GameWindow.IfAlive(Interlocked.Read(ref _gameWindow)));
+                _capturingWindow = settings.Window;
                 _encoder = settings.Describe();
                 var outcome = await RecordOnceAsync(ffmpeg, settings, ct).ConfigureAwait(false);
                 if (outcome == Outcome.Reconfigured || ct.IsCancellationRequested)
@@ -284,7 +291,21 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 continue;
             }
 
-            if (_runner.Uptime > StartGrace && _runner.SinceLastFrame > StallLimit)
+            // Game-window capture follows the game: another window can't join the buffer's segments (its size differs),
+            // so recording starts over on it, like a settings change. A closed window falls back to the monitor.
+            if (_windowChanged)
+            {
+                _windowChanged = false;
+                if (_config.Capture == CaptureMethod.GameWindow && GameWindow.IfAlive(Interlocked.Read(ref _gameWindow)) != _capturingWindow)
+                {
+                    _log.Information("The game's window changed; restarting the recorder on it with an empty buffer");
+                    await StopRecorderAsync().ConfigureAwait(false);
+                    DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
+                    return Outcome.Reconfigured;
+                }
+            }
+
+            if (_runner.Uptime > StartGrace && _runner.SinceLastFrame > CaptureStall.LimitFor(_config.Capture))
             {
                 _log.Warning("No new frames for {Seconds:0} s; killing the recorder", _runner.SinceLastFrame.TotalSeconds);
                 _runner.Kill();

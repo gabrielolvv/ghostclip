@@ -14,17 +14,24 @@ public sealed record CaptureSettings(
     int OutputHeight,
     int QsvAsyncDepth,
     bool LowPower = true,
-    CaptureMethod Capture = CaptureMethod.DesktopDuplication)
+    CaptureMethod Capture = CaptureMethod.DesktopDuplication,
+    long Window = 0)
 {
-    public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input) => new(
+    /// <param name="window">The game's window (HWND); only the game window mode records it, 0 records the monitor.</param>
+    public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input, long window = 0) => new(
         encoder, input, config.Codec, config.Monitor, config.Fps, config.BitrateMbps,
-        config.OutputHeight, config.QsvAsyncDepth, Capture: config.Capture);
+        config.OutputHeight, config.QsvAsyncDepth, Capture: config.Capture,
+        Window: config.Capture == CaptureMethod.GameWindow ? window : 0);
 
     public string EncoderName =>
         $"{(Codec == VideoCodec.H264 ? "h264" : "hevc")}_{Encoder.ToString().ToLowerInvariant()}";
 
-    public string Describe() =>
-        $"{EncoderName} ({Input.ToString().ToLowerInvariant()}{(Capture == CaptureMethod.GraphicsCapture ? ", graphics capture" : "")})";
+    public string Describe() => $"{EncoderName} ({Input.ToString().ToLowerInvariant()}{Capture switch
+    {
+        CaptureMethod.GameWindow when Window != 0 => ", game window",
+        CaptureMethod.GraphicsCapture or CaptureMethod.GameWindow => ", graphics capture",
+        _ => "",
+    }})";
 }
 
 /// <summary>Builds FFmpeg command lines. Kept pure so the exact flags are unit tested.</summary>
@@ -43,9 +50,15 @@ public static class FfmpegArgs
         }
 
         // Both capture at the clip rate, never at the monitor's refresh rate, and hand over D3D11 BGRA frames.
-        var filter = new StringBuilder(s.Capture == CaptureMethod.GraphicsCapture
-            ? Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1")
-            : Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"));
+        // A window can be any size: the negative sizes round it down to even dimensions, which the encoders need.
+        var filter = new StringBuilder(s.Capture switch
+        {
+            CaptureMethod.GameWindow when s.Window != 0 =>
+                Inv($"gfxcapture=hwnd={s.Window}:max_framerate={s.Fps}:capture_cursor=1:width=-2:height=-2"),
+            CaptureMethod.GraphicsCapture or CaptureMethod.GameWindow =>
+                Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1"),
+            _ => Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"),
+        });
         var nv12 = s.Input == EncoderInput.Nv12 || s.OutputHeight > 0;
         if (s.Input == EncoderInput.Memory)
         {
