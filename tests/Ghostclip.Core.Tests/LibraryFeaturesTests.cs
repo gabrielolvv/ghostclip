@@ -169,9 +169,10 @@ public sealed class LibraryFeaturesTests : IDisposable
         var newer = moved with { Path = @"E:\Videos\Ghostclip\G\G_2026-10-03_12-00-00.mp4", LastWriteUtc = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc) };
         Assert.Empty(StorageLimit.SelectForDeletion(@"E:\Videos\Ghostclip", [moved, newer], state, 1024L * 1024 * 1024));
 
-        // Unstarring it in its new place takes the old entry away too.
+        // Unstarring it in its new place takes the old entry away too, and the lookup sees it at once.
         state.SetFavorite(@"E:\Videos\Ghostclip\G\G_2026-10-01_12-00-00.mp4", false);
         Assert.Empty(state.Favorites);
+        Assert.False(state.IsFavorite(@"E:\Videos\Ghostclip\G\G_2026-10-01_12-00-00.mp4"));
     }
 
     // A copy with the same game folder and name (a backup folder inside the clips folder) shows as starred, but

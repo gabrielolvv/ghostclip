@@ -100,3 +100,21 @@ jobs:
       - name: Publish release
         shell: pwsh
         run: dotnet vpk upload github --repoUrl https://github.com/${{ github.repository }} --outputDir artifacts/release --publish --releaseName "Ghostclip ${{ env.VERSION }}" --tag ${{ github.ref_name }} --token ${{ secrets.GITHUB_TOKEN }}
+
+  # Opens the pull request that brings the new version to winget (winget install ghostclip). Needs a
+  # classic personal access token with the public_repo scope in the WINGET_TOKEN secret; without it,
+  # the job does nothing. The package must already be in winget-pkgs: the first version goes in by hand.
+  winget:
+    needs: release
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Submit the update to winget-pkgs
+        if: env.WINGET_TOKEN != ''
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Ghostclip-win-Setup.exe"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe update gabrielolvv.Ghostclip --version $version --urls $url --submit --token $env:WINGET_TOKEN

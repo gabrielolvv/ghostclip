@@ -13,12 +13,31 @@ namespace Ghostclip.Core;
 /// </summary>
 public sealed record LibraryState
 {
-    public List<string> Favorites { get; set; } = [];
+    private List<string> _favorites = [];
+
+    // The game folder and name of every favorite, built on the first lookup and dropped on every change:
+    // the library asks once per clip, and a list of thousands is otherwise walked path by path each time.
+    private HashSet<string>? _favoriteTails;
+
+    public List<string> Favorites
+    {
+        get => _favorites;
+        set
+        {
+            _favorites = value;
+            _favoriteTails = null;
+        }
+    }
 
     /// <summary>Seconds from the start of the clip, ascending.</summary>
     public Dictionary<string, List<double>> Bookmarks { get; set; } = [];
 
-    public bool IsFavorite(string path) => Favorites.Any(p => SameClip(p, path));
+    public bool IsFavorite(string path)
+    {
+        if (Favorites.Any(p => SamePath(p, path))) return true;
+        _favoriteTails ??= new HashSet<string>(Favorites.Select(Tail), StringComparer.OrdinalIgnoreCase);
+        return _favoriteTails.Contains(Tail(path));
+    }
 
     public IReadOnlyList<double> BookmarksFor(string path) =>
         (Bookmarks.FirstOrDefault(b => string.Equals(b.Key, path, StringComparison.OrdinalIgnoreCase)).Value
@@ -30,6 +49,7 @@ public sealed record LibraryState
         if (favorite || Favorites.Any(p => SamePath(p, path))) Favorites.RemoveAll(p => SamePath(p, path));
         else Favorites.RemoveAll(p => SameClip(p, path));
         if (favorite) Favorites.Add(path);
+        _favoriteTails = null;
     }
 
     private static bool SamePath(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
@@ -67,6 +87,7 @@ public sealed record LibraryState
     public void Forget(string path)
     {
         Favorites.RemoveAll(p => SamePath(p, path));
+        _favoriteTails = null;
         RemoveBookmarks(path);
     }
 

@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- Looking up favorites keeps each favorite's game folder and name in a set,
+  so a library with thousands of clips and favorites lists them without
+  walking every favorite for every clip.
+
 ## 0.8.2
 
 ### Fixed

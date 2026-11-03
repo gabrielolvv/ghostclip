@@ -10,6 +10,8 @@ guarda o último minuto da tela, do áudio do jogo e do microfone, e salva um
 clipe quando você aperta a hotkey. O objetivo nº 1 é tirar o mínimo possível
 de FPS do jogo.
 
+![A biblioteca do Ghostclip: clipes e prints por dia, com miniaturas, durações, favoritos marcados e uma sessão com marcadores](site/img/library.png)
+
 Nada roda dentro do jogo: sem injeção de DLL, sem hook de renderização, sem
 leitura de memória e sem hook global de teclado. A captura usa o Desktop
 Duplication, a hotkey usa `RegisterHotKey`, o áudio só do jogo usa o process
@@ -39,6 +41,10 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
+- **Limite de espaço** (opcional): passado dele, os clipes e prints mais
+  antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
+  que o Ghostclip não criou nunca são tocados.
+- **Inglês ou português,** ou o idioma do Windows, trocado na hora.
 
 ## Instalar
 
@@ -54,10 +60,11 @@ o .NET e o FFmpeg, vem junto.
 
 ## Estado
 
-**0.6.** Funcionam gravação em NVIDIA, AMD e Intel, save, roteamento de áudio
+**0.8.** Funcionam gravação em NVIDIA, AMD e Intel, save, roteamento de áudio
 (com o Discord em faixa própria), perfis, prints, gravação da sessão com
-marcadores, a biblioteca de clipes com favoritos, corte e compressão, a página
-de configurações em português e inglês e o instalador com atualizações. Ainda
+marcadores, a biblioteca de clipes com favoritos, corte e compressão, o limite
+de espaço, a página de configurações em português e inglês e o instalador com
+atualizações. Ainda
 falta: números de benchmark
 em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
 inglês) e um GIF para esta página (`assets\make-gif.ps1` gera um a partir de
