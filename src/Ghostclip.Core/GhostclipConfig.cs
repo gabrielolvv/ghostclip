@@ -93,7 +93,10 @@ public sealed record GhostclipConfig
     /// <summary>0 keeps the monitor's resolution.</summary>
     public int OutputHeight { get; set; }
 
-    /// <summary>Desktop Duplication output index (0 = first monitor of the adapter).</summary>
+    /// <summary>
+    /// Desktop Duplication output index (0 = first monitor of the adapter). Graphics Capture records the
+    /// monitor behind the same output, so both methods record the same screen.
+    /// </summary>
     public int Monitor { get; set; }
 
     public bool SystemAudio { get; set; } = true;

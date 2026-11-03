@@ -3,6 +3,22 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- Settings > Video > Monitor lists your screens by name, resolution and which
+  one is the main screen, instead of asking for a number. Two identical
+  monitors are told apart by where they sit (on the left, on the right). A
+  monitor that is unplugged stays selected and shows as not connected, so
+  saving never moves recording to another screen.
+
+### Fixed
+
+- With Windows Graphics Capture and more than one monitor, Ghostclip could
+  record a different screen than Desktop Duplication with the same setting:
+  the two count monitors in different orders. Both now record the same one.
+
 ## 0.8.5
 
 ### Added

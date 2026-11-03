@@ -14,11 +14,15 @@ public sealed record CaptureSettings(
     int OutputHeight,
     int QsvAsyncDepth,
     bool LowPower = true,
-    CaptureMethod Capture = CaptureMethod.DesktopDuplication)
+    CaptureMethod Capture = CaptureMethod.DesktopDuplication,
+    long MonitorHandle = 0)
 {
-    public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input) => new(
+    /// <param name="monitorHandle">The HMONITOR of Desktop Duplication output <see cref="GhostclipConfig.Monitor"/>
+    /// (0: unknown). Graphics Capture records it, so both methods record the same screen.</param>
+    public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input, long monitorHandle = 0) => new(
         encoder, input, config.Codec, config.Monitor, config.Fps, config.BitrateMbps,
-        config.OutputHeight, config.QsvAsyncDepth, Capture: config.Capture);
+        config.OutputHeight, config.QsvAsyncDepth, Capture: config.Capture,
+        MonitorHandle: config.Capture == CaptureMethod.GraphicsCapture ? monitorHandle : 0);
 
     public string EncoderName =>
         $"{(Codec == VideoCodec.H264 ? "h264" : "hevc")}_{Encoder.ToString().ToLowerInvariant()}";
@@ -43,9 +47,13 @@ public static class FfmpegArgs
         }
 
         // Both capture at the clip rate, never at the monitor's refresh rate, and hand over D3D11 BGRA frames.
-        var filter = new StringBuilder(s.Capture == CaptureMethod.GraphicsCapture
-            ? Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1")
-            : Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"));
+        // Graphics Capture's own monitor_idx counts monitors in another order than Desktop Duplication's
+        // outputs, so it gets the output's monitor when the worker could find it.
+        var filter = new StringBuilder(s.Capture != CaptureMethod.GraphicsCapture
+            ? Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}")
+            : s.MonitorHandle != 0
+                ? Inv($"gfxcapture=hmonitor={unchecked((ulong)s.MonitorHandle)}:max_framerate={s.Fps}:capture_cursor=1")
+                : Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1"));
         var nv12 = s.Input == EncoderInput.Nv12 || s.OutputHeight > 0;
         if (s.Input == EncoderInput.Memory)
         {
