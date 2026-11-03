@@ -40,10 +40,11 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private string? _encoder;
     private string? _game;
     private uint _gamePid;
-    // Game-window capture: the window the tray reported, and the one FFmpeg is recording (0: the monitor).
+    // Game-window capture: the window the tray reported, the one chosen (see GameWindowTarget) and the one
+    // FFmpeg is recording now (0: the monitor). Only the recording loop touches the last two.
     private long _gameWindow;
+    private long _preferredWindow;
     private long _capturingWindow;
-    private volatile bool _windowChanged;
 
     public CaptureSupervisor(GhostclipPaths paths, IpcChannel channel, LoggingLevelSwitch level, ILogger log)
     {
@@ -66,9 +67,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     {
         _game = game;
         _gamePid = processId;
+        // The recording loop decides, every second, whether this calls for another capture target.
         Interlocked.Exchange(ref _gameWindow, window);
-        // The recording loop decides whether this calls for another capture target.
-        _windowChanged = true;
         ApplyAudioRouting();
     }
 
@@ -141,7 +141,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     continue;
                 }
 
-                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input, GameWindow.IfAlive(Interlocked.Read(ref _gameWindow)));
+                var window = ChooseWindow();
+                var (canvasWidth, canvasHeight) = window != 0 ? GameWindow.MonitorSize(window) : (0, 0);
+                var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input, window) with { CanvasWidth = canvasWidth, CanvasHeight = canvasHeight };
                 _capturingWindow = settings.Window;
                 _encoder = settings.Describe();
                 var outcome = await RecordOnceAsync(ffmpeg, settings, ct).ConfigureAwait(false);
@@ -291,26 +293,39 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 continue;
             }
 
-            // Game-window capture follows the game: another window can't join the buffer's segments (its size differs),
-            // so recording starts over on it, like a settings change. A closed window falls back to the monitor.
-            if (_windowChanged)
+            // Game-window capture moves between the game's window and the monitor (the game closed, minimized or came
+            // to the front). The window is fitted into its monitor's size, so the segments still join: the buffer stays.
+            if (_config.Capture == CaptureMethod.GameWindow && ChooseWindow() is var target && target != _capturingWindow)
             {
-                _windowChanged = false;
-                if (_config.Capture == CaptureMethod.GameWindow && GameWindow.IfAlive(Interlocked.Read(ref _gameWindow)) != _capturingWindow)
-                {
-                    _log.Information("The game's window changed; restarting the recorder on it with an empty buffer");
-                    await StopRecorderAsync().ConfigureAwait(false);
-                    DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
-                    return Outcome.Reconfigured;
-                }
+                _log.Information("Game-window capture moves to {Target}; restarting the recorder, buffer kept",
+                    target == 0 ? "the monitor" : "the game's window");
+                await StopRecorderAsync().ConfigureAwait(false);
+                return Outcome.Reconfigured;
             }
 
             if (_runner.Uptime > StartGrace && _runner.SinceLastFrame > CaptureStall.LimitFor(_config.Capture))
             {
+                if (_config.Capture != CaptureMethod.DesktopDuplication)
+                {
+                    // Windows Graphics Capture only hands over changed pictures: this is a still screen, not a hang.
+                    // A quiet restart, with no "recording interrupted" for the tray to show.
+                    _log.Information("No new frame for {Seconds:0} s (a still screen); restarting the capture", _runner.SinceLastFrame.TotalSeconds);
+                    await StopRecorderAsync().ConfigureAwait(false);
+                    return Outcome.Reconfigured;
+                }
                 _log.Warning("No new frames for {Seconds:0} s; killing the recorder", _runner.SinceLastFrame.TotalSeconds);
                 _runner.Kill();
             }
         }
+    }
+
+    // Game-window capture: the window to record now (0: the monitor), keeping the preferred one up to date.
+    private long ChooseWindow()
+    {
+        if (_config.Capture != CaptureMethod.GameWindow) return 0;
+        var (target, preferred) = GameWindowTarget.Choose(_preferredWindow, Interlocked.Read(ref _gameWindow), GameWindow.State);
+        _preferredWindow = preferred;
+        return target;
     }
 
     // Quiet wait while Windows refuses the desktop: no FFmpeg runs, no restart

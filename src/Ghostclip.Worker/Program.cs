@@ -15,6 +15,8 @@ if (pipeName is null)
 }
 
 var paths = GhostclipPaths.Default;
+// Monitor and window sizes for game-window capture, in the physical pixels FFmpeg captures.
+Ghostclip.Worker.Native.GameWindow.UsePhysicalPixels();
 paths.EnsureCreated();
 var level = new LoggingLevelSwitch(LogEventLevel.Information);
 Log.Logger = new LoggerConfiguration()

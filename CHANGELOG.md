@@ -8,17 +8,20 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 ### Added
 
 - A third capture choice, Windows Graphics Capture of the game window alone
-  (Settings > Video > Capture). It records just the game in front, at its
-  window's size; with no game it records the whole monitor, and when another
-  game opens, recording starts over on it with an empty buffer, since the
-  two can't be joined. While the game is minimized nothing new is recorded.
+  (Settings > Video > Capture). It records just the game, fitted into its
+  monitor's size, so switching between the game and the monitor keeps the
+  replay buffer. It stays on the game while its window is open, even when
+  you alt-tab to another fullscreen program; it records the monitor while
+  the game is minimized or closed, and follows a new game window, such as
+  the game opening after its launcher.
 
 ### Fixed
 
 - With Windows Graphics Capture, a still screen (an idle desktop, a paused
-  game) no longer makes the recorder restart every half minute: it only
-  hands over a frame when the picture changes, so Ghostclip now waits five
-  minutes before taking that for a hung recorder.
+  game) no longer has the recorder killed as hung every few seconds and
+  "Recording interrupted" shown: it only hands over a frame when the
+  picture changes. After half a minute without one the capture restarts
+  quietly, which also splits a session recording at that point.
 
 ## 0.8.5
 

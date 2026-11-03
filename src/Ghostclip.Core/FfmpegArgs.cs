@@ -15,7 +15,9 @@ public sealed record CaptureSettings(
     int QsvAsyncDepth,
     bool LowPower = true,
     CaptureMethod Capture = CaptureMethod.DesktopDuplication,
-    long Window = 0)
+    long Window = 0,
+    int CanvasWidth = 0,
+    int CanvasHeight = 0)
 {
     /// <param name="window">The game's window (HWND); only the game window mode records it, 0 records the monitor.</param>
     public static CaptureSettings From(GhostclipConfig config, EncoderKind encoder, EncoderInput input, long window = 0) => new(
@@ -50,11 +52,13 @@ public static class FfmpegArgs
         }
 
         // Both capture at the clip rate, never at the monitor's refresh rate, and hand over D3D11 BGRA frames.
-        // A window can be any size: the negative sizes round it down to even dimensions, which the encoders need.
+        // A window is fitted into its monitor's size (the canvas), keeping its shape: then window and monitor segments
+        // match and join, and a resized window still shows whole. Even sizes, which the encoders need; with no canvas
+        // known, the window's own size rounded down to even. HWNDs are 32-bit: never written as a negative number.
         var filter = new StringBuilder(s.Capture switch
         {
             CaptureMethod.GameWindow when s.Window != 0 =>
-                Inv($"gfxcapture=hwnd={s.Window}:max_framerate={s.Fps}:capture_cursor=1:width=-2:height=-2"),
+                Inv($"gfxcapture=hwnd={(uint)s.Window}:max_framerate={s.Fps}:capture_cursor=1:width={Even(s.CanvasWidth)}:height={Even(s.CanvasHeight)}:resize_mode=scale_aspect"),
             CaptureMethod.GraphicsCapture or CaptureMethod.GameWindow =>
                 Inv($"gfxcapture=monitor_idx={s.Monitor}:max_framerate={s.Fps}:capture_cursor=1"),
             _ => Inv($"ddagrab=output_idx={s.Monitor}:framerate={s.Fps}"),
@@ -121,6 +125,8 @@ public static class FfmpegArgs
 
         return (["-init_hw_device", "d3d11va=gc", "-filter_hw_device", "gc"], filter.ToString(), codec.ToArray());
     }
+
+    private static int Even(int size) => size > 0 ? size & ~1 : -2;
 
     /// <summary>Encodes a few captured frames into the null muxer. Nothing touches the disk.</summary>
     public static IReadOnlyList<string> Probe(CaptureSettings s, int frames)
