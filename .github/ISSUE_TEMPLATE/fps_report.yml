@@ -1,0 +1,69 @@
+name: FPS report
+description: How many FPS a game loses while Ghostclip records. Drops and "no difference" both help.
+title: "FPS: <game> on <GPU>"
+labels: [performance]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for measuring. Play the same scene twice, once with Ghostclip closed (tray icon > Exit) and once
+        recording, with the same game settings. The README's "If a game loses FPS" section lists what to try.
+  - type: input
+    id: game
+    attributes:
+      label: Game, and whether it runs fullscreen, borderless or windowed
+      placeholder: Counter-Strike 2, fullscreen
+    validations:
+      required: true
+  - type: input
+    id: off
+    attributes:
+      label: FPS with Ghostclip closed
+      description: Average, and 1% lows if you have them.
+      placeholder: 240 avg, 160 1% low
+    validations:
+      required: true
+  - type: input
+    id: on
+    attributes:
+      label: FPS while Ghostclip records
+      placeholder: 220 avg, 140 1% low
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you measured
+      options:
+        - The game's own FPS counter
+        - The game's built-in benchmark
+        - The GPU driver's overlay (NVIDIA, AMD or Intel)
+        - PresentMon or bench\run-bench.ps1
+        - Something else (say which below)
+    validations:
+      required: true
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: What you tried
+      description: Each one changed alone, with its own FPS in the notes below if you measured it.
+      options:
+        - label: Games first on (Settings > Advanced)
+        - label: Capture set to Windows Graphics Capture (Settings > Video)
+        - label: 30 FPS (Settings > Video > Frame rate)
+        - label: 1080p or 720p (Settings > Video > Resolution)
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Settings > Advanced > Copy diagnostics, right after the recording run, then paste here.
+        It holds the versions, GPUs, drivers and capture settings; no file names.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Stutter, a different scene, other recorders or overlays running, anything else.

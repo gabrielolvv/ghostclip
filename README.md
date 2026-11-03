@@ -155,7 +155,7 @@ order, one at a time, so you know which one helped:
    encoded.
 
 To report it, press **Copy diagnostics** (Settings > Advanced) and paste the
-result in an [issue](https://github.com/gabrielolvv/ghostclip/issues) with
+result in an [FPS report](https://github.com/gabrielolvv/ghostclip/issues/new?template=fps_report.yml) with
 the game, its FPS with Ghostclip off and on, and which of the steps above you
 tried. It holds your GPUs and drivers, the Windows version, the capture and
 priority settings and the log lines saying which encoder and priority ran;

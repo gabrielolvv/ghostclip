@@ -157,7 +157,7 @@ ordem, um de cada vez, para saber qual ajudou:
    codificar.
 
 Para relatar, aperte **Copiar diagnóstico** (Configurações > Avançado) e cole
-o resultado numa [issue](https://github.com/gabrielolvv/ghostclip/issues) com
+o resultado num [relato de FPS](https://github.com/gabrielolvv/ghostclip/issues/new?template=fps_report.yml) com
 o jogo, o FPS com o Ghostclip desligado e ligado, e quais dos passos acima
 você tentou. Ele traz suas GPUs e drivers, a versão do Windows, as opções de
 captura e prioridade e as linhas do log que dizem qual encoder e qual
