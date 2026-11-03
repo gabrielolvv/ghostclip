@@ -140,6 +140,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["hotkey"] = KeyLabels.Describe(config.Hotkey),
         ["screenshotHotkey"] = KeyLabels.Describe(config.ScreenshotHotkey),
         ["sessionHotkey"] = KeyLabels.Describe(config.SessionHotkey),
+        ["micMuteHotkey"] = KeyLabels.Describe(config.MicMuteHotkey),
     };
 
     // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
@@ -152,8 +153,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         var keys = config.Hotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
         if (keys.Distinct().Count() < keys.Count)
         {
-            return L("Saving a clip, taking a screenshot and recording a session each need a hotkey of their own.",
-                "Salvar clipe, tirar print e gravar sessão precisam de uma hotkey diferente cada.");
+            return L("Saving a clip, taking a screenshot, recording a session and muting the microphone each need a hotkey of their own.",
+                "Salvar clipe, tirar print, gravar sessão e mutar o microfone precisam de uma hotkey diferente cada.");
         }
         return null;
     }

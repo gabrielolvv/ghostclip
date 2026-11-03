@@ -5,6 +5,16 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ## Unreleased
 
+### Added
+
+- Alt+F8 mutes the microphone while you play, and pressing it again turns it
+  back on. Recording goes on: the microphone track records silence meanwhile,
+  so nothing restarts and the replay buffer stays. A short falling or rising
+  tone says which (with the confirmation sound on), a notification too, and
+  the tray menu has the same switch. The key is taken only while the
+  microphone is on, can be changed in Settings > Audio, and Ghostclip always
+  starts with the microphone on.
+
 ### Changed
 
 - Settings > Video > Monitor lists your screens by name, resolution and which

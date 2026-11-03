@@ -13,7 +13,7 @@ public class ProfileTests
         var config = WithProfiles(new GameProfile { Game = "Elden Ring", ClipSeconds = 120, AudioSource = AudioSourceMode.GameOnly });
         Assert.Equal(120, config.ClipSecondsFor("elden ring"));
         Assert.Equal(AudioSourceMode.GameOnly, config.AudioSourceFor("ELDEN RING"));
-        Assert.False(config.MicrophoneMutedFor("Elden Ring"));
+        Assert.False(config.MicrophoneMutedFor("Elden Ring", byHotkey: false));
         Assert.Equal(60, config.ClipSecondsFor("Counter-Strike 2"));
         Assert.Equal(AudioSourceMode.System, config.AudioSourceFor(null));
     }

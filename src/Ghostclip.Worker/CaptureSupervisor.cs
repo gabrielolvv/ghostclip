@@ -41,6 +41,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private string? _encoder;
     private string? _game;
     private uint _gamePid;
+    private volatile bool _micMutedByHotkey;
 
     public CaptureSupervisor(GhostclipPaths paths, IpcChannel channel, LoggingLevelSwitch level, ILogger log)
     {
@@ -66,7 +67,14 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         ApplyAudioRouting();
     }
 
-    // Game-only audio, per-game mic mute and Discord coming and going switch live: no restart, buffer kept.
+    /// <summary>The mute hotkey was pressed: the microphone track records silence until it is pressed again.</summary>
+    public void SetMicrophoneMuted(bool muted)
+    {
+        _micMutedByHotkey = muted;
+        ApplyAudioRouting();
+    }
+
+    // Game-only audio, per-game and hotkey mic mute and Discord coming and going switch live: no restart, buffer kept.
     private void ApplyAudioRouting()
     {
         var config = _config;
@@ -75,7 +83,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         // On its own track, Discord is left out of the system one, so a call isn't recorded twice.
         _audio?.SetExcludedProcess(_discord is not null ? _discordPid : 0);
         _discord?.SetTargetProcess(_discordPid);
-        if (_mic is not null) _mic.Muted = config.MicrophoneMutedFor(_game);
+        if (_mic is not null) _mic.Muted = config.MicrophoneMutedFor(_game, _micMutedByHotkey);
     }
 
     // Two process lookups every couple of seconds, only while there is a Discord track.

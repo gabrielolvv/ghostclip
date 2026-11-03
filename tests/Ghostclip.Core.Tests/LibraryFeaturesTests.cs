@@ -292,7 +292,7 @@ public sealed class LibraryFeaturesTests : IDisposable
     public void Every_action_has_a_hotkey()
     {
         var config = new GhostclipConfig { ScreenshotHotkey = " ", SessionHotkey = "" }.Normalize();
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9"], config.Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8"], config.Hotkeys);
         // The list is for the app, not a setting of its own in config.json.
         Assert.DoesNotContain("\"hotkeys\"", JsonSerializer.Serialize(config, CoreJson.Default.GhostclipConfig));
     }

@@ -26,6 +26,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   Discord, sem música. Ele segue o jogo que você está jogando, não qualquer
   janela em primeiro plano.
 - **Microfone em faixa separada,** para silenciar ou rebalancear depois.
+  O Alt+F8 muta o microfone durante o jogo, sem reiniciar a gravação.
 - **Discord em faixa própria** (opcional): o som do app do Discord sai da
   faixa principal e é gravado à parte, para dar para silenciar a call depois.
 - **Prints** no Alt+F11, salvos em JPEG junto dos clipes.

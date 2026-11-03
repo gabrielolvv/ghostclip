@@ -49,6 +49,18 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
         }
     }
 
+    private volatile IpcMessage _microphone = new() { Type = IpcType.Microphone };
+
+    /// <summary>Tells the worker whether the mute hotkey muted the microphone track; a restarted worker hears it again.</summary>
+    public void SetMicrophoneMuted(bool muted)
+    {
+        _microphone = new IpcMessage { Type = IpcType.Microphone, MicrophoneMuted = muted };
+        if (_channel is { } channel)
+        {
+            _ = SendQuietlyAsync(channel, _microphone);
+        }
+    }
+
     public void UpdateConfig(GhostclipConfig config)
     {
         _config = ForWorker(config);
@@ -117,6 +129,7 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
             await using var channel = new IpcChannel(server);
             await channel.SendAsync(new IpcMessage { Type = IpcType.Config, Config = _config }, ct).ConfigureAwait(false);
             await channel.SendAsync(_foreground, ct).ConfigureAwait(false);
+            await channel.SendAsync(_microphone, ct).ConfigureAwait(false);
             _channel = channel;
 
             var lastMessage = Stopwatch.StartNew();
