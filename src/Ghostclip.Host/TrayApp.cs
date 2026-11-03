@@ -17,6 +17,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _saveItem;
     private readonly ToolStripMenuItem _screenshotItem;
     private readonly ToolStripMenuItem _sessionItem;
+    private readonly ToolStripMenuItem _micItem;
     private readonly ToolStripMenuItem _statusItem = new() { Enabled = false };
     private readonly ToolStripMenuItem _updateItem = new() { Visible = false };
     private readonly ToolStripMenuItem _libraryItem;
@@ -40,6 +41,10 @@ internal sealed class TrayApp : ApplicationContext
     private string _game = ClipNaming.FallbackGame;
     private uint _gamePid;
     private readonly ConfirmationSound _sound = new();
+    private readonly ConfirmationSound _mutedSound = new(784.0, 523.25);
+    private readonly ConfirmationSound _unmutedSound = new(523.25, 784.0);
+    // Muted by the hotkey. Never saved: Ghostclip always starts with the microphone on.
+    private bool _micMuted;
     private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
     private readonly RegisteredWaitHandle _saveRequestWait;
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
@@ -72,6 +77,7 @@ internal sealed class TrayApp : ApplicationContext
         _saveItem = new ToolStripMenuItem("", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
         _screenshotItem = new ToolStripMenuItem("", null, (_, _) => TakeScreenshot());
         _sessionItem = new ToolStripMenuItem("", null, (_, _) => ToggleSession());
+        _micItem = new ToolStripMenuItem("", null, (_, _) => ToggleMicrophone());
         _libraryItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary());
         _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
@@ -86,6 +92,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_saveItem);
         menu.Items.Add(_screenshotItem);
         menu.Items.Add(_sessionItem);
+        menu.Items.Add(_micItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_libraryItem);
         menu.Items.Add(_clipsFolderItem);
@@ -129,6 +136,7 @@ internal sealed class TrayApp : ApplicationContext
                 case HotkeyAction.SaveClip: SaveClip(); break;
                 case HotkeyAction.Screenshot: TakeScreenshot(); break;
                 case HotkeyAction.Session: ToggleSession(); break;
+                case HotkeyAction.MicMute: ToggleMicrophone(); break;
             }
         };
         // An exit request set before this instance existed (by the installer's hook,
@@ -220,28 +228,41 @@ internal sealed class TrayApp : ApplicationContext
     {
         _hotkey.UnregisterAll();
         _hotkeyLabels.Clear();
-        foreach (var action in Enum.GetValues<HotkeyAction>())
-        {
-            var gesture = _config.Hotkeys[(int)action];
-            var old = previous?.Hotkeys[(int)action];
-            if (_hotkey.TryRegister(action, gesture, out var error))
-            {
-                _hotkeyLabels[action] = KeyLabels.Describe(gesture);
-            }
-            else if (old is not null && old != gesture && _hotkey.TryRegister(action, old, out _))
-            {
-                _hotkeyLabels[action] = KeyLabels.Describe(old);
-                Notify(L("Hotkey not changed", "Hotkey não alterada"),
-                    L($"{error} Still using {_hotkeyLabels[action]}. Pick another one in Settings.",
-                        $"{error} Continua valendo {_hotkeyLabels[action]}. Escolha outra em Configurações."), ToolTipIcon.Warning);
-            }
-            else
-            {
-                Notify(L("Hotkey not available", "Hotkey indisponível"),
-                    L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
-            }
-        }
+        foreach (var action in Enum.GetValues<HotkeyAction>()) Register(action, previous);
         ApplyTexts();
+    }
+
+    // Turning the microphone on or off takes or frees the mute key alone: the others stay, with no new warnings.
+    private void RegisterMuteHotkey()
+    {
+        _hotkey.Unregister(HotkeyAction.MicMute);
+        _hotkeyLabels.Remove(HotkeyAction.MicMute);
+        Register(HotkeyAction.MicMute, previous: null);
+        ApplyTexts();
+    }
+
+    private void Register(HotkeyAction action, GhostclipConfig? previous)
+    {
+        // Without a microphone track the mute key stays free for other programs.
+        if (action == HotkeyAction.MicMute && !_config.Microphone) return;
+        var gesture = _config.Hotkeys[(int)action];
+        var old = previous?.Hotkeys[(int)action];
+        if (_hotkey.TryRegister(action, gesture, out var error))
+        {
+            _hotkeyLabels[action] = KeyLabels.Describe(gesture);
+        }
+        else if (old is not null && old != gesture && _hotkey.TryRegister(action, old, out _))
+        {
+            _hotkeyLabels[action] = KeyLabels.Describe(old);
+            Notify(L("Hotkey not changed", "Hotkey não alterada"),
+                L($"{error} Still using {_hotkeyLabels[action]}. Pick another one in Settings.",
+                    $"{error} Continua valendo {_hotkeyLabels[action]}. Escolha outra em Configurações."), ToolTipIcon.Warning);
+        }
+        else
+        {
+            Notify(L("Hotkey not available", "Hotkey indisponível"),
+                L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
+        }
     }
 
     // "Save clip (Alt+F10)", or without the key when none is registered.
@@ -256,6 +277,10 @@ internal sealed class TrayApp : ApplicationContext
         _sessionItem.Text = _session.Running
             ? WithHotkey(HotkeyAction.Session, L($"Stop session recording · {Clock(_session.Elapsed)}", $"Parar gravação da sessão · {Clock(_session.Elapsed)}"))
             : WithHotkey(HotkeyAction.Session, L("Record session", "Gravar sessão"));
+        _micItem.Text = _micMuted
+            ? WithHotkey(HotkeyAction.MicMute, L("Unmute microphone", "Desmutar microfone"))
+            : WithHotkey(HotkeyAction.MicMute, L("Mute microphone", "Mutar microfone"));
+        _micItem.Enabled = _config.Microphone;
         _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}");
         _libraryItem.Text = L("Open library", "Abrir biblioteca");
         _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes");
@@ -343,7 +368,8 @@ internal sealed class TrayApp : ApplicationContext
             _ => L("Starting", "Iniciando"),
         };
         var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}") : "";
-        var mic = (_status.Microphone ? " · mic" : "") + (_status.Discord ? " · discord" : "");
+        // What the recorder does, not what the tray asked: a mute that didn't reach it shows as the live mic.
+        var mic = (_status.MicrophoneMuted ? L(" · mic muted", " · mic mudo") : _status.Microphone ? " · mic" : "") + (_status.Discord ? " · discord" : "");
         var game = _gamePid != 0 ? _game : _foreground;
         var session = _session.Running ? L($"● Session {Clock(_session.Elapsed)} · ", $"● Sessão {Clock(_session.Elapsed)} · ") : "";
         _statusItem.Text = $"{session}{state} · {game}{audio}{mic}";
@@ -406,6 +432,38 @@ internal sealed class TrayApp : ApplicationContext
         // The clip is safe from here on: confirm right away, the MP4 follows.
         if (_config.ConfirmationSound) _sound.Play();
         _ = FinishAsync(snapshot);
+    }
+
+    // The microphone track records silence until the key is pressed again. Recording goes on: nothing restarts.
+    private void ToggleMicrophone()
+    {
+        if (!_config.Microphone) return;
+        _micMuted = !_micMuted;
+        _worker.SetMicrophoneMuted(_micMuted);
+        _log.Information(_micMuted ? "Microphone muted by the hotkey" : "Microphone unmuted by the hotkey");
+        // A balloon doesn't show over a fullscreen game: the tone says it there, even with the other sounds off,
+        // since nothing else would tell you whether the microphone records.
+        (_micMuted ? _mutedSound : _unmutedSound).Play();
+        if (_micMuted)
+        {
+            Notify(L("Microphone muted", "Microfone mudo"),
+                L("Clips record silence on the microphone track until you press it again.", "Os clipes gravam silêncio na faixa do microfone até você apertar de novo."), ToolTipIcon.None);
+        }
+        else
+        {
+            var game = CurrentGame();
+            if (_config.MicrophoneMutedFor(game, byHotkey: false))
+            {
+                Notify(L("Microphone still muted", "Microfone continua mudo"),
+                    L($"{game}'s profile mutes it.", $"O perfil de {game} deixa o microfone mudo."), ToolTipIcon.None);
+            }
+            else
+            {
+                Notify(L("Microphone unmuted", "Microfone desmutado"),
+                    L("The microphone track records again.", "A faixa do microfone volta a gravar."), ToolTipIcon.None);
+            }
+        }
+        ApplyTexts();
     }
 
     private async void TakeScreenshot()
@@ -568,8 +626,15 @@ internal sealed class TrayApp : ApplicationContext
         _config = config;
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         UiText.Use(config.Language);
-        // Both redo the menu's texts, in the language just set.
+        // Turning the microphone off lets the mute key go, and on again starts unmuted.
+        if (!config.Microphone && _micMuted)
+        {
+            _micMuted = false;
+            _worker.SetMicrophoneMuted(false);
+        }
+        // Each redoes the menu's texts, in the language just set.
         if (!config.Hotkeys.SequenceEqual(previous.Hotkeys)) RegisterHotkeys(previous);
+        else if (config.Microphone != previous.Microphone) RegisterMuteHotkey();
         else ApplyTexts();
         ApplyAutostart();
         _worker.UpdateConfig(config);
@@ -656,6 +721,8 @@ internal sealed class TrayApp : ApplicationContext
         // Give the worker a moment to close its last segment cleanly.
         Task.Run(async () => await _worker.DisposeAsync().ConfigureAwait(false)).Wait(TimeSpan.FromSeconds(8));
         _sound.Dispose();
+        _mutedSound.Dispose();
+        _unmutedSound.Dispose();
         _icon.Dispose();
     }
 }

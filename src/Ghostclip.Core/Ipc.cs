@@ -16,6 +16,9 @@ public static class IpcType
     /// <summary>Host → worker: the foreground game changed. Drives game-only audio and per-game mic mute.</summary>
     public const string Foreground = "foreground";
 
+    /// <summary>Host → worker: the mute hotkey muted or unmuted the microphone track.</summary>
+    public const string Microphone = "microphone";
+
     /// <summary>Worker → host: heartbeat, every second. Silence means the worker hung.</summary>
     public const string Status = "status";
 
@@ -41,6 +44,9 @@ public sealed record WorkerStatus
 
     public bool Microphone { get; set; }
 
+    /// <summary>There is a microphone track and it records silence (the mute hotkey or the game's profile).</summary>
+    public bool MicrophoneMuted { get; set; }
+
     /// <summary>Discord is running and recorded on its own track.</summary>
     public bool Discord { get; set; }
 
@@ -64,6 +70,9 @@ public sealed record IpcMessage
     /// <summary>On a foreground message: the game's name and process id (0 for the desktop).</summary>
     public string? Game { get; set; }
     public uint ProcessId { get; set; }
+
+    /// <summary>On a microphone message: muted by the hotkey.</summary>
+    public bool MicrophoneMuted { get; set; }
 
     /// <summary>On an error: the worker can't record until the config changes.</summary>
     public bool Fatal { get; set; }

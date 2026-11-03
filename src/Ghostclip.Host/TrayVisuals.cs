@@ -147,14 +147,18 @@ internal static class TrayMenuStyle
     }
 }
 
-/// <summary>A short two-note chime, synthesized once into a WAV in memory.</summary>
+/// <summary>
+/// A short two-note chime, synthesized once into a WAV in memory. Rising (the default) says saved; the
+/// microphone hotkey falls to say muted and rises, lower, to say it records again.
+/// </summary>
 internal sealed class ConfirmationSound : IDisposable
 {
-    private readonly MemoryStream _wav = Synthesize();
+    private readonly MemoryStream _wav;
     private readonly SoundPlayer _player;
 
-    public ConfirmationSound()
+    public ConfirmationSound(double first = 880.0, double second = 1318.5)
     {
+        _wav = Synthesize(first, second);
         _player = new SoundPlayer(_wav);
         _player.Load();
     }
@@ -167,14 +171,14 @@ internal sealed class ConfirmationSound : IDisposable
         _wav.Dispose();
     }
 
-    private static MemoryStream Synthesize()
+    private static MemoryStream Synthesize(double first, double second)
     {
         const int rate = 44100;
         var samples = new short[rate * 140 / 1000];
         for (var i = 0; i < samples.Length; i++)
         {
             var t = i / (double)rate;
-            var freq = t < 0.06 ? 880.0 : 1318.5;
+            var freq = t < 0.06 ? first : second;
             var envelope = Math.Min(1, i / 200.0) * Math.Min(1, (samples.Length - i) / 1500.0);
             samples[i] = (short)(Math.Sin(2 * Math.PI * freq * t) * envelope * 9000);
         }
