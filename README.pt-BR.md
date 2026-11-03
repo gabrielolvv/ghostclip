@@ -14,7 +14,7 @@ de FPS do jogo.
 
 Nada roda dentro do jogo: sem injeção de DLL, sem hook de renderização, sem
 leitura de memória e sem hook global de teclado. A captura usa o Desktop
-Duplication, a hotkey usa `RegisterHotKey`, o áudio só do jogo usa o process
+Duplication ou o Windows Graphics Capture, a hotkey usa `RegisterHotKey`, o áudio só do jogo usa o process
 loopback do próprio Windows e a codificação roda no encoder de hardware da GPU
 (NVENC, AMF ou QuickSync). Não existe fallback para encoder de CPU.
 
@@ -137,6 +137,31 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 | `Ghostclip.exe --save` | A instância em execução salva um clipe |
 | `Ghostclip.exe --trim <clipe> <início> <fim>` | Gera `<clipe>_trim.mp4` por stream copy |
 | `Ghostclip.exe --compress <clipe>` | Gera `<clipe>_discord.mp4` dentro do limite do Discord |
+
+## Se o jogo perder FPS
+
+Gravar sempre custa alguma coisa ao jogo: a GPU copia cada quadro e o encoder
+dela o comprime. Se a queda for maior do que você quer, tente estes passos em
+ordem, um de cada vez, para saber qual ajudou:
+
+1. **Deixe a Prioridade para os jogos ligada** (Configurações > Avançado,
+   ligada por padrão). O gravador roda abaixo da prioridade normal na CPU e
+   na GPU, então espera atrás dos quadros do jogo.
+2. **Troque a captura** para Windows Graphics Capture (Configurações > Vídeo >
+   Captura). Em algumas GPUs e jogos ela custa menos que o Desktop
+   Duplication.
+3. **Grave a 30 FPS** em vez de 60 (Configurações > Vídeo > Taxa de quadros):
+   metade dos quadros para copiar e codificar.
+4. **Grave numa resolução menor,** 1080p ou 720p num monitor 1440p ou 4K
+   (Configurações > Vídeo > Resolução). A GPU reduz a imagem antes de
+   codificar.
+
+Para relatar, aperte **Copiar diagnóstico** (Configurações > Avançado) e cole
+o resultado numa [issue](https://github.com/gabrielolvv/ghostclip/issues) com
+o jogo, o FPS com o Ghostclip desligado e ligado, e quais dos passos acima
+você tentou. Ele traz suas GPUs e drivers, a versão do Windows, as opções de
+captura e prioridade e as linhas do log que dizem qual encoder e qual
+prioridade rodaram; nenhum nome de arquivo nem dado pessoal.
 
 ## Medições
 
