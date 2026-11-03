@@ -120,6 +120,9 @@ public sealed record GhostclipConfig
     /// <summary>QuickSync frame queue. 1 saves RAM; higher absorbs GPU stalls.</summary>
     public int QsvAsyncDepth { get; set; } = 1;
 
+    /// <summary>The recorder runs below normal priority on the CPU and GPU (<see cref="RecorderPriority"/>). Applies live.</summary>
+    public bool GamePriority { get; set; } = true;
+
     /// <summary>Null uses Videos\Ghostclip.</summary>
     public string? ClipsFolder { get; set; }
 
