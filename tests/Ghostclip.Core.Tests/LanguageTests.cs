@@ -13,6 +13,8 @@ public sealed class LanguageTests : IDisposable
     [Theory]
     [InlineData("pt-BR", "pt")]
     [InlineData("pt-PT", "pt")]
+    [InlineData("es-ES", "es")]
+    [InlineData("es-MX", "es")]
     [InlineData("en-US", "en")]
     [InlineData("fr-FR", "en")]
     [InlineData("", "en")]
@@ -26,6 +28,8 @@ public sealed class LanguageTests : IDisposable
     {
         Assert.Equal("en", UiText.Resolve(UiLanguage.English, CultureInfo.GetCultureInfo("pt-BR")));
         Assert.Equal("pt", UiText.Resolve(UiLanguage.Portuguese, CultureInfo.GetCultureInfo("en-US")));
+        Assert.Equal("es", UiText.Resolve(UiLanguage.Spanish, CultureInfo.GetCultureInfo("en-US")));
+        Assert.Equal("en", UiText.Resolve(UiLanguage.English, CultureInfo.GetCultureInfo("es-ES")));
     }
 
     [Fact]

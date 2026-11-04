@@ -20,9 +20,9 @@ internal static partial class RecycleBin
     public static void Send(string path, nint owner)
     {
         var (result, aborted) = Run([path], owner);
-        if (aborted) throw new IOException(L("Kept the clip.", "O clipe foi mantido."));
+        if (aborted) throw new IOException(L("Kept the clip.", "O clipe foi mantido.", "Se conservó el clip."));
         if (result != 0) throw new IOException(L($"Windows couldn't delete the clip (error 0x{result:X}). Is it open in another program?",
-            $"O Windows não conseguiu apagar o clipe (erro 0x{result:X}). Ele está aberto em outro programa?"));
+            $"O Windows não conseguiu apagar o clipe (erro 0x{result:X}). Ele está aberto em outro programa?", $"Windows no pudo eliminar el clip (error 0x{result:X}). ¿Está abierto en otro programa?"));
     }
 
     /// <summary>

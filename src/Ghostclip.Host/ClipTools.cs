@@ -20,7 +20,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
             "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate:stream_tags=handler_name", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}"));
+        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}", $"No se pudo leer el clip: {r.FirstError}"));
 
         using var json = JsonDocument.Parse(r.StdOut);
         var duration = double.Parse(json.RootElement.GetProperty("format").GetProperty("duration").GetString()!, CultureInfo.InvariantCulture);
@@ -73,7 +73,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException(L($"Could not trim the clip: {r.FirstError}", $"Não foi possível cortar o clipe: {r.FirstError}"));
+            throw new InvalidOperationException(L($"Could not trim the clip: {r.FirstError}", $"Não foi possível cortar o clipe: {r.FirstError}", $"No se pudo recortar el clip: {r.FirstError}"));
         }
         PartFile.Commit(output);
         log.Information("Trimmed {Clip} to {Start:0.0}-{End:0.0} s: {Output}", clip, start, end, output);
@@ -96,7 +96,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             var max = limit * 8.0 * 1024 * 0.92 / (CompressionPlanner.MinVideoKbps + (silent ? 0 : CompressionPlanner.AudioKbps));
             throw new InvalidOperationException(L($"{info.Duration:0} s is too long for {limit} MB. Trim it to {max:0} s or less first.",
-                $"{info.Duration:0} s é longo demais para {limit} MB. Corte para {max:0} s ou menos antes."));
+                $"{info.Duration:0} s é longo demais para {limit} MB. Corte para {max:0} s ou menos antes.", $"{info.Duration:0} s es demasiado largo para {limit} MB. Recórtalo antes a {max:0} s o menos."));
         }
 
         var encoder = HardwareEncoder(cfg);
@@ -137,7 +137,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException(L($"Could not make the vertical copy: {r.FirstError}", $"Não foi possível fazer a cópia vertical: {r.FirstError}"));
+            throw new InvalidOperationException(L($"Could not make the vertical copy: {r.FirstError}", $"Não foi possível fazer a cópia vertical: {r.FirstError}", $"No se pudo hacer la copia vertical: {r.FirstError}"));
         }
         PartFile.Commit(output);
         log.Information("Vertical copy of {Clip}: {Output}", clip, output);
@@ -148,7 +148,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
     {
         var ordered = ClipJoiner.InOrder(clips.Where(c => !ClipLibrary.IsImage(c)), File.GetLastWriteTime);
-        if (ordered.Count < 2) throw new InvalidOperationException(L("Select at least two clips to join.", "Selecione pelo menos dois clipes para juntar."));
+        if (ordered.Count < 2) throw new InvalidOperationException(L("Select at least two clips to join.", "Selecione pelo menos dois clipes para juntar.", "Selecciona al menos dos clips para unir."));
 
         var sources = new List<JoinSource>();
         foreach (var clip in ordered) sources.Add(await JoinSourceAsync(clip, ct).ConfigureAwait(false));
@@ -156,7 +156,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             var name = Path.GetFileName(other.Path);
             throw new InvalidOperationException(L($"{name} was recorded with other settings, so it can't join the rest without re-encoding.",
-                $"{name} foi gravado com outros ajustes, então não dá para juntar com os demais sem recodificar."));
+                $"{name} foi gravado com outros ajustes, então não dá para juntar com os demais sem recodificar.", $"{name} se grabó con otros ajustes, así que no se puede unir con los demás sin recodificar."));
         }
 
         // A join still running on these clips holds the .part: this one takes the next name.
@@ -182,7 +182,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded || ClipJoiner.LostAClip(r.StdErr))
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException(L($"Could not join the clips: {r.FirstError}", $"Não foi possível juntar os clipes: {r.FirstError}"));
+            throw new InvalidOperationException(L($"Could not join the clips: {r.FirstError}", $"Não foi possível juntar os clipes: {r.FirstError}", $"No se pudieron unir los clips: {r.FirstError}"));
         }
         PartFile.Commit(output);
         log.Information("Joined {Count} clips into {Output}", ordered.Count, output);
@@ -194,7 +194,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
             "-v", "error", "-show_data_hash", "md5", "-show_entries", "stream=codec_type,codec_name,width,height,sample_rate,channels,extradata_hash:stream_tags=handler_name", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
-        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}"));
+        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}", $"No se pudo leer el clip: {r.FirstError}"));
 
         using var json = JsonDocument.Parse(r.StdOut);
         var video = "";
@@ -227,7 +227,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (!r.Succeeded)
         {
             PartFile.Discard(output);
-            throw new InvalidOperationException(L($"Could not compress the clip: {r.FirstError}", $"Não foi possível comprimir o clipe: {r.FirstError}"));
+            throw new InvalidOperationException(L($"Could not compress the clip: {r.FirstError}", $"Não foi possível comprimir o clipe: {r.FirstError}", $"No se pudo comprimir el clip: {r.FirstError}"));
         }
         return new FileInfo(PartFile.For(output)).Length;
     }
@@ -243,16 +243,16 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         }
         var choice = cache?.Choose(cfg.Encoder, EncoderInput.Auto)
             ?? throw new InvalidOperationException(L("No hardware encoder has been detected yet. Let Ghostclip record for a moment first.",
-                "Nenhum encoder de hardware foi detectado ainda. Deixe o Ghostclip gravar por um momento antes."));
+                "Nenhum encoder de hardware foi detectado ainda. Deixe o Ghostclip gravar por um momento antes.", "Aún no se ha detectado ningún encoder de hardware. Deja que Ghostclip grabe un momento antes."));
         return CaptureSettings.From(cfg with { Codec = VideoCodec.H264 }, choice.Encoder, choice.Input).EncoderName;
     }
 
     internal string Ffmpeg() => FfmpegLocator.Find(config().FfmpegPath, AppContext.BaseDirectory)
-        ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
+        ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado.", "No se encontró FFmpeg."));
 
     internal string Ffprobe()
     {
         var probe = Path.Combine(Path.GetDirectoryName(Ffmpeg())!, "ffprobe.exe");
-        return File.Exists(probe) ? probe : throw new InvalidOperationException(L("ffprobe.exe was not found next to FFmpeg.", "O ffprobe.exe não foi encontrado ao lado do FFmpeg."));
+        return File.Exists(probe) ? probe : throw new InvalidOperationException(L("ffprobe.exe was not found next to FFmpeg.", "O ffprobe.exe não foi encontrado ao lado do FFmpeg.", "No se encontró ffprobe.exe junto a FFmpeg."));
     }
 }

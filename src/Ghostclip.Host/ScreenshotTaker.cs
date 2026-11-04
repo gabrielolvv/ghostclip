@@ -31,7 +31,7 @@ internal sealed class ScreenshotTaker(Func<GhostclipConfig> config, ILogger log)
     {
         var cfg = config();
         var ffmpeg = FfmpegLocator.Find(cfg.FfmpegPath, AppContext.BaseDirectory)
-            ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
+            ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado.", "No se encontró FFmpeg."));
         var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, game, DateTime.Now, File.Exists, ".jpg");
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
         // Normal priority: the moment is now, and it's one frame.
@@ -41,7 +41,7 @@ internal sealed class ScreenshotTaker(Func<GhostclipConfig> config, ILogger log)
         {
             PartFile.Discard(output);
             throw new InvalidOperationException(L($"Could not take the screenshot: {(r.TimedOut ? "timed out" : r.FirstError)}",
-                $"Não foi possível tirar o print: {(r.TimedOut ? "tempo esgotado" : r.FirstError)}"));
+                $"Não foi possível tirar o print: {(r.TimedOut ? "tempo esgotado" : r.FirstError)}", $"No se pudo hacer la captura: {(r.TimedOut ? "tiempo agotado" : r.FirstError)}"));
         }
         PartFile.Commit(output);
         log.Information("Screenshot saved: {Path} ({Ms} ms)", output, (long)r.Elapsed.TotalMilliseconds);

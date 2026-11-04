@@ -135,7 +135,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 {
                     await FailAsync(UiText.L(
                         $"The replay buffer folder can't be used: {BufferDir}. Plug its drive in, or choose another folder in Settings.",
-                        $"Não dá para usar a pasta do buffer de replay: {BufferDir}. Conecte o disco ou escolha outra pasta em Configurações."), ct, retry: true).ConfigureAwait(false);
+                        $"Não dá para usar a pasta do buffer de replay: {BufferDir}. Conecte o disco ou escolha outra pasta em Configurações.", $"No se puede usar la carpeta del búfer de repetición: {BufferDir}. Conecta el disco o elige otra carpeta en Configuración."), ct, retry: true).ConfigureAwait(false);
                     continue;
                 }
 
@@ -144,7 +144,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 {
                     await FailAsync(UiText.L(
                         "FFmpeg was not found. Put it in the ffmpeg folder next to Ghostclip or set ffmpegPath in config.json.",
-                        "O FFmpeg não foi encontrado. Coloque-o na pasta ffmpeg ao lado do Ghostclip ou defina ffmpegPath no config.json."), ct).ConfigureAwait(false);
+                        "O FFmpeg não foi encontrado. Coloque-o na pasta ffmpeg ao lado do Ghostclip ou defina ffmpegPath no config.json.", "No se encontró FFmpeg. Colócalo en la carpeta ffmpeg junto a Ghostclip o define ffmpegPath en config.json."), ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -166,7 +166,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     // Never fall back to a CPU encoder: it would cost far more FPS than promised.
                     await FailAsync(UiText.L(
                         "No hardware encoder (NVENC, AMF or QuickSync) works on this PC. Ghostclip does not record with a CPU encoder.",
-                        "Nenhum encoder de hardware (NVENC, AMF ou QuickSync) funciona neste PC. O Ghostclip não grava com encoder de CPU."), ct).ConfigureAwait(false);
+                        "Nenhum encoder de hardware (NVENC, AMF ou QuickSync) funciona neste PC. O Ghostclip não grava com encoder de CPU.", "Ningún encoder de hardware (NVENC, AMF o QuickSync) funciona en este PC. Ghostclip no graba con un encoder de CPU."), ct).ConfigureAwait(false);
                     continue;
                 }
 

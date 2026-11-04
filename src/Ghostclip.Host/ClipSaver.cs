@@ -39,7 +39,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDirFor(cfg)), seconds ?? cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
         if (plan.IsEmpty)
         {
-            throw new InvalidOperationException(L("Nothing recorded yet: the replay buffer is empty.", "Nada gravado ainda: o buffer de replay está vazio."));
+            throw new InvalidOperationException(L("Nothing recorded yet: the replay buffer is empty.", "Nada gravado ainda: o buffer de replay está vazio.", "Aún no se ha grabado nada: el búfer de repetición está vacío."));
         }
 
         var dir = Path.Combine(paths.PendingDirFor(cfg), now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture));
@@ -58,7 +58,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (names.Count == 0)
         {
             Directory.Delete(dir, recursive: true);
-            throw new InvalidOperationException(L("The buffer segments disappeared before they could be saved.", "Os segmentos do buffer sumiram antes de serem salvos."));
+            throw new InvalidOperationException(L("The buffer segments disappeared before they could be saved.", "Os segmentos do buffer sumiram antes de serem salvos.", "Los segmentos del búfer desaparecieron antes de poder guardarse."));
         }
 
         // The newest segment's session decides the audio shift: that's the part people watch.
@@ -83,7 +83,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             var cfg = config();
             var ffmpeg = FfmpegLocator.Find(cfg.FfmpegPath, AppContext.BaseDirectory)
-                ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado."));
+                ?? throw new InvalidOperationException(L("FFmpeg was not found.", "O FFmpeg não foi encontrado.", "No se encontró FFmpeg."));
             var output = ClipNaming.BuildPath(cfg.ResolvedClipsFolder, snapshot.Game, snapshot.Time, File.Exists);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
             EnsureRoomFor(snapshot.Dir, output);
@@ -97,7 +97,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
             {
                 PartFile.Discard(output);
                 // The snapshot stays in Pending and is retried on the next start.
-                throw new InvalidOperationException(L($"Could not write the clip: {result.FirstError}", $"Não foi possível gravar o clipe: {result.FirstError}"));
+                throw new InvalidOperationException(L($"Could not write the clip: {result.FirstError}", $"Não foi possível gravar o clipe: {result.FirstError}", $"No se pudo escribir el clip: {result.FirstError}"));
             }
             PartFile.Commit(output);
             if (snapshot.Bookmarks is { Count: > 0 } bookmarks)
@@ -153,7 +153,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         if (free >= needed + margin) return;
         var gb = (needed + margin) / 1024.0 / 1024 / 1024;
         throw new IOException(L($"Not enough free space on {root}: saving it needs about {gb:0.0} GB. It is kept and saved on the next start.",
-            $"Não há espaço livre suficiente em {root}: salvar precisa de cerca de {gb:0.0} GB. Ele fica guardado e é salvo na próxima vez que o Ghostclip abrir."));
+            $"Não há espaço livre suficiente em {root}: salvar precisa de cerca de {gb:0.0} GB. Ele fica guardado e é salvo na próxima vez que o Ghostclip abrir.", $"No hay espacio libre suficiente en {root}: guardarlo necesita unos {gb:0.0} GB. Se conserva y se guarda la próxima vez que se abra Ghostclip."));
     }
 
     /// <summary>Snapshots left by a run that ended before remuxing them.</summary>

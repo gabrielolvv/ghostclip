@@ -31,6 +31,13 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - In Settings, choosing or removing an optional hotkey keeps the keyboard's place
   instead of going back to the top of the page.
 
+## Unreleased
+
+### Added
+
+- Spanish: the tray, notifications, library, settings and site. Like Portuguese,
+  it follows Windows, or can be picked in Settings.
+
 ## 0.8.10
 
 ### Added

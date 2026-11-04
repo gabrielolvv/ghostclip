@@ -30,9 +30,9 @@ public enum CaptureMethod { DesktopDuplication, GraphicsCapture }
 [JsonConverter(typeof(JsonStringEnumConverter<GhostclipLogLevel>))]
 public enum GhostclipLogLevel { Debug, Information, Warning, Error }
 
-/// <summary>The language of Ghostclip's own texts. Auto follows Windows: Portuguese on a Portuguese Windows, English otherwise.</summary>
+/// <summary>The language of Ghostclip's own texts. Auto follows Windows: Portuguese or Spanish on a Windows in that language, English otherwise.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<UiLanguage>))]
-public enum UiLanguage { Auto, English, Portuguese }
+public enum UiLanguage { Auto, English, Portuguese, Spanish }
 
 /// <summary>What the main audio track records.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AudioSourceMode>))]

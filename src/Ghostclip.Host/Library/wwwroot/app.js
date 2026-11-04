@@ -7,9 +7,10 @@
 const $ = id => document.getElementById(id);
 const MIN_RANGE = 0.5;
 
-// "en" or "pt": the window opens the page with ?lang=, and a "language" message changes it live.
-// Texts built here carry both translations where they are used: L('Settings', 'Configurações').
-let lang = new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
+// "en", "pt" or "es": the window opens the page with ?lang=, and a "language" message changes it live.
+// Texts built here carry every translation where they are used: L('Settings', 'Configurações', 'Configuración').
+function knownLang(code) { return code === 'pt' || code === 'es' ? code : 'en'; }
+let lang = knownLang(new URLSearchParams(location.search).get('lang'));
 
 // A soft light follows the pointer (app.css, "Light"): --mx/--my over the window, --lx/--ly inside
 // the card, button or sidebar item it's over. One write per frame, however fast the pointer moves.
@@ -37,26 +38,26 @@ document.documentElement.addEventListener('pointerleave', () => {
   document.documentElement.style.setProperty('--mx', '-1000px');
   document.documentElement.style.setProperty('--my', '-1000px');
 });
-function L(en, pt) { return lang === 'pt' ? pt : en; }
+function L(en, pt, es) { return lang === 'pt' ? pt : lang === 'es' ? es : en; }
 
-// The page's fixed texts: English is what the HTML carries, Portuguese sits next to it in data-pt,
-// data-pt-label (aria-label), data-pt-placeholder and data-pt-title. Never on an element code rewrites.
+// The page's fixed texts: English is what the HTML carries, the others sit next to it in data-pt and data-es,
+// data-pt-label (aria-label), data-pt-placeholder and data-pt-title, and the same for es. Never on an element code rewrites.
 function translatePage() {
-  document.documentElement.lang = L('en', 'pt-BR');
+  document.documentElement.lang = L('en', 'pt-BR', 'es');
   for (const node of document.querySelectorAll('[data-pt]')) {
     if (node.dataset.en === undefined) node.dataset.en = node.textContent;
-    node.textContent = L(node.dataset.en, node.dataset.pt);
+    node.textContent = L(node.dataset.en, node.dataset.pt, node.dataset.es);
   }
   for (const [name, attribute] of [['Label', 'aria-label'], ['Placeholder', 'placeholder'], ['Title', 'title']]) {
     for (const node of document.querySelectorAll(`[data-pt-${name.toLowerCase()}]`)) {
       if (node.dataset['en' + name] === undefined) node.dataset['en' + name] = node.getAttribute(attribute);
-      node.setAttribute(attribute, L(node.dataset['en' + name], node.dataset['pt' + name]));
+      node.setAttribute(attribute, L(node.dataset['en' + name], node.dataset['pt' + name], node.dataset['es' + name]));
     }
   }
 }
 
 function setLanguage(next) {
-  lang = next === 'pt' ? 'pt' : 'en';
+  lang = knownLang(next);
   translatePage();
   // Texts built by code are built again; the open clip and the settings draft stay as they are.
   if (state.listed) {
@@ -112,11 +113,11 @@ function dayLabel(date) {
   const today = new Date();
   const start = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((start(today) - start(date)) / 86400000);
-  if (days === 0) return L('TODAY', 'HOJE');
-  if (days === 1) return L('YESTERDAY', 'ONTEM');
+  if (days === 0) return L('TODAY', 'HOJE', 'HOY');
+  if (days === 1) return L('YESTERDAY', 'ONTEM', 'AYER');
   const options = { month: 'short', day: 'numeric' };
   if (date.getFullYear() !== today.getFullYear()) options.year = 'numeric';
-  return date.toLocaleDateString(L('en-US', 'pt-BR'), options).toUpperCase();
+  return date.toLocaleDateString(L('en-US', 'pt-BR', 'es-419'), options).toUpperCase();
 }
 
 function clockLabel(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
@@ -133,17 +134,17 @@ function codecLabel(codec) {
 
 // Track names as saving wrote them; clips cached before names were read only know how many there are.
 function tracksLabel(meta) {
-  const names = { Game: L('GAME', 'JOGO'), Microphone: 'MIC', Discord: 'DISCORD' };
+  const names = { Game: L('GAME', 'JOGO', 'JUEGO'), Microphone: 'MIC', Discord: 'DISCORD' };
   if (meta.audioTitles && meta.audioTitles.length) return meta.audioTitles.map(t => names[t] || t.toUpperCase()).join(' + ');
   const count = meta.audioTracks;
-  return count >= 2 ? L('GAME + MIC', 'JOGO + MIC') : count === 1 ? L('GAME', 'JOGO') : L('NO AUDIO', 'SEM ÁUDIO');
+  return count >= 2 ? L('GAME + MIC', 'JOGO + MIC', 'JUEGO + MIC') : count === 1 ? L('GAME', 'JOGO', 'JUEGO') : L('NO AUDIO', 'SEM ÁUDIO', 'SIN AUDIO');
 }
 
 // One name per track, for choosing among them. A clip with unnamed tracks only says how many it has.
 function trackNames(meta) {
-  const names = { Game: L('GAME', 'JOGO'), Microphone: 'MIC', Discord: 'DISCORD' };
+  const names = { Game: L('GAME', 'JOGO', 'JUEGO'), Microphone: 'MIC', Discord: 'DISCORD' };
   if (meta.audioTitles && meta.audioTitles.length) return meta.audioTitles.map(t => names[t] || t.toUpperCase());
-  return Array.from({ length: meta.audioTracks || 0 }, (_, i) => L(`TRACK ${i + 1}`, `FAIXA ${i + 1}`));
+  return Array.from({ length: meta.audioTracks || 0 }, (_, i) => L(`TRACK ${i + 1}`, `FAIXA ${i + 1}`, `PISTA ${i + 1}`));
 }
 
 function el(tag, className, text) {
@@ -236,8 +237,8 @@ function renderSidebar() {
     });
     nav.append(b);
   };
-  row(L('All clips', 'Todos os clipes'), state.clips.length, null);
-  row(L('★ Favorites', '★ Favoritos'), state.clips.filter(c => c.favorite).length, null, true);
+  row(L('All clips', 'Todos os clipes', 'Todos los clips'), state.clips.length, null);
+  row(L('★ Favorites', '★ Favoritos', '★ Favoritos'), state.clips.filter(c => c.favorite).length, null, true);
   for (const [game, count] of games) row(game, count, game);
 
   const bytes = state.clips.reduce((sum, c) => sum + c.bytes, 0);
@@ -268,19 +269,19 @@ function renderCard(clip) {
   pick.type = 'button';
   pick.setAttribute('role', 'checkbox');
   pick.setAttribute('aria-checked', String(selected.has(clip.path)));
-  pick.setAttribute('aria-label', L(`Select ${fileName(clip.path)}`, `Selecionar ${fileName(clip.path)}`));
+  pick.setAttribute('aria-label', L(`Select ${fileName(clip.path)}`, `Selecionar ${fileName(clip.path)}`, `Seleccionar ${fileName(clip.path)}`));
   pick.append(icon('<path d="M5 12l5 5 9-10"/>'));
   pick.addEventListener('click', e => { e.stopPropagation(); togglePick(clip.path, e.shiftKey); });
   thumb.append(pick);
   if (clip.image) {
     // A screenshot is its own thumbnail.
-    thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT')));
+    thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT', 'CAPTURA')));
     thumb.style.backgroundImage = `url("${clip.url}?v=${encodeURIComponent(clip.version)}")`;
   } else if (clip.derived) {
     const name = fileName(clip.path);
-    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : /_joined(_\d+)?\.mp4$/i.test(name) ? L('JOINED', 'JUNTOS') : L('TRIM', 'CORTE')));
+    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : /_joined(_\d+)?\.mp4$/i.test(name) ? L('JOINED', 'JUNTOS', 'UNIDOS') : L('TRIM', 'CORTE', 'RECORTE')));
   } else if (clip.bookmarks) {
-    thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`)));
+    thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`, `SESIÓN · ${clip.bookmarks.length} ◆`)));
   }
   if (clip.favorite) {
     const star = el('span', 'star');
@@ -296,10 +297,10 @@ function renderCard(clip) {
     b.addEventListener('click', e => { e.stopPropagation(); post({ ...message, path: clip.path }); });
     quick.append(b);
   };
-  quickButton(ICON_STAR, clip.favorite ? L('Remove from favorites', 'Tirar dos favoritos') : L('Add to favorites', 'Adicionar aos favoritos'),
+  quickButton(ICON_STAR, clip.favorite ? L('Remove from favorites', 'Tirar dos favoritos', 'Quitar de favoritos') : L('Add to favorites', 'Adicionar aos favoritos', 'Añadir a favoritos'),
     { type: 'favorite', favorite: !clip.favorite }, clip.favorite ? 'fav' : '');
-  quickButton(ICON_COPY, L('Copy file', 'Copiar arquivo'), { type: 'copy' });
-  quickButton(ICON_FOLDER, L('Show in folder', 'Mostrar na pasta'), { type: 'reveal' });
+  quickButton(ICON_COPY, L('Copy file', 'Copiar arquivo', 'Copiar archivo'), { type: 'copy' });
+  quickButton(ICON_FOLDER, L('Show in folder', 'Mostrar na pasta', 'Mostrar en la carpeta'), { type: 'reveal' });
   thumb.append(quick);
 
   const text = el('div', 'card-text');
@@ -387,18 +388,18 @@ function showSelection() {
   const clips = selectedClips();
   const favorites = clips.filter(c => c.favorite).length;
   const count = selected.size;
-  const items = L(`${count} ${count === 1 ? 'item' : 'items'}`, `${count} ${count === 1 ? 'item' : 'itens'}`);
+  const items = L(`${count} ${count === 1 ? 'item' : 'items'}`, `${count} ${count === 1 ? 'item' : 'itens'}`, `${count} ${count === 1 ? 'elemento' : 'elementos'}`);
   const also = favorites === 0 ? '' : L(` ${favorites} of them ${favorites === 1 ? 'is a favorite' : 'are favorites'}.`,
-    ` ${favorites === 1 ? '1 é favorito' : `${favorites} são favoritos`}.`);
+    ` ${favorites === 1 ? '1 é favorito' : `${favorites} são favoritos`}.`, ` ${favorites} de ellos ${favorites === 1 ? 'es favorito' : 'son favoritos'}.`);
   $('selbar-text').textContent = binAsking
-    ? L(`Send ${items} to the Recycle Bin?${also}`, `Mandar ${items} para a Lixeira?${also}`)
-    : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`);
+    ? L(`Send ${items} to the Recycle Bin?${also}`, `Mandar ${items} para a Lixeira?${also}`, `¿Enviar ${items} a la Papelera de reciclaje?${also}`)
+    : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`, `Seleccionados: ${items}`);
   $('sel-all').hidden = binAsking;
   $('sel-join').hidden = binAsking || count < 2 || clips.some(c => c.image);
   $('sel-favorite').hidden = binAsking;
-  $('sel-favorite').textContent = favorites === clips.length ? L('Remove from favorites', 'Tirar dos favoritos') : L('Add to favorites', 'Adicionar aos favoritos');
-  $('sel-bin').textContent = binAsking ? L('Send to Recycle Bin', 'Mandar para a Lixeira') : L('Recycle Bin', 'Lixeira');
-  $('sel-cancel').textContent = binAsking ? L('Keep them', 'Manter') : L('Cancel', 'Cancelar');
+  $('sel-favorite').textContent = favorites === clips.length ? L('Remove from favorites', 'Tirar dos favoritos', 'Quitar de favoritos') : L('Add to favorites', 'Adicionar aos favoritos', 'Añadir a favoritos');
+  $('sel-bin').textContent = binAsking ? L('Send to Recycle Bin', 'Mandar para a Lixeira', 'Enviar a la Papelera') : L('Recycle Bin', 'Lixeira', 'Papelera de reciclaje');
+  $('sel-cancel').textContent = binAsking ? L('Keep them', 'Manter', 'Conservarlos') : L('Cancel', 'Cancelar', 'Cancelar');
 }
 
 $('sel-all').addEventListener('click', () => {
@@ -406,7 +407,7 @@ $('sel-all').addEventListener('click', () => {
   showSelection();
 });
 $('sel-join').addEventListener('click', () => {
-  toast(L('Joining the clips…', 'Juntando os clipes…'));
+  toast(L('Joining the clips…', 'Juntando os clipes…', 'Uniendo los clips…'));
   post({ type: 'joinClips', paths: selectedClips().map(c => c.path) });
   clearSelection();
 });
@@ -466,10 +467,10 @@ function renderGrid() {
   // The list changed under the question: it is asked again about what is there now.
   binAsking = false;
   $('empty').hidden = state.clips.length > 0;
-  $('empty-hint').textContent = L(`Press ${state.saveKey} in a game to save a clip.`, `Aperte ${state.saveKey} num jogo para salvar um clipe.`);
+  $('empty-hint').textContent = L(`Press ${state.saveKey} in a game to save a clip.`, `Aperte ${state.saveKey} num jogo para salvar um clipe.`, `Pulsa ${state.saveKey} en un juego para guardar un clip.`);
   $('no-match').hidden = state.clips.length === 0 || clips.length > 0;
   $('count').textContent = state.clips.length
-    ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE') : L('CLIPS', 'CLIPES')}` : '';
+    ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE', 'CLIP') : L('CLIPS', 'CLIPES', 'CLIPS')}` : '';
 
   // Grouped by day only while the days are in order. By size or length a day would come up again and again.
   const byDay = state.sort === 'newest' || state.sort === 'oldest';
@@ -512,7 +513,7 @@ function showView(name) {
 function openClip(path) {
   const clip = state.clips.find(c => c.path.toLowerCase() === path.toLowerCase());
   if (!clip) {
-    toast(L('That clip is no longer in your clips folder.', 'Esse clipe não está mais na sua pasta de clipes.'), true);
+    toast(L('That clip is no longer in your clips folder.', 'Esse clipe não está mais na sua pasta de clipes.', 'Ese clip ya no está en tu carpeta de clips.'), true);
     return;
   }
   state.current = clip;
@@ -631,7 +632,7 @@ function placeBookmarks() {
     if (at > meta.duration) continue;
     const mark = el('div', 'bookmark');
     mark.style.left = `${(at / meta.duration) * 100}%`;
-    mark.title = L(`Bookmark ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`);
+    mark.title = L(`Bookmark ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`);
     mark.addEventListener('pointerdown', e => {
       e.stopPropagation();
       video.currentTime = at;
@@ -650,7 +651,7 @@ function layoutRange() {
   $('h-start').style.left = pct(state.start);
   $('h-end').style.left = pct(state.end);
   const length = state.end - state.start;
-  const hint = dragging === 'start' ? L(' · STARTS ON A KEYFRAME', ' · COMEÇA NUM KEYFRAME') : '';
+  const hint = dragging === 'start' ? L(' · STARTS ON A KEYFRAME', ' · COMEÇA NUM KEYFRAME', ' · EMPIEZA EN UN KEYFRAME') : '';
   $('t-range').textContent = `${fmtTime(state.start)} → ${fmtTime(state.end)} · ${Math.round(length)} S${hint}`;
   drawWave();
   placePlayhead();
@@ -708,7 +709,7 @@ function togglePlay() {
     if (video.currentTime < state.start || video.currentTime >= state.end) video.currentTime = state.start;
     video.play().catch(err => {
       if (err && err.name === 'AbortError') return;
-      toast(L("This clip can't be played here.", 'Este clipe não pode ser reproduzido aqui.'), true);
+      toast(L("This clip can't be played here.", 'Este clipe não pode ser reproduzido aqui.', 'Este clip no se puede reproducir aquí.'), true);
     });
   } else {
     video.pause();
@@ -802,19 +803,19 @@ $('back').addEventListener('click', closeClip);
 $('a-trim').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-trim').classList.contains('busy')) return;
   busy($('a-trim'), true);
-  toast(L('Saving trim…', 'Salvando corte…'));
+  toast(L('Saving trim…', 'Salvando corte…', 'Guardando recorte…'));
   post({ type: 'trim', path: state.current.path, start: state.start, end: state.end });
 });
 $('a-discord').addEventListener('click', () => {
   if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
-  toast(L('Compressing on the GPU…', 'Comprimindo na GPU…'));
+  toast(L('Compressing on the GPU…', 'Comprimindo na GPU…', 'Comprimiendo en la GPU…'));
   post({ type: 'compress', path: state.current.path, ...exportTracks() });
 });
 $('a-vertical').addEventListener('click', () => {
   if (!state.current || $('a-vertical').classList.contains('busy')) return;
   busy($('a-vertical'), true);
-  toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…'));
+  toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…', 'Haciendo la copia vertical en la GPU…'));
   post({ type: 'vertical', path: state.current.path, ...exportTracks() });
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
@@ -966,42 +967,43 @@ function onDone(message) {
   switch (message.op) {
     case 'trim':
       busy($('a-trim'), false);
-      toast(L('Trim saved', 'Corte salvo'), false, open);
+      toast(L('Trim saved', 'Corte salvo', 'Recorte guardado'), false, open);
       break;
     case 'compress':
       busy($('a-discord'), false);
-      toast(L(`Compressed to ${message.message}`, `Comprimido para ${message.message}`), false, open);
+      toast(L(`Compressed to ${message.message}`, `Comprimido para ${message.message}`, `Comprimido a ${message.message}`), false, open);
       break;
     case 'vertical':
       busy($('a-vertical'), false);
-      toast(L('Vertical copy saved', 'Cópia vertical salva'), false, open);
+      toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
       break;
     case 'diagnostics':
-      toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.'));
+      toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.', 'Diagnóstico copiado. Pégalo en el chat.'));
       break;
     case 'copy':
-      toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
+      toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.', 'Copiado. Pégalo en Discord.'));
       break;
     case 'joinClips':
-      toast(L('Joined clip saved', 'Clipe unido salvo'), false, open);
+      toast(L('Joined clip saved', 'Clipe unido salvo', 'Clip unido guardado'), false, open);
       break;
     case 'deleteMany':
       if (message.kept > 0) {
         toast(L(`Moved: ${message.moved}. Not moved: ${message.kept}, open in another program or kept by you.`,
-          `Movidos: ${message.moved}. Não movidos: ${message.kept}, abertos em outro programa ou mantidos por você.`), true);
+          `Movidos: ${message.moved}. Não movidos: ${message.kept}, abertos em outro programa ou mantidos por você.`, `Movidos: ${message.moved}. No movidos: ${message.kept}, abiertos en otro programa o conservados por ti.`), true);
       } else {
-        toast(L(`Moved ${message.moved} to the Recycle Bin`, message.moved === 1 ? '1 item movido para a Lixeira' : `${message.moved} itens movidos para a Lixeira`));
+        toast(L(`Moved ${message.moved} to the Recycle Bin`, message.moved === 1 ? '1 item movido para a Lixeira' : `${message.moved} itens movidos para a Lixeira`,
+          message.moved === 1 ? '1 elemento movido a la Papelera' : `${message.moved} elementos movidos a la Papelera`));
       }
       break;
     case 'delete':
-      toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
+      toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira', 'Movido a la Papelera de reciclaje'));
       if (state.current && state.current.path === message.path) {
         state.current = null;
         showView('library');
       }
       break;
     case 'rename':
-      toast(L('Renamed', 'Renomeado'));
+      toast(L('Renamed', 'Renomeado', 'Renombrado'));
       // The list with the new name follows; the clip opens again under it.
       if (state.current && state.current.path === message.path) state.pendingOpen = message.output;
       break;
@@ -1083,7 +1085,7 @@ function onMessage(message) {
         lengthAnswered();
       }
       if (message.op === 'meta' && !(state.current && state.current.path === message.path)) break;
-      toast(message.message || L('Something went wrong.', 'Algo deu errado.'), true);
+      toast(message.message || L('Something went wrong.', 'Algo deu errado.', 'Algo salió mal.'), true);
       break;
     case 'changed':
       post({ type: 'list' });

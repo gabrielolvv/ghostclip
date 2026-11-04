@@ -80,15 +80,15 @@ public static class ClipMedia
         if (!keyframes.Succeeded)
         {
             throw new InvalidOperationException(UiText.L($"Could not list the clip's keyframes: {(keyframes.TimedOut ? "timed out" : keyframes.FirstError)}",
-                $"Não foi possível listar os keyframes do clipe: {(keyframes.TimedOut ? "tempo esgotado" : keyframes.FirstError)}"));
+                $"Não foi possível listar os keyframes do clipe: {(keyframes.TimedOut ? "tempo esgotado" : keyframes.FirstError)}", $"No se pudieron listar los fotogramas clave del clip: {(keyframes.TimedOut ? "tiempo agotado" : keyframes.FirstError)}"));
         }
         var keys = ParseKeyframes(keyframes.StdOut);
-        if (keys.Count == 0) throw new InvalidOperationException(UiText.L("The clip has no keyframes to trim from.", "O clipe não tem keyframes para cortar."));
+        if (keys.Count == 0) throw new InvalidOperationException(UiText.L("The clip has no keyframes to trim from.", "O clipe não tem keyframes para cortar.", "El clip no tiene fotogramas clave para recortar."));
         if (audioTracks > 0 && peaks is not { Succeeded: true })
         {
             throw new InvalidOperationException(UiText.L(
                 $"Could not read the clip's audio levels: {(peaks is null ? "not measured" : peaks.TimedOut ? "timed out" : peaks.FirstError)}",
-                $"Não foi possível ler os níveis de áudio do clipe: {(peaks is null ? "não medido" : peaks.TimedOut ? "tempo esgotado" : peaks.FirstError)}"));
+                $"Não foi possível ler os níveis de áudio do clipe: {(peaks is null ? "não medido" : peaks.TimedOut ? "tempo esgotado" : peaks.FirstError)}", $"No se pudieron leer los niveles de audio del clip: {(peaks is null ? "sin medir" : peaks.TimedOut ? "tiempo agotado" : peaks.FirstError)}"));
         }
         return new ClipMeta(duration, height, Math.Round(fps, 2), audioTracks, videoCodec, keys,
             peaks is null ? [] : ParsePeaks(peaks.StdErr), audioTitles);

@@ -32,7 +32,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 CaptureHotkey(false);
                 break;
             case "pickFolder":
-                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip saves clips", "Onde o Ghostclip salva os clipes"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
+                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip saves clips", "Onde o Ghostclip salva os clipes", "Dónde guarda Ghostclip los clips"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
                 {
                     var folder = current().ResolvedClipsFolder;
                     if (Directory.Exists(folder)) dialog.InitialDirectory = folder;
@@ -40,7 +40,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 }
                 break;
             case "pickBufferFolder":
-                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip keeps the replay buffer", "Onde o Ghostclip guarda o buffer de replay"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
+                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip keeps the replay buffer", "Onde o Ghostclip guarda o buffer de replay", "Dónde guarda Ghostclip el búfer de repetición"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
                 {
                     if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "bufferFolder", Path: dialog.SelectedPath));
                 }
@@ -48,8 +48,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             case "pickFfmpeg":
                 using (var dialog = new OpenFileDialog
                 {
-                    Title = L("Choose ffmpeg.exe", "Escolha o ffmpeg.exe"),
-                    Filter = L("FFmpeg|ffmpeg.exe|Programs|*.exe", "FFmpeg|ffmpeg.exe|Programas|*.exe"),
+                    Title = L("Choose ffmpeg.exe", "Escolha o ffmpeg.exe", "Elige ffmpeg.exe"),
+                    Filter = L("FFmpeg|ffmpeg.exe|Programs|*.exe", "FFmpeg|ffmpeg.exe|Programas|*.exe", "FFmpeg|ffmpeg.exe|Programas|*.exe"),
                     CheckFileExists = true,
                 })
                 {
@@ -114,7 +114,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 
     private void Save(LibraryRequest r)
     {
-        var raw = r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar."));
+        var raw = r.Config ?? throw new InvalidOperationException(L("No settings to save.", "Nenhuma configuração para salvar.", "No hay configuración que guardar."));
         var config = raw.Normalize();
         // The hotkeys as typed: normalizing would quietly swap a common shortcut for the default.
         if ((HotkeyProblem(raw) ?? HotkeyProblem(config)) is { } hotkeyError)
@@ -141,7 +141,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         {
             // Segments in two formats can't be joined: the buffer starts over.
             warnings.Add(L($"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay.",
-                $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay."));
+                $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay.", $"Guardar reinicia la grabación y borra los últimos {before!.MaxClipSeconds} s de repetición."));
         }
         if (!r.Confirmed && config.StorageLimitGB > 0)
         {
@@ -155,13 +155,13 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             if (!readable)
             {
                 warnings.Add(L("The space limit is paused: the file that keeps your favorites can't be read, so nothing is deleted.",
-                    "O limite de espaço está pausado: o arquivo dos favoritos não pode ser lido, então nada é apagado."));
+                    "O limite de espaço está pausado: o arquivo dos favoritos não pode ser lido, então nada é apagado.", "El límite de espacio está en pausa: no se puede leer el archivo de tus favoritos, así que no se borra nada."));
             }
             if (deleting.Count > 0)
             {
                 var gb = deleting.Sum(c => c.Bytes) / (double)StorageLimit.BytesPerGB;
                 warnings.Add(L($"To fit in {config.StorageLimitGB} GB, your {deleting.Count} oldest clips ({gb:0.0} GB) are deleted for good. Favorites stay.",
-                    $"Para caber em {config.StorageLimitGB} GB, seus {deleting.Count} clipes mais antigos ({gb:0.0} GB) são apagados de vez. Os favoritos ficam."));
+                    $"Para caber em {config.StorageLimitGB} GB, seus {deleting.Count} clipes mais antigos ({gb:0.0} GB) são apagados de vez. Os favoritos ficam.", $"Para caber en {config.StorageLimitGB} GB, tus {deleting.Count} clips más antiguos ({gb:0.0} GB) se eliminan definitivamente. Los favoritos se quedan."));
             }
         }
         if (!r.Confirmed && warnings.Count > 0)
@@ -190,11 +190,11 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
     {
         if (string.IsNullOrWhiteSpace(config.BufferFolder)) return null;
         var folder = config.BufferFolder.Trim();
-        var message = L($"The replay buffer can't be kept in {folder}. Choose another folder.", $"Não dá para guardar o buffer de replay em {folder}. Escolha outra pasta.");
+        var message = L($"The replay buffer can't be kept in {folder}. Choose another folder.", $"Não dá para guardar o buffer de replay em {folder}. Escolha outra pasta.", $"No se puede guardar el búfer de repetición en {folder}. Elige otra carpeta.");
         if (!GhostclipPaths.CanHoldBuffer(folder))
         {
             return L($"The replay buffer can't be kept in {folder}: FFmpeg can't work in a path with % or #. Choose another folder.",
-                $"Não dá para guardar o buffer de replay em {folder}: o FFmpeg não funciona num caminho com % ou #. Escolha outra pasta.");
+                $"Não dá para guardar o buffer de replay em {folder}: o FFmpeg não funciona num caminho com % ou #. Escolha outra pasta.", $"No se puede guardar el búfer de repetición en {folder}: FFmpeg no funciona en una ruta con % o #. Elige otra carpeta.");
         }
         if (!Path.IsPathFullyQualified(folder)) return message;
         try
@@ -222,14 +222,14 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         if (keys.Distinct().Count() < keys.Count)
         {
             return L("Saving a clip, saving a short clip, taking a screenshot, recording a session, muting the microphone and pausing recording can't share a hotkey.",
-                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão, mutar o microfone e pausar a gravação não podem usar a mesma hotkey.");
+                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão, mutar o microfone e pausar a gravação não podem usar a mesma hotkey.", "Guardar un clip, guardar un clip corto, hacer una captura, grabar una sesión, silenciar el micrófono y pausar la grabación no pueden compartir la misma tecla.");
         }
         return null;
     }
 
     private static string Unreadable(string? error) => L(
         $"config.json can't be read ({error}). Fix the file, or delete it to start from the defaults; nothing is saved from here until then.",
-        $"Não foi possível ler o config.json ({error}). Corrija o arquivo ou apague-o para começar dos padrões; nada é salvo daqui até lá.");
+        $"Não foi possível ler o config.json ({error}). Corrija o arquivo ou apague-o para começar dos padrões; nada é salvo daqui até lá.", $"No se puede leer config.json ({error}). Corrige el archivo o bórralo para empezar con los valores predeterminados; hasta entonces no se guarda nada desde aquí.");
 
     // What the recorder measured working on this PC, for marking the encoder choices.
     private IReadOnlyList<string> DetectedEncoders()

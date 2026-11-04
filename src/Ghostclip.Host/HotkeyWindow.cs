@@ -31,7 +31,7 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         // While paused it only takes its place: Resume registers it with the others.
         if (!_paused && !Register(action, modifiers, key))
         {
-            error = L($"{gesture} is already taken by another program.", $"{gesture} já está em uso por outro programa.");
+            error = L($"{gesture} is already taken by another program.", $"{gesture} já está em uso por outro programa.", $"{gesture} ya la usa otro programa.");
             return false;
         }
         _registered[action] = (modifiers, key);
@@ -86,7 +86,7 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
                 key is Keys.ShiftKey or Keys.ControlKey or Keys.Menu or Keys.LWin or Keys.RWin)
             {
                 error = L($"\"{gesture}\" is not a valid hotkey. Use something like Alt+F10.",
-                    $"\"{gesture}\" não é uma hotkey válida. Use algo como Alt+F10.");
+                    $"\"{gesture}\" não é uma hotkey válida. Use algo como Alt+F10.", $"\"{gesture}\" no es una tecla válida. Usa algo como Alt+F10.");
                 key = Keys.None;
                 return false;
             }
@@ -94,20 +94,20 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         if (key == Keys.None)
         {
             error = L($"\"{gesture}\" has no main key. Use something like Alt+F10.",
-                $"\"{gesture}\" não tem uma tecla principal. Use algo como Alt+F10.");
+                $"\"{gesture}\" não tem uma tecla principal. Use algo como Alt+F10.", $"\"{gesture}\" no tiene una tecla principal. Usa algo como Alt+F10.");
             return false;
         }
         if (HotkeyRules.TakesCommonShortcut(gesture))
         {
             error = L($"{gesture} is a shortcut programs use all the time; as a hotkey it would stop working in all of them. Use something like Alt+F10.",
-                $"{gesture} é um atalho que os programas usam o tempo todo; como hotkey, ele pararia de funcionar em todos. Use algo como Alt+F10.");
+                $"{gesture} é um atalho que os programas usam o tempo todo; como hotkey, ele pararia de funcionar em todos. Use algo como Alt+F10.", $"{gesture} es un atajo que los programas usan todo el tiempo; como tecla, dejaría de funcionar en todos. Usa algo como Alt+F10.");
             key = Keys.None;
             return false;
         }
         if (modifiers == 0 && !HotkeyRules.AllowedWithoutModifier(key.ToString()))
         {
             error = L($"\"{gesture}\" alone would stop working in every other program. Add Ctrl, Alt, Shift or Win, or use an F key.",
-                $"\"{gesture}\" sozinha deixaria de funcionar em todos os outros programas. Adicione Ctrl, Alt, Shift ou Win, ou use uma tecla F.");
+                $"\"{gesture}\" sozinha deixaria de funcionar em todos os outros programas. Adicione Ctrl, Alt, Shift ou Win, ou use uma tecla F.", $"\"{gesture}\" sola dejaría de funcionar en todos los demás programas. Añade Ctrl, Alt, Shift o Win, o usa una tecla F.");
             key = Keys.None;
             return false;
         }
