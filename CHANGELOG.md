@@ -14,6 +14,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   tray menu has the same switch. The key is taken only while the microphone
   is on, can be changed in Settings > Audio, and Ghostclip always starts with
   the microphone on.
+- A second clip key for when you only want the moment: Settings > Clips > Save
+  a short clip saves the last 15 s, or the length you set, while Alt+F10 keeps
+  saving its usual clip. It comes without a key, so updating takes nothing away
+  from other programs or games; once you choose one, the tray menu has it too.
 - Settings > Clips > Confirmation sounds (was "Sound when a clip is saved")
   says what it covers: clips, screenshots and sessions.
 

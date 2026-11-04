@@ -141,20 +141,21 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["screenshotHotkey"] = KeyLabels.Describe(config.ScreenshotHotkey),
         ["sessionHotkey"] = KeyLabels.Describe(config.SessionHotkey),
         ["micMuteHotkey"] = KeyLabels.Describe(config.MicMuteHotkey),
+        ["shortClipHotkey"] = KeyLabels.Describe(config.ShortClipHotkey),
     };
 
     // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
     private static string? HotkeyProblem(GhostclipConfig config)
     {
-        foreach (var gesture in config.Hotkeys)
+        foreach (var gesture in config.ChosenHotkeys)
         {
             if (!HotkeyWindow.TryParse(gesture, out _, out _, out var error)) return error;
         }
-        var keys = config.Hotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
+        var keys = config.ChosenHotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
         if (keys.Distinct().Count() < keys.Count)
         {
-            return L("Saving a clip, taking a screenshot, recording a session and muting the microphone each need a hotkey of their own.",
-                "Salvar clipe, tirar print, gravar sessão e mutar o microfone precisam de uma hotkey diferente cada.");
+            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session and muting the microphone each need a hotkey of their own.",
+                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão e mutar o microfone precisam de uma hotkey diferente cada.");
         }
         return null;
     }

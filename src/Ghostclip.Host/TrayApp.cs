@@ -15,6 +15,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly SynchronizationContext _ui;
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _saveItem;
+    private readonly ToolStripMenuItem _shortClipItem;
     private readonly ToolStripMenuItem _screenshotItem;
     private readonly ToolStripMenuItem _sessionItem;
     private readonly ToolStripMenuItem _micItem;
@@ -75,6 +76,7 @@ internal sealed class TrayApp : ApplicationContext
 
         // Texts come from ApplyTexts, in the chosen language.
         _saveItem = new ToolStripMenuItem("", null, (_, _) => SaveClip()) { Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold) };
+        _shortClipItem = new ToolStripMenuItem("", null, (_, _) => SaveClip(_config.ShortClipSeconds));
         _screenshotItem = new ToolStripMenuItem("", null, (_, _) => TakeScreenshot());
         _sessionItem = new ToolStripMenuItem("", null, (_, _) => ToggleSession());
         _micItem = new ToolStripMenuItem("", null, (_, _) => ToggleMicrophone());
@@ -90,6 +92,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_saveItem);
+        menu.Items.Add(_shortClipItem);
         menu.Items.Add(_screenshotItem);
         menu.Items.Add(_sessionItem);
         menu.Items.Add(_micItem);
@@ -137,6 +140,7 @@ internal sealed class TrayApp : ApplicationContext
                 case HotkeyAction.Screenshot: TakeScreenshot(); break;
                 case HotkeyAction.Session: ToggleSession(); break;
                 case HotkeyAction.MicMute: ToggleMicrophone(); break;
+                case HotkeyAction.ShortClip: SaveClip(_config.ShortClipSeconds); break;
             }
         };
         // An exit request set before this instance existed (by the installer's hook,
@@ -245,6 +249,8 @@ internal sealed class TrayApp : ApplicationContext
     {
         // Without a microphone track the mute key stays free for other programs.
         if (action == HotkeyAction.MicMute && !_config.Microphone) return;
+        // So does the short clip key, until one is chosen.
+        if (action == HotkeyAction.ShortClip && !_config.HasShortClipHotkey) return;
         var gesture = _config.Hotkeys[(int)action];
         var old = previous?.Hotkeys[(int)action];
         if (_hotkey.TryRegister(action, gesture, out var error))
@@ -273,6 +279,8 @@ internal sealed class TrayApp : ApplicationContext
     private void ApplyTexts()
     {
         _saveItem.Text = WithHotkey(HotkeyAction.SaveClip, L("Save clip", "Salvar clipe"));
+        _shortClipItem.Text = WithHotkey(HotkeyAction.ShortClip, L($"Save last {_config.ShortClipSeconds} s", $"Salvar últimos {_config.ShortClipSeconds} s"));
+        _shortClipItem.Visible = _config.HasShortClipHotkey;
         _screenshotItem.Text = WithHotkey(HotkeyAction.Screenshot, L("Take screenshot", "Tirar print"));
         _sessionItem.Text = _session.Running
             ? WithHotkey(HotkeyAction.Session, L($"Stop session recording · {Clock(_session.Elapsed)}", $"Parar gravação da sessão · {Clock(_session.Elapsed)}"))
@@ -413,7 +421,8 @@ internal sealed class TrayApp : ApplicationContext
         return _gamePid != 0 && !front.Fullscreen && _config.ProfileFor(front.Game) is null ? _game : front.Game;
     }
 
-    private void SaveClip()
+    // Without a length, the one set for the game.
+    private void SaveClip(int? seconds = null)
     {
         var game = CurrentGame();
         // During a session the moment is also marked in it; the clip is saved as well.
@@ -421,7 +430,7 @@ internal sealed class TrayApp : ApplicationContext
         ClipSnapshot snapshot;
         try
         {
-            snapshot = _saver.TakeSnapshot(game, recording: _status.State == WorkerState.Recording);
+            snapshot = _saver.TakeSnapshot(game, recording: _status.State == WorkerState.Recording, seconds);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {

@@ -29,6 +29,13 @@ const Settings = (() => {
         hint: L('Press to start and again to stop. Keeps everything in between: about 9 GB an hour at 20 Mbps.', 'Aperte para começar e de novo para parar. Guarda tudo entre os dois: uns 9 GB por hora a 20 Mbps.'), type: 'hotkey' },
       { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
+      { key: 'shortClipHotkey', label: L('Save a short clip', 'Salvar um clipe curto'),
+        hint: L('Optional: a second key that saves a clip of its own length. No key is taken until you choose one.',
+          'Opcional: uma segunda tecla que salva um clipe com duração própria. Nenhuma tecla é ocupada até você escolher uma.'), type: 'hotkey', optional: true },
+      { key: 'shortClipSeconds', label: L('Short clip length', 'Duração do clipe curto'),
+        hint: L('The same in every game. Longer than the clip length, the replay buffer keeps that much too.',
+          'A mesma em todos os jogos. Maior que a duração do clipe, o buffer de replay também guarda esse tanto.'),
+        type: 'number', unit: 'S', min: 10, max: 600 },
       { key: 'clipsFolder', label: L('Clips folder', 'Pasta de clipes'), hint: L('A folder per game goes inside.', 'Dentro dela fica uma pasta por jogo.'),
         type: 'path', pick: 'pickFolder', empty: () => s.saved && s.saved.resolvedClipsFolder, reset: L('Default', 'Padrão') },
       { key: 'confirmationSound', label: L('Confirmation sounds', 'Sons de confirmação'),
@@ -272,16 +279,23 @@ const Settings = (() => {
       }
       case 'hotkey': {
         // The saved hotkey as the app names it on this keyboard; a new one as you pressed it.
-        const shown = value === (s.saved && s.saved[field.key])
-          ? ((s.hotkeyLabels || {})[field.key] || value)
-          : ((s.recordedLabels || {})[field.key] || value);
+        const shown = !value ? L('Choose a key', 'Escolher tecla')
+          : value === (s.saved && s.saved[field.key])
+            ? ((s.hotkeyLabels || {})[field.key] || value)
+            : ((s.recordedLabels || {})[field.key] || value);
         const b = el('button', 'act hotkey', shown);
         b.type = 'button';
         b.setAttribute('aria-label', `${field.label}: ${shown}`);
         b.addEventListener('click', () => listen(b, field.key));
         // Listening ends when focus leaves the field, so a key pressed elsewhere never becomes the hotkey.
         b.addEventListener('blur', () => stopListening());
-        return b;
+        if (!field.optional || !value) return b;
+        // An optional hotkey can go back to taking no key at all.
+        const remove = el('button', 'act small', L('Remove', 'Remover'));
+        remove.type = 'button';
+        remove.setAttribute('aria-label', `${L('Remove', 'Remover')}: ${field.label}`);
+        remove.addEventListener('click', () => { s.draft[field.key] = ''; changed(); render(); });
+        return [b, remove];
       }
     }
     return el('span');
@@ -353,9 +367,12 @@ const Settings = (() => {
       : main;
     const label = [...mods, printed].join('+');
     s.recordedLabels = { ...s.recordedLabels, [s.listening.key]: label };
+    // An optional hotkey that had no key gains its Remove button.
+    const first = !s.draft[s.listening.key];
     s.draft[s.listening.key] = combo;
     stopListening(label);
     changed();
+    if (first) render();
   }, true);
 
   // Profiles
