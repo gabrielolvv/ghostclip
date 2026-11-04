@@ -30,6 +30,10 @@ const Settings = (() => {
       { key: 'pauseHotkey', label: L('Pause recording', 'Pausar a gravação'),
         hint: L('Optional: stops recording and deletes the replay buffer until you press it again, for a bank’s page or a password. The tray menu does it too. Ghostclip records again when it restarts.',
           'Opcional: para a gravação e apaga o buffer de replay até você apertar de novo, para a página do banco ou uma senha. O menu da bandeja também faz isso. O Ghostclip volta a gravar quando reinicia.'), type: 'hotkey', optional: true },
+      { key: 'privateApps', label: L('Pause for these programs', 'Pausar para estes programas'),
+        hint: L('While one is the active window, recording pauses by itself and the replay buffer is deleted. Beside another active window it can still be recorded. Names as in the Details tab of Task Manager, separated by commas. Programs only: not a website in a browser, and Store apps may not be recognized.',
+          'Enquanto um deles for a janela ativa, a gravação pausa sozinha e o buffer de replay é apagado. Ao lado de outra janela ativa, ele ainda pode ser gravado. Nomes como na aba Detalhes do Gerenciador de Tarefas, separados por vírgula. Só programas: não um site no navegador, e apps da Store podem não ser reconhecidos.'),
+        type: 'names', placeholder: 'KeePass, Bitwarden' },
       { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
       { key: 'shortClipHotkey', label: L('Save a short clip', 'Salvar um clipe curto'),
@@ -276,6 +280,18 @@ const Settings = (() => {
           parts.push(reset);
         }
         return parts;
+      }
+      case 'names': {
+        const input = el('input', 'field names');
+        input.value = (value || []).join(', ');
+        input.placeholder = field.placeholder;
+        input.spellcheck = false;
+        input.setAttribute('aria-label', field.label);
+        input.addEventListener('input', () => {
+          s.draft[field.key] = input.value.split(/[,;]/).map(n => n.trim()).filter(Boolean);
+          changed();
+        });
+        return input;
       }
       case 'action': {
         // Not a setting: a button that asks the app for something.

@@ -50,6 +50,8 @@ internal sealed class TrayApp : ApplicationContext
     // Muted by the hotkey. Never saved: Ghostclip always starts with the microphone on.
     private bool _micMuted;
     private bool _paused;
+    private string? _pausedFor;
+    private bool Paused => _paused || _pausedFor is not null;
     private bool _welcomePending;
     private readonly List<(EventWaitHandle Request, RegisteredWaitHandle Wait)> _commands = [];
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
@@ -127,6 +129,7 @@ internal sealed class TrayApp : ApplicationContext
         _session.Ticked += ApplyTexts;
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
         _foregroundTimer.Tick += (_, _) => CheckForeground();
+        _foregroundTimer.Interval = ForegroundInterval(_config);
         _foregroundTimer.Start();
         _diskTimer.Tick += (_, _) => CheckDiskSpace();
         _diskTimer.Start();
@@ -180,6 +183,8 @@ internal sealed class TrayApp : ApplicationContext
         ClearOldBuffers();
         RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
+        // A listed program already in front: the worker hears it before anything it could record.
+        CheckPrivateAppNow();
         _worker.Start(_config);
         PublishStatus(_status);
         _ = RecoverPendingAsync();
@@ -403,9 +408,19 @@ internal sealed class TrayApp : ApplicationContext
         ExitThread();
     }
 
+    // Quicker with programs to pause for: what they show should reach the disk for as short a time as possible.
+    private static int ForegroundInterval(GhostclipConfig config) => config.PrivateApps.Count > 0 ? 500 : 2000;
+
     private void CheckForeground()
     {
         var front = ForegroundGame.Detect();
+        var privateApp = _config.PausingApp(_pausedFor, front.Process, front.Game);
+        if (privateApp != _pausedFor)
+        {
+            var before = Paused;
+            _pausedFor = privateApp;
+            PauseChanged(before, fromKey: false);
+        }
         if (front.Game != _foreground)
         {
             _foreground = front.Game;
@@ -413,7 +428,7 @@ internal sealed class TrayApp : ApplicationContext
             UpdateStatusItem();
         }
 
-        var isGame = front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
+        var isGame = privateApp is null && front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
         if (isGame && front.ProcessId != _gamePid)
         {
             SetGame(front.Game, front.ProcessId);
@@ -494,7 +509,8 @@ internal sealed class TrayApp : ApplicationContext
     // Without a length, the one set for the game.
     private void SaveClip(int? seconds = null)
     {
-        if (_paused)
+        CheckPrivateAppNow();
+        if (Paused)
         {
             Notify(L("Clip not saved", "Clipe não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
             return;
@@ -522,23 +538,49 @@ internal sealed class TrayApp : ApplicationContext
     // so there is nothing to save from before it either. Not kept across restarts: Ghostclip always starts recording.
     private void TogglePause()
     {
+        var before = Paused;
         _paused = !_paused;
-        // A session is the buffer kept, and the buffer is about to go: saved as it is.
-        if (_paused && _session.Running) StopSession();
-        _worker.SetPaused(_paused);
-        _log.Information(_paused ? "Recording paused from the tray" : "Recording resumed from the tray");
+        PauseChanged(before, fromKey: true);
+    }
+
+    // A key pressed the moment a listed program comes to the front must not save what it shows.
+    private void CheckPrivateAppNow()
+    {
+        if (_config.PrivateApps.Count > 0) CheckForeground();
+    }
+
+    // The key or menu, or a program from Settings > Clips in front: paused while either says so.
+    private void PauseChanged(bool before, bool fromKey)
+    {
+        ApplyTexts();
+        if (Paused == before)
+        {
+            if (fromKey && _pausedFor is { } holding)
+            {
+                Notify(_paused ? L("Recording stays paused", "A gravação continua pausada") : L("Recording still paused", "Gravação continua pausada"),
+                    _paused
+                        ? L($"Also after {holding} leaves the front, until you press it again.", $"Também depois que {holding} sair da frente, até você apertar de novo.")
+                        : L($"{holding} is in front.", $"{holding} está na frente."), ToolTipIcon.None);
+            }
+            return;
+        }
+        // A session is the buffer kept, and the buffer is about to go: saved as it is. For a listed program it goes on
+        // in a new part afterwards, since a moment in a password manager shouldn't end it (see OnStatus).
+        if (Paused && _pausedFor is null && _session.Running) StopSession();
+        _worker.SetPaused(Paused);
+        _log.Information(Paused ? "Recording paused ({App})" : "Recording resumed", _pausedFor ?? "from the tray");
         // A balloon doesn't show over a fullscreen game: the tone says it there, even with the other sounds off.
-        (_paused ? _mutedSound : _unmutedSound).Play();
-        if (_paused)
+        (Paused ? _mutedSound : _unmutedSound).Play();
+        if (Paused)
         {
             Notify(L("Recording paused", "Gravação pausada"),
+                (_pausedFor is { } app ? L($"{app} is in front. ", $"{app} está na frente. ") : "") +
                 L("The replay buffer is deleted, and nothing is recorded until you resume.", "O buffer de replay é apagado, e nada é gravado até você retomar."), ToolTipIcon.None);
         }
         else
         {
             Notify(L("Recording resumed", "Gravação retomada"), L("Clips start from now.", "Os clipes começam a partir de agora."), ToolTipIcon.None);
         }
-        ApplyTexts();
     }
 
     // The microphone track records silence until the key is pressed again. Recording goes on: nothing restarts.
@@ -575,7 +617,8 @@ internal sealed class TrayApp : ApplicationContext
 
     private async void TakeScreenshot()
     {
-        if (_paused)
+        CheckPrivateAppNow();
+        if (Paused)
         {
             Notify(L("Screenshot not saved", "Print não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
             return;
@@ -604,7 +647,7 @@ internal sealed class TrayApp : ApplicationContext
             return;
         }
         // A session is the buffer kept: there must be a buffer being written.
-        if (_paused || _status.State != WorkerState.Recording)
+        if (Paused || _status.State != WorkerState.Recording)
         {
             Notify(L("Session not started", "Sessão não iniciada"),
                 L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora."), ToolTipIcon.Warning);
@@ -774,6 +817,7 @@ internal sealed class TrayApp : ApplicationContext
             StopSession();
         }
         _config = config;
+        _foregroundTimer.Interval = ForegroundInterval(config);
         RememberBufferFolder();
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         UiText.Use(config.Language);

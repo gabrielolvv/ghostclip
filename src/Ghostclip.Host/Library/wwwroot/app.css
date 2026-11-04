@@ -230,6 +230,7 @@ main { min-width: 0; min-height: 0; display: flex; }
   background: var(--canvas); color: var(--text); font: inherit; outline: none; transition: border-color var(--fast);
 }
 .field:focus { border-color: var(--accent); }
+input.field.names { width: 220px; }
 input.field[type=number] { width: 86px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 select.field { padding-right: 6px; }
 .path { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--mono); color: var(--text); }

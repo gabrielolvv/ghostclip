@@ -34,7 +34,8 @@ QuickSync). There is no CPU encoder fallback.
   the clip hotkey adds bookmarks you can jump to. It keeps the replay buffer
   instead of running a second encoder, so the game pays nothing extra.
 - **Pause** from the tray or a key you choose: stops recording and deletes the
-  replay buffer, for a bank's page or a password.
+  replay buffer, for a bank's page or a password. It can also pause by itself
+  while a program you list is in front.
 - **Per-game profiles** for clip length, audio source and microphone mute.
 - **Replay buffer on the drive you choose,** to spare the system's SSD.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a

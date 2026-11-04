@@ -67,6 +67,18 @@ public sealed class GameProfileList : List<GameProfile>
     public override int GetHashCode() => Count;
 }
 
+/// <summary>Program names with value equality, so configs compare by content.</summary>
+public sealed class AppNameList : List<string>
+{
+    public AppNameList() { }
+
+    public AppNameList(IEnumerable<string> items) : base(items) { }
+
+    public override bool Equals(object? obj) => obj is AppNameList other && this.SequenceEqual(other);
+
+    public override int GetHashCode() => Count;
+}
+
 // Settable rather than init-only: the JSON source generator sets every init-only
 // property, so a field missing from a hand-edited config.json would become 0
 // instead of keeping its default.
@@ -134,6 +146,9 @@ public sealed record GhostclipConfig
     /// is ever deleted unless people chose a limit.
     /// </summary>
     public int StorageLimitGB { get; set; }
+
+    /// <summary>Programs that pause recording while they are in front, by process name. Applies live.</summary>
+    public AppNameList PrivateApps { get; set; } = [];
 
     public GameProfileList Profiles { get; set; } = [];
 
@@ -217,6 +232,7 @@ public sealed record GhostclipConfig
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
         StorageLimitGB = Math.Clamp(StorageLimitGB, 0, 100_000),
+        PrivateApps = new AppNameList((PrivateApps ?? []).Select(AppName).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)),
         Profiles = new GameProfileList((Profiles ?? [])
             .Where(p => !string.IsNullOrWhiteSpace(p.Game))
             .Select(p => p with
@@ -225,6 +241,29 @@ public sealed record GhostclipConfig
                 ClipSeconds = p.ClipSeconds is { } s ? Math.Clamp(s, 10, 600) : null,
             })),
     };
+
+    private static string AppName(string name)
+    {
+        var trimmed = name.Trim();
+        return trimmed.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? trimmed[..^4].TrimEnd() : trimmed;
+    }
+
+    /// <summary>Whether this program pauses recording while it is in front. By its whole name, without .exe.</summary>
+    public bool IsPrivateApp(string? process) =>
+        !string.IsNullOrWhiteSpace(process) && PrivateApps.Contains(AppName(process), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The listed program recording is paused for, or null. <paramref name="process"/> and <paramref name="name"/> are
+    /// the program in front: the taskbar, Alt+Tab, the tray's menu and the library take the focus with the program
+    /// still on screen, so they change nothing until another program has it.
+    /// </summary>
+    public string? PausingApp(string? current, string? process, string? name)
+    {
+        if (IsPrivateApp(process)) return process;
+        if (IsPrivateApp(name)) return name;
+        var passing = process is null || process.Equals("explorer", StringComparison.OrdinalIgnoreCase) || process.Equals("Ghostclip", StringComparison.OrdinalIgnoreCase);
+        return passing && IsPrivateApp(current) ? current : null;
+    }
 
     public GameProfile? ProfileFor(string? game) =>
         game is null ? null : Profiles.FirstOrDefault(p => string.Equals(p.Game, game, StringComparison.OrdinalIgnoreCase));
