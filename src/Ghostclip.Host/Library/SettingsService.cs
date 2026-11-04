@@ -53,12 +53,19 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         }
     }
 
+    /// <summary>The window lost focus: nothing can be pressed here now, so a game gets its hotkeys back whatever the page thinks.</summary>
+    public void WindowDeactivated()
+    {
+        if (_hotkeyCapture is not null) CaptureHotkey(false);
+    }
+
     // The tray lets go of its hotkeys while the page waits for one: a key it holds would run its action and never
     // reach the page. The mutex says so; it closes with this process, so a crash can't leave the hotkeys off.
     private void CaptureHotkey(bool capturing)
     {
         _hotkeyCapture?.Dispose();
-        _hotkeyCapture = capturing ? new Mutex(initiallyOwned: false, LibraryProgram.HotkeyCaptureMutexName) : null;
+        // A click followed at once by a switch to another window can arrive after the window lost focus.
+        _hotkeyCapture = capturing && Form.ActiveForm == window ? new Mutex(initiallyOwned: false, LibraryProgram.HotkeyCaptureMutexName) : null;
         if (EventWaitHandle.TryOpenExisting(Program.HotkeyCaptureEventName, out var changed))
         {
             using (changed) changed.Set();

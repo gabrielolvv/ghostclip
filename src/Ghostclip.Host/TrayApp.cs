@@ -238,6 +238,8 @@ internal sealed class TrayApp : ApplicationContext
     {
         _hotkey.UnregisterAll();
         _hotkeyLabels.Clear();
+        // A save lands in the second before the keys come back: they register now, so one already taken keeps its old key.
+        if (!Library.LibraryProgram.IsCapturingHotkey()) _hotkey.Resume();
         foreach (var action in Enum.GetValues<HotkeyAction>()) Register(action, previous);
         ApplyTexts();
     }
