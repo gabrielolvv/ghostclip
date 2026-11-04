@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Settings > Clips > Pause for these programs: while a password manager or a
+  bank's app you list is in front, recording pauses by itself and the replay
+  buffer is deleted, and it goes on when the program leaves the front. Programs
+  only: it can't tell a website in a browser.
+
 ## 0.8.10
 
 ### Added

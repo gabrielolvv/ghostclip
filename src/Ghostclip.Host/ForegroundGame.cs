@@ -6,7 +6,8 @@ namespace Ghostclip.Host;
 /// <param name="Game">Name for the clip folder.</param>
 /// <param name="ProcessId">0 for the desktop and other non-programs.</param>
 /// <param name="Fullscreen">The window covers its whole monitor (fullscreen or borderless): most likely a game.</param>
-internal readonly record struct Foreground(string Game, uint ProcessId, bool Fullscreen);
+/// <param name="Process">The program's process name, whatever kind of program it is. Null when there is none.</param>
+internal readonly record struct Foreground(string Game, uint ProcessId, bool Fullscreen, string? Process = null);
 
 /// <summary>
 /// Looks at the program in the foreground. Reads only the window's process id,
@@ -22,6 +23,7 @@ internal static class ForegroundGame
     // Polled every couple of seconds: the version resource is read once per process.
     private static uint _cachedPid;
     private static string _cachedName = ClipNaming.FallbackGame;
+    private static string? _cachedProcess;
 
     public static Foreground Detect()
     {
@@ -32,12 +34,26 @@ internal static class ForegroundGame
         if (pid != _cachedPid)
         {
             _cachedName = Resolve(pid);
+            _cachedProcess = ProcessName(pid);
             _cachedPid = pid;
         }
         // The shell and other non-games carry no process: nothing to capture audio from.
         return _cachedName == ClipNaming.FallbackGame
-            ? new(_cachedName, 0, false)
-            : new(_cachedName, pid, CoversMonitor(window));
+            ? new(_cachedName, 0, false, _cachedProcess)
+            : new(_cachedName, pid, CoversMonitor(window), _cachedProcess);
+    }
+
+    private static string? ProcessName(uint pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById((int)pid);
+            return p.ProcessName;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Cheap liveness check, so game-only audio can fall back when the game closes.</summary>
