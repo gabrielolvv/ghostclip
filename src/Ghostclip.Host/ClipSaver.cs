@@ -36,13 +36,13 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
         var sw = Stopwatch.StartNew();
         var now = DateTime.Now;
         var cfg = config();
-        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), seconds ?? cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
+        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDirFor(cfg)), seconds ?? cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
         if (plan.IsEmpty)
         {
             throw new InvalidOperationException(L("Nothing recorded yet: the replay buffer is empty.", "Nada gravado ainda: o buffer de replay está vazio."));
         }
 
-        var dir = Path.Combine(paths.PendingDir, now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture));
+        var dir = Path.Combine(paths.PendingDirFor(cfg), now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture));
         Directory.CreateDirectory(dir);
         var names = new List<string>();
         foreach (var segment in plan.Complete)
@@ -63,7 +63,7 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
 
         // The newest segment's session decides the audio shift: that's the part people watch.
         var newest = plan.Current ?? plan.Complete[^1];
-        var session = AudioSync.ForSequence(AudioSync.Scan(paths.BufferDir), newest.Sequence);
+        var session = AudioSync.ForSequence(AudioSync.Scan(paths.BufferDirFor(cfg)), newest.Sequence);
         var lead = session?.AudioLeadMs ?? 0;
         var titles = session?.AudioTitles;
 
@@ -160,8 +160,10 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
     public IReadOnlyList<ClipSnapshot> PendingFromEarlierRuns()
     {
         var result = new List<ClipSnapshot>();
-        if (!Directory.Exists(paths.PendingDir)) return result;
-        foreach (var dir in Directory.EnumerateDirectories(paths.PendingDir))
+        // In any folder the buffer has been in: a clip kept for the next start must not be lost by moving it.
+        var folders = paths.KnownBufferFolders().Select(GhostclipPaths.PendingDirIn).Append(paths.PendingDir).Append(paths.PendingDirFor(config()))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Where(Directory.Exists);
+        foreach (var dir in folders.SelectMany(Directory.EnumerateDirectories))
         {
             var meta = Path.Combine(dir, MetaFile);
             if (!File.Exists(meta) || !File.Exists(Path.Combine(dir, ListFile)))

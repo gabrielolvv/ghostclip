@@ -11,6 +11,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   first, without re-encoding, saved next to the oldest. Clips recorded with
   other video settings or other audio tracks can't be joined this way, and
   Ghostclip says which.
+- Settings > Video > Replay buffer folder keeps the buffer on the drive you
+  choose, since it writes to its drive all the time while recording. Changing
+  it restarts recording and clears the buffer, and uninstalling removes it.
 
 ## 0.8.7
 

@@ -24,6 +24,7 @@ namespace Ghostclip.Host;
 internal sealed class SessionRecorder : IDisposable
 {
     private readonly GhostclipPaths _paths;
+    private readonly Func<GhostclipConfig> _config;
     private readonly ClipSaver _saver;
     private readonly ILogger _log;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
@@ -39,9 +40,12 @@ internal sealed class SessionRecorder : IDisposable
     private DateTime _partStartedLocal;
     private RecordingSession? _audio;
 
-    public SessionRecorder(GhostclipPaths paths, ClipSaver saver, ILogger log)
+    private string BufferDir => _paths.BufferDirFor(_config());
+
+    public SessionRecorder(GhostclipPaths paths, Func<GhostclipConfig> config, ClipSaver saver, ILogger log)
     {
         _paths = paths;
+        _config = config;
         _saver = saver;
         _log = log;
         _timer.Tick += (_, _) =>
@@ -71,7 +75,7 @@ internal sealed class SessionRecorder : IDisposable
         _startedLocal = DateTime.Now;
         SavedParts = 0;
         // From the segment being written now: the session starts at most 2 s early, never late.
-        var segments = SegmentRing.Scan(_paths.BufferDir);
+        var segments = SegmentRing.Scan(BufferDir);
         BeginPart(segments.Count > 0 ? segments[^1].Sequence : 0, resumedAfterUtc: null);
         _timer.Start();
         _log.Information("Session recording started for {Game} from segment {From}", game, _from);
@@ -83,7 +87,7 @@ internal sealed class SessionRecorder : IDisposable
         if (_dir is not { } dir) return;
         Collect();
         // Only segments of this part's run are in it, back to back: counted, not timed from file dates.
-        var segments = SegmentRing.Scan(_paths.BufferDir);
+        var segments = SegmentRing.Scan(BufferDir);
         var at = 0.0;
         if (_from >= 0 && segments.Count > 0)
         {
@@ -148,7 +152,7 @@ internal sealed class SessionRecorder : IDisposable
         _audio = null;
         _linked.Clear();
         _bookmarks.Clear();
-        _dir = Path.Combine(_paths.PendingDir, _partStartedLocal.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "-session");
+        _dir = Path.Combine(_paths.PendingDirFor(_config()), _partStartedLocal.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "-session");
         Directory.CreateDirectory(_dir);
     }
 
@@ -176,7 +180,7 @@ internal sealed class SessionRecorder : IDisposable
     private void Collect(bool final = false, long before = long.MaxValue)
     {
         if (_dir is not { } dir) return;
-        var segments = SegmentRing.Scan(_paths.BufferDir);
+        var segments = SegmentRing.Scan(BufferDir);
         if (_from < 0)
         {
             // A part after a restart: its run's segments are the ones created since, whatever their numbers.
@@ -201,7 +205,7 @@ internal sealed class SessionRecorder : IDisposable
         // With the run known, an earlier run's is not taken for it.
         if (_audio is null && _linked.Count > 0)
         {
-            var audio = AudioSync.ForSequence(AudioSync.Scan(_paths.BufferDir), _from);
+            var audio = AudioSync.ForSequence(AudioSync.Scan(BufferDir), _from);
             if (_runStart is not { } run || audio?.StartSequence == run) _audio = audio;
         }
         if (!added) return;

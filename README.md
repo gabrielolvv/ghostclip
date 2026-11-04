@@ -36,6 +36,7 @@ QuickSync). There is no CPU encoder fallback.
 - **Pause** from the tray or a key you choose: stops recording and deletes the
   replay buffer, for a bank's page or a password.
 - **Per-game profiles** for clip length, audio source and microphone mute.
+- **Replay buffer on the drive you choose,** to spare the system's SSD.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; favorites, renaming and
   acting on several at once. It runs only while its window is open.

@@ -118,7 +118,7 @@ internal sealed class TrayApp : ApplicationContext
 
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
         _screenshots = new ScreenshotTaker(() => _config, Log.ForContext<ScreenshotTaker>());
-        _session = new SessionRecorder(paths, _saver, Log.ForContext<SessionRecorder>());
+        _session = new SessionRecorder(paths, () => _config, _saver, Log.ForContext<SessionRecorder>());
         _storage = new StorageKeeper(paths, () => _config, Log.ForContext<StorageKeeper>());
         // The menu shows how long the session has been running.
         _session.Ticked += ApplyTexts;
@@ -167,6 +167,8 @@ internal sealed class TrayApp : ApplicationContext
             _hotkeyCapture, (_, _) => _ui.Post(_ => OnHotkeyCaptureChanged(), null), null, Timeout.Infinite, executeOnlyOnce: false);
         _hotkeyResume.Tick += (_, _) => ResumeHotkeys();
 
+        RememberBufferFolder();
+        ClearOldBuffers();
         RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
         _worker.Start(_config);
@@ -710,6 +712,7 @@ internal sealed class TrayApp : ApplicationContext
             StopSession();
         }
         _config = config;
+        RememberBufferFolder();
         _level.MinimumLevel = Program.ToSerilog(config.LogLevel);
         UiText.Use(config.Language);
         // Turning the microphone off lets the mute key go, and on again starts unmuted.
@@ -727,6 +730,38 @@ internal sealed class TrayApp : ApplicationContext
         // A new or lower limit, or a different clips folder: applied now, not at the next save.
         if (config.StorageLimitGB != previous.StorageLimitGB || config.ResolvedClipsFolder != previous.ResolvedClipsFolder) _storage.Enforce();
         _log.Information("Settings applied");
+    }
+
+    private void RememberBufferFolder()
+    {
+        try
+        {
+            _paths.RememberBufferFolder(_config.BufferFolder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warning("Could not note the buffer folder: {Error}", ex.Message);
+        }
+    }
+
+    // The worker clears a folder it moves away from, but not one it wasn't running for, or whose drive was gone.
+    // Before the worker starts, so nothing is writing. A folder with clips still to save stays until they are.
+    private void ClearOldBuffers()
+    {
+        var current = _paths.BufferDirFor(_config);
+        foreach (var dir in _paths.KnownBufferFolders().Select(GhostclipPaths.BufferDirIn).Append(_paths.BufferDir))
+        {
+            if (string.Equals(dir, current, StringComparison.OrdinalIgnoreCase)) continue;
+            try
+            {
+                foreach (var segment in SegmentRing.Scan(dir)) File.Delete(segment.Path);
+                foreach (var session in AudioSync.Scan(dir)) AudioSync.Delete(dir, session);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.Debug("Could not clear the old buffer in {Dir}: {Error}", dir, ex.Message);
+            }
+        }
     }
 
     private void Notify(string title, string text, ToolTipIcon icon)

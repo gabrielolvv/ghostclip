@@ -13,7 +13,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 {
     private Mutex? _hotkeyCapture;
 
-    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
+    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickBufferFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
 
     public async Task HandleAsync(LibraryRequest r)
     {
@@ -37,6 +37,12 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                     var folder = current().ResolvedClipsFolder;
                     if (Directory.Exists(folder)) dialog.InitialDirectory = folder;
                     if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "clipsFolder", Path: dialog.SelectedPath));
+                }
+                break;
+            case "pickBufferFolder":
+                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip keeps the replay buffer", "Onde o Ghostclip guarda o buffer de replay"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
+                {
+                    if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "bufferFolder", Path: dialog.SelectedPath));
                 }
                 break;
             case "pickFfmpeg":
@@ -122,6 +128,13 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: Unreadable(error)));
             return;
         }
+        // As typed: normalizing would quietly go back to the default. Only when it changed, so an unplugged drive
+        // doesn't get in the way of every other setting.
+        if (!string.Equals(raw.BufferFolder, before!.BufferFolder, StringComparison.OrdinalIgnoreCase) && BufferFolderProblem(raw) is { } folderError)
+        {
+            window.Post(new LibraryEvent("error", Op: r.Type, Message: folderError));
+            return;
+        }
         // Anything saving loses is said first, all of it in one question.
         var warnings = new List<string>();
         if (!config.SameCaptureAs(before!))
@@ -171,6 +184,32 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["shortClipHotkey"] = KeyLabels.Describe(config.ShortClipHotkey),
         ["pauseHotkey"] = KeyLabels.Describe(config.PauseHotkey),
     };
+
+    // Said here rather than as a recorder that stops: it must be a whole path to a folder that takes files.
+    private static string? BufferFolderProblem(GhostclipConfig config)
+    {
+        if (string.IsNullOrWhiteSpace(config.BufferFolder)) return null;
+        var folder = config.BufferFolder.Trim();
+        var message = L($"The replay buffer can't be kept in {folder}. Choose another folder.", $"Não dá para guardar o buffer de replay em {folder}. Escolha outra pasta.");
+        if (!GhostclipPaths.CanHoldBuffer(folder))
+        {
+            return L($"The replay buffer can't be kept in {folder}: FFmpeg can't work in a path with % or #. Choose another folder.",
+                $"Não dá para guardar o buffer de replay em {folder}: o FFmpeg não funciona num caminho com % ou #. Escolha outra pasta.");
+        }
+        if (!Path.IsPathFullyQualified(folder)) return message;
+        try
+        {
+            Directory.CreateDirectory(folder);
+            var probe = Path.Combine(folder, $"ghostclip-{Guid.NewGuid():N}.tmp");
+            File.WriteAllBytes(probe, []);
+            File.Delete(probe);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return message;
+        }
+    }
 
     // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
     private static string? HotkeyProblem(GhostclipConfig config)

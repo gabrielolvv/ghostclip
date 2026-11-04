@@ -29,6 +29,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private readonly JobObject _job = new();
     private readonly ConfigInbox _configs = new();
     private readonly PauseSwitch _pause = new();
+
+    private string BufferDir => _paths.BufferDirFor(_config);
+
     private AudioCapture? _audio;
     private AudioCapture? _mic;
     private AudioCapture? _discord;
@@ -125,6 +128,14 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 if (_pause.MustStop)
                 {
                     await WaitWhilePausedAsync(ct).ConfigureAwait(false);
+                    continue;
+                }
+
+                if (!TryMakeBufferDir())
+                {
+                    await FailAsync(UiText.L(
+                        $"The replay buffer folder can't be used: {BufferDir}. Plug its drive in, or choose another folder in Settings.",
+                        $"Não dá para usar a pasta do buffer de replay: {BufferDir}. Conecte o disco ou escolha outra pasta em Configurações."), ct, retry: true).ConfigureAwait(false);
                     continue;
                 }
 
@@ -255,10 +266,10 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
         ApplyAudioRouting();
 
-        var start = SegmentRing.NextStartNumber(SegmentRing.Scan(_paths.BufferDir));
+        var start = SegmentRing.NextStartNumber(SegmentRing.Scan(BufferDir));
         _runStart = start;
         _runId = string.Create(CultureInfo.InvariantCulture, $"{Environment.ProcessId}:{++_runs}");
-        var args = FfmpegArgs.Record(settings, _paths.BufferDir, start, pipes, _config.AudioOffsetMs);
+        var args = FfmpegArgs.Record(settings, BufferDir, start, pipes, _config.AudioOffsetMs);
         _runner?.Dispose();
         _runner = FfmpegRunner.Start(ffmpeg, args, _job, _log);
         // The game first: capture and encoding wait behind its frames on the CPU and GPU.
@@ -284,7 +295,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             if (!syncMeasured && _runner.FirstSample is { } sample && first!.StreamStartTicks is var audioStart and > 0)
             {
                 var lead = AudioSync.MeasureLeadMs((sample.Ticks - audioStart) / (double)Stopwatch.Frequency, sample.Frames, settings.Fps);
-                AudioSync.Write(_paths.BufferDir, new RecordingSession(start, lead, titles.Count > 1 ? titles.ToArray() : null));
+                AudioSync.Write(BufferDir, new RecordingSession(start, lead, titles.Count > 1 ? titles.ToArray() : null));
                 _log.Information("Audio stream started {Lead} ms before video; saves will compensate", lead);
                 syncMeasured = true;
             }
@@ -301,6 +312,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             {
                 var config = await _configs.TakeAsync(ct).ConfigureAwait(false);
                 var restart = !config.SameCaptureAs(_config);
+                var oldBuffer = BufferDir;
                 if (config.GamePriority != _config.GamePriority) _runner.ApplyPriority(RecorderPriority.For(config.GamePriority));
                 _config = config;
                 SetLogLevel(config.LogLevel);
@@ -310,7 +322,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     _log.Information("Capture settings changed; restarting the recorder with an empty buffer");
                     await StopRecorderAsync().ConfigureAwait(false);
                     // Segments in two formats can't be joined by stream copy.
-                    ClearBuffer();
+                    ClearBuffer(oldBuffer);
+                    LeaveBufferDir(oldBuffer);
                     return Outcome.Reconfigured;
                 }
                 nextConfig = _configs.NextAsync(ct);
@@ -348,7 +361,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             var changed = _pause.Changed;
             _pause.TakeBufferClear();
-            var left = ClearBuffer();
+            var left = ClearBuffer(BufferDir);
             if (_pause.Paused)
             {
                 sinceResume.Restart();
@@ -361,8 +374,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             var nextConfig = _configs.NextAsync(ct);
             if (await Task.WhenAny(changed, nextConfig, Task.Delay(left > 0 ? 250 : 2000, ct)).ConfigureAwait(false) == nextConfig)
             {
-                _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
-                SetLogLevel(_config.LogLevel);
+                await TakeConfigAsync(ct).ConfigureAwait(false);
             }
             ct.ThrowIfCancellationRequested();
         }
@@ -370,11 +382,50 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     }
 
     // Numbering starts over with an empty buffer, so what described the old segments goes too. Returns the segments left.
-    private int ClearBuffer()
+    private int ClearBuffer(string dir)
     {
-        DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
-        foreach (var session in AudioSync.Scan(_paths.BufferDir)) AudioSync.Delete(_paths.BufferDir, session);
-        return SegmentRing.Scan(_paths.BufferDir).Count;
+        DeleteSegments(SegmentRing.Scan(dir));
+        foreach (var session in AudioSync.Scan(dir)) AudioSync.Delete(dir, session);
+        return SegmentRing.Scan(dir).Count;
+    }
+
+    // Applies a config while nothing records, leaving nothing behind in a buffer folder it moved away from.
+    private async Task TakeConfigAsync(CancellationToken ct)
+    {
+        var oldBuffer = BufferDir;
+        _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
+        SetLogLevel(_config.LogLevel);
+        if (LeaveBufferDir(oldBuffer)) _log.Information("Replay buffer moved to {Dir}", BufferDir);
+    }
+
+    // After a move, what is left in the old folder goes, and the folder too once it is empty. Says whether it moved.
+    private bool LeaveBufferDir(string oldBuffer)
+    {
+        if (string.Equals(oldBuffer, BufferDir, StringComparison.OrdinalIgnoreCase)) return false;
+        ClearBuffer(oldBuffer);
+        try
+        {
+            Directory.Delete(oldBuffer);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Debug("Could not remove the old buffer folder {Dir}: {Error}", oldBuffer, ex.Message);
+        }
+        return true;
+    }
+
+    private bool TryMakeBufferDir()
+    {
+        try
+        {
+            Directory.CreateDirectory(BufferDir);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            _log.Debug("Can't use the buffer folder {Dir}: {Error}", BufferDir, ex.Message);
+            return false;
+        }
     }
 
     // Quiet wait while Windows refuses the desktop: no FFmpeg runs, no restart
@@ -395,18 +446,23 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _log.Information("Desktop available again after {Seconds:0} s", waited.Elapsed.TotalSeconds);
     }
 
-    private async Task FailAsync(string message, CancellationToken ct)
+    /// <param name="retry">The problem can go away by itself, a drive that was late or came back: tries again every few seconds.</param>
+    private async Task FailAsync(string message, CancellationToken ct, bool retry = false)
     {
         _log.Error("{Message}", message);
         _state = WorkerState.Stopped;
         await SendAsync(new IpcMessage { Type = IpcType.Error, Message = message, Fatal = true }, ct).ConfigureAwait(false);
         // Nothing to do until the user changes something, or pauses: the buffer still has to go.
-        var pauseChanged = _pause.Changed;
-        if (_pause.MustStop) return;
-        var nextConfig = _configs.NextAsync(ct);
-        if (await Task.WhenAny(nextConfig, pauseChanged).ConfigureAwait(false) != nextConfig) return;
-        _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
-        SetLogLevel(_config.LogLevel);
+        while (true)
+        {
+            var pauseChanged = _pause.Changed;
+            if (_pause.MustStop) return;
+            var nextConfig = _configs.NextAsync(ct);
+            var done = await Task.WhenAny(nextConfig, pauseChanged, Task.Delay(retry ? 5000 : Timeout.Infinite, ct)).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            if (done == nextConfig) await TakeConfigAsync(ct).ConfigureAwait(false);
+            if (done == nextConfig || done == pauseChanged || TryMakeBufferDir()) return;
+        }
     }
 
     private async Task StopRecorderAsync()
@@ -461,12 +517,12 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             // The longest clip any game profile can ask for.
             var keep = SegmentRing.KeepCount(_config.MaxClipSeconds, GhostclipConfig.SegmentSeconds);
-            var segments = SegmentRing.Scan(_paths.BufferDir);
+            var segments = SegmentRing.Scan(BufferDir);
             DeleteSegments(SegmentRing.SelectForDeletion(segments, keep));
             var oldest = segments.Count > keep ? segments[^keep].Sequence : segments.FirstOrDefault().Sequence;
-            foreach (var session in AudioSync.SelectObsolete(AudioSync.Scan(_paths.BufferDir), oldest))
+            foreach (var session in AudioSync.SelectObsolete(AudioSync.Scan(BufferDir), oldest))
             {
-                AudioSync.Delete(_paths.BufferDir, session);
+                AudioSync.Delete(BufferDir, session);
             }
         }
     }
@@ -475,7 +531,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     {
         // Segments older than a clip (plus a margin) are from a session long gone.
         var maxAge = TimeSpan.FromSeconds(_config.MaxClipSeconds + 120);
-        DeleteSegments(SegmentRing.SelectStale(SegmentRing.Scan(_paths.BufferDir), DateTime.UtcNow, maxAge));
+        DeleteSegments(SegmentRing.SelectStale(SegmentRing.Scan(BufferDir), DateTime.UtcNow, maxAge));
     }
 
     private void DeleteSegments(IEnumerable<SegmentFile> segments)
