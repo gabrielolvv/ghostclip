@@ -13,6 +13,13 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   It takes up to half a second to notice, and beside another active window the
   program can still be recorded. Programs only: not a website in a browser.
 
+### Changed
+
+- The replay buffer is deleted when you exit Ghostclip or Windows shuts down,
+  since it holds your last moments of screen. If Windows cuts that short, it goes
+  the next time Ghostclip starts. Settings > Advanced can keep it on disk until
+  then, as before.
+
 ## 0.8.10
 
 ### Added

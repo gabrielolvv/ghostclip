@@ -176,6 +176,9 @@ public sealed record GhostclipConfig
     /// <summary>Null searches next to the app, then tools\, then PATH.</summary>
     public string? FfmpegPath { get; set; }
 
+    /// <summary>Deletes the replay buffer when Ghostclip exits. Off, it stays until the next start deletes what is stale.</summary>
+    public bool ClearBufferOnExit { get; set; } = true;
+
     public bool ConfirmationSound { get; set; } = true;
 
     /// <summary>Starts Ghostclip at sign-in (installed copies only).</summary>

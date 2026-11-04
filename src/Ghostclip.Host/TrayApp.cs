@@ -131,6 +131,8 @@ internal sealed class TrayApp : ApplicationContext
         _foregroundTimer.Tick += (_, _) => CheckForeground();
         _foregroundTimer.Interval = ForegroundInterval(_config);
         _foregroundTimer.Start();
+        // Windows shutting down or signing out: a clean exit, so the buffer goes and a session is kept, as with Exit.
+        Microsoft.Win32.SystemEvents.SessionEnded += OnSessionEnded;
         _diskTimer.Tick += (_, _) => CheckDiskSpace();
         _diskTimer.Start();
 
@@ -926,9 +928,12 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
+    private void OnSessionEnded(object? sender, Microsoft.Win32.SessionEndedEventArgs e) => Exit();
+
     private void Shutdown()
     {
         _shuttingDown = true;
+        Microsoft.Win32.SystemEvents.SessionEnded -= OnSessionEnded;
         _icon.Visible = false;
         // A session left in Pending is finished into an MP4 on the next start, like any interrupted save.
         _session.Stop();
