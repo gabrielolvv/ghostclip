@@ -8,9 +8,6 @@ namespace Ghostclip.Host;
 
 internal static class Program
 {
-    /// <summary>Set by "Ghostclip.exe --save" to make the running instance save a clip (Stream Deck, macros).</summary>
-    public const string SaveEventName = @"Local\Ghostclip.Save";
-
     /// <summary>Set by the installer before uninstalling or updating: the running instance shuts down cleanly.</summary>
     public const string ExitEventName = @"Local\Ghostclip.Exit";
 
@@ -32,7 +29,7 @@ internal static class Program
 
     /// <summary>
     /// Ghostclip.exe                         tray app
-    /// Ghostclip.exe --save                  the running instance saves a clip
+    /// Ghostclip.exe --save and others       the running instance does it (see <see cref="TrayCommands"/>)
     /// Ghostclip.exe --trim clip start end   trimmed copy by stream copy, then exits
     /// Ghostclip.exe --compress clip         copy that fits the Discord limit, then exits
     /// </summary>
@@ -73,16 +70,18 @@ internal static class Program
             return Library.LibraryProgram.Run(args.Length > 1 ? args[1] : null);
         }
 
-        // One host per user session. A second launch only forwards --save.
+        // One host per user session. A second launch only forwards a command.
         using var single = new Mutex(initiallyOwned: true, HostMutexName, out var first);
         if (!first)
         {
-            if (command == "--save" && EventWaitHandle.TryOpenExisting(SaveEventName, out var save))
+            if (TrayCommands.Parse(command) is { } forwarded && EventWaitHandle.TryOpenExisting(TrayCommands.EventName(forwarded), out var request))
             {
-                using (save) save.Set();
+                using (request) request.Set();
             }
             return 0;
         }
+        // Nothing running to do it: starting to record because of it would be a surprise, after --pause above all.
+        if (TrayCommands.Parse(command) is not null) return 0;
 
         var (paths, config, problem, level) = Start("host");
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);

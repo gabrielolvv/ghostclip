@@ -14,6 +14,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Settings > Video > Replay buffer folder keeps the buffer on the drive you
   choose, since it writes to its drive all the time while recording. Changing
   it restarts recording and clears the buffer, and uninstalling removes it.
+- Commands for Stream Deck, macros and mouse software: besides `--save`,
+  `Ghostclip.exe --save-short`, `--screenshot`, `--session`, `--mute` and
+  `--pause` do what the hotkeys do in the running copy, without taking a key
+  from other programs.
 
 ## 0.8.7
 
