@@ -70,18 +70,20 @@ internal static class Program
             return Library.LibraryProgram.Run(args.Length > 1 ? args[1] : null);
         }
 
-        // One host per user session. A second launch only forwards a command.
-        using var single = new Mutex(initiallyOwned: true, HostMutexName, out var first);
-        if (!first)
+        // For the running copy, if there is one. With none, starting to record because of it would be a surprise,
+        // after --pause above all. Before the mutex: holding it even for a moment could turn a tray starting away.
+        if (TrayCommands.Parse(command) is { } forwarded)
         {
-            if (TrayCommands.Parse(command) is { } forwarded && EventWaitHandle.TryOpenExisting(TrayCommands.EventName(forwarded), out var request))
+            if (EventWaitHandle.TryOpenExisting(TrayCommands.EventName(forwarded), out var request))
             {
                 using (request) request.Set();
             }
             return 0;
         }
-        // Nothing running to do it: starting to record because of it would be a surprise, after --pause above all.
-        if (TrayCommands.Parse(command) is not null) return 0;
+
+        // One host per user session.
+        using var single = new Mutex(initiallyOwned: true, HostMutexName, out var first);
+        if (!first) return 0;
 
         var (paths, config, problem, level) = Start("host");
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);

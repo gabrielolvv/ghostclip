@@ -17,7 +17,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Commands for Stream Deck, macros and mouse software: besides `--save`,
   `Ghostclip.exe --save-short`, `--screenshot`, `--session`, `--mute` and
   `--pause` do what the hotkeys do in the running copy, without taking a key
-  from other programs.
+  from other programs. With no copy running they do nothing, `--save` included,
+  which used to start Ghostclip.
 
 ## 0.8.7
 
