@@ -19,6 +19,17 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   since it holds your last moments of screen. If Windows cuts that short, it goes
   the next time Ghostclip starts. Settings > Advanced can keep it on disk until
   then, as before.
+- A silent Discord size copy uses the room the sound would have taken: better
+  picture, and clips too long to fit with sound can fit without it.
+- In the library's selection, Delete goes to the Recycle Bin question and Ctrl+A
+  picks everything on screen, so the bar can be reached from the keyboard.
+
+### Fixed
+
+- Saving a clip to a drive without hard links (exFAT, FAT32) no longer holds up
+  the tray and its other hotkeys while it copies.
+- In Settings, choosing or removing an optional hotkey keeps the keyboard's place
+  instead of going back to the top of the page.
 
 ## 0.8.10
 

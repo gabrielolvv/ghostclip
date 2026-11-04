@@ -90,10 +90,11 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var cfg = config();
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var limit = cfg.DiscordLimitMB;
-        var plan = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit);
+        var silent = ClipMedia.TracksToKeep(info.AudioTracks, tracks).Count == 0;
+        var plan = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit, silent: silent);
         if (plan is null)
         {
-            var max = limit * 8.0 * 1024 * 0.92 / (CompressionPlanner.MinVideoKbps + CompressionPlanner.AudioKbps);
+            var max = limit * 8.0 * 1024 * 0.92 / (CompressionPlanner.MinVideoKbps + (silent ? 0 : CompressionPlanner.AudioKbps));
             throw new InvalidOperationException(L($"{info.Duration:0} s is too long for {limit} MB. Trim it to {max:0} s or less first.",
                 $"{info.Duration:0} s é longo demais para {limit} MB. Corte para {max:0} s ou menos antes."));
         }
@@ -104,7 +105,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         var limitBytes = limit * 1024L * 1024;
         if (size > limitBytes)
         {
-            var retry = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit, CompressionPlanner.RetrySafety(size, limit));
+            var retry = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit, CompressionPlanner.RetrySafety(size, limit), silent);
             if (retry is not null)
             {
                 log.Information("Compressed clip came out at {Size} bytes, over {Limit} MB; retrying at {Kbps} kbps", size, limit, retry.VideoKbps);

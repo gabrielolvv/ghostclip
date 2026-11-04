@@ -20,12 +20,14 @@ public static class CompressionPlanner
     /// 1080p60 wants ~6 Mbps, 720p ~2.5 Mbps; under ~2.5 Mbps 30 fps looks better than 60.
     /// </summary>
     /// <param name="safety">Fraction of the limit to aim for; a retry passes a smaller one.</param>
+    /// <param name="silent">The copy has no sound, so the video gets its share.</param>
     /// <returns>Null when the clip is too long to fit at any watchable quality.</returns>
-    public static CompressionPlan? Plan(double durationSeconds, int sourceHeight, double sourceFps, int limitMB, double safety = FirstTry)
+    public static CompressionPlan? Plan(double durationSeconds, int sourceHeight, double sourceFps, int limitMB, double safety = FirstTry, bool silent = false)
     {
         if (durationSeconds <= 0) return null;
         var totalKbps = limitMB * 8.0 * 1024 * safety / durationSeconds;
-        var videoKbps = (int)(totalKbps - AudioKbps);
+        var audioKbps = silent ? 0 : AudioKbps;
+        var videoKbps = (int)(totalKbps - audioKbps);
         if (videoKbps < MinVideoKbps) return null;
 
         var height = videoKbps switch
@@ -37,7 +39,7 @@ public static class CompressionPlanner
         };
         if (height >= sourceHeight) height = 0;
         var fps = videoKbps < 2500 && sourceFps > 31 ? 30 : 0;
-        return new CompressionPlan(videoKbps, AudioKbps, height, fps);
+        return new CompressionPlan(videoKbps, audioKbps, height, fps);
     }
 
     /// <summary>Safety factor for the second attempt, after the first came out too big.</summary>
