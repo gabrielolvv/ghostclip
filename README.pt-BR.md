@@ -45,6 +45,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
+- **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
+  codificado na GPU.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
   que o Ghostclip não criou nunca são tocados.

@@ -48,7 +48,7 @@ public static class ClipNaming
         return ReservedNames.Contains(stem) ? name + "_" : name;
     }
 
-    /// <summary>A sibling of an existing clip: Game_..._trim.mp4, Game_..._discord.mp4, deduplicated.</summary>
+    /// <summary>A sibling of an existing clip: Game_..._trim.mp4, Game_..._discord.mp4, Game_..._vertical.mp4, deduplicated.</summary>
     public static string DerivedPath(string clipPath, string suffix, Func<string, bool> exists)
     {
         var dir = Path.GetDirectoryName(clipPath) ?? "";

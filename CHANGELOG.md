@@ -12,6 +12,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   buffer until you resume. A running session is saved first, and a tone says
   which way it went, even over a fullscreen game. Ghostclip records again the
   next time it starts.
+- Vertical in the library makes a 9:16 copy of a clip for Shorts, TikTok and
+  Reels: the middle of the picture at 1080x1920, encoded on the GPU, with the
+  audio tracks mixed into one, saved next to the clip.
+
 
 ## 0.8.6
 

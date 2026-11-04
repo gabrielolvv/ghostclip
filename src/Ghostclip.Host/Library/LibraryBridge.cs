@@ -194,6 +194,10 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: compressed,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
+                case "vertical":
+                    var vertical = await Job(_tools.VerticalAsync(path, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
+                    break;
                 case "copy":
                     Clipboard.SetFileDropList(new StringCollection { path });
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));

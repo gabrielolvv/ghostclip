@@ -43,6 +43,8 @@ QuickSync). There is no CPU encoder fallback.
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
   (10 MB by default), mixing game and mic into one track.
+- **Vertical copy** for Shorts, TikTok and Reels: the middle of the picture at
+  1080x1920, encoded on the GPU.
 - **Space limit** (optional): past it, the oldest clips and screenshots make
   room for new ones. Favorites, clips you renamed and anything Ghostclip
   didn't make are never touched.
