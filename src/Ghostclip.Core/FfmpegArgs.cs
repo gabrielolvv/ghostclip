@@ -271,15 +271,7 @@ public static class FfmpegArgs
     public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        if (audioTracks > 1)
-        {
-            var inputs = string.Concat(Enumerable.Range(0, audioTracks).Select(i => Inv($"[0:a:{i}]")));
-            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={audioTracks}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
-        }
-        else
-        {
-            args.AddRange(["-map", "0:v:0", "-map", "0:a:0?"]);
-        }
+        AddOneAudioTrack(args, audioTracks);
 
         var vf = new List<string>();
         if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
@@ -294,6 +286,43 @@ public static class FfmpegArgs
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
         return args;
+    }
+
+    /// <summary>
+    /// A 9:16 copy for Shorts, TikTok and Reels: the middle of the picture at 1080x1920, on the hardware encoder, at no
+    /// more than 60 fps and at a rate they keep. Several audio tracks are mixed into one, since they play only the first.
+    /// </summary>
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps)
+    {
+        const int MaxFps = 60;
+        const int VideoKbps = 12000;
+        var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
+        AddOneAudioTrack(args, audioTracks);
+        var capped = sourceFps > MaxFps;
+        var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
+        args.AddRange([
+            "-vf", "crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
+            "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"), "-g", Inv($"{fps * 2}"),
+            "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart", "-f", "mp4", output,
+        ]);
+        return args;
+    }
+
+    /// <summary>Time for a vertical copy: a long session takes a while on the GPU at below-normal priority, with a game open.</summary>
+    public static TimeSpan VerticalTimeout(double durationSeconds) => TimeSpan.FromSeconds(Math.Max(15 * 60, durationSeconds * 3));
+
+    private static void AddOneAudioTrack(List<string> args, int audioTracks)
+    {
+        if (audioTracks > 1)
+        {
+            var inputs = string.Concat(Enumerable.Range(0, audioTracks).Select(i => Inv($"[0:a:{i}]")));
+            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={audioTracks}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+        }
+        else
+        {
+            args.AddRange(["-map", "0:v:0", "-map", "0:a:0?"]);
+        }
     }
 
     /// <summary>An ffconcat list. Paths use forward slashes and single quotes are escaped.</summary>

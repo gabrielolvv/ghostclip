@@ -231,7 +231,7 @@ function renderCard(clip) {
     thumb.style.backgroundImage = `url("${clip.url}?v=${encodeURIComponent(clip.version)}")`;
   } else if (clip.derived) {
     const name = fileName(clip.path);
-    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : L('TRIM', 'CORTE')));
+    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : L('TRIM', 'CORTE')));
   } else if (clip.bookmarks) {
     thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`)));
   }
@@ -594,6 +594,12 @@ $('a-discord').addEventListener('click', () => {
   toast(L('Compressing on the GPU…', 'Comprimindo na GPU…'));
   post({ type: 'compress', path: state.current.path });
 });
+$('a-vertical').addEventListener('click', () => {
+  if (!state.current || $('a-vertical').classList.contains('busy')) return;
+  busy($('a-vertical'), true);
+  toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…'));
+  post({ type: 'vertical', path: state.current.path });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -676,6 +682,10 @@ function onDone(message) {
       busy($('a-discord'), false);
       toast(L(`Compressed to ${message.message}`, `Comprimido para ${message.message}`), false, open);
       break;
+    case 'vertical':
+      busy($('a-vertical'), false);
+      toast(L('Vertical copy saved', 'Cópia vertical salva'), false, open);
+      break;
     case 'diagnostics':
       toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.'));
       break;
@@ -755,6 +765,7 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
+      if (message.op === 'vertical') busy($('a-vertical'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.

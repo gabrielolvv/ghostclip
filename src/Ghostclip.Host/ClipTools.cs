@@ -10,8 +10,8 @@ namespace Ghostclip.Host;
 internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec, IReadOnlyList<string> AudioTitles);
 
 /// <summary>
-/// Trimming and "compress for Discord". Both run at below-normal priority, so a
-/// game in the foreground keeps the CPU.
+/// Trimming, "compress for Discord" and the vertical copy. All run at below-normal
+/// priority, so a game in the foreground keeps the CPU.
 /// </summary>
 internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> config, ILogger log)
 {
@@ -114,6 +114,33 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         PartFile.Commit(output);
         log.Information("Compressed {Clip} to {Output} ({Size} bytes, {Kbps} kbps, {Height}p)", clip, output, size, plan.VideoKbps, plan.Height);
         return (output, size);
+    }
+
+    /// <summary>Re-encodes the middle of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
+    public async Task<string> VerticalAsync(string clip, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var encoder = HardwareEncoder(config());
+        var output = ClipNaming.DerivedPath(clip, "vertical", File.Exists);
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps),
+                FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not make the vertical copy: {r.FirstError}", $"Não foi possível fazer a cópia vertical: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Vertical copy of {Clip}: {Output}", clip, output);
+        return output;
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.

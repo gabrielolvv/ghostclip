@@ -134,8 +134,8 @@ internal sealed partial class LibraryWindow : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         if (e.CloseReason == CloseReason.UserClosing && _bridge.HasRunningJobs &&
-            MessageBox.Show(this, L("A trim or compression is still running. Close and stop it?",
-                    "Um corte ou compressão ainda está rodando. Fechar e interromper?"), "Ghostclip",
+            MessageBox.Show(this, L("A trim, compression or vertical copy is still running. Close and stop it?",
+                    "Um corte, compressão ou cópia vertical ainda está rodando. Fechar e interromper?"), "Ghostclip",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             e.Cancel = true;
