@@ -268,10 +268,11 @@ public static class FfmpegArgs
     /// Re-encodes a clip to fit a size limit, on the hardware encoder. Several
     /// audio tracks are mixed into one, since Discord plays only the first.
     /// </summary>
-    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks)
+    /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks);
+        AddOneAudioTrack(args, audioTracks, keep);
 
         var vf = new List<string>();
         if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
@@ -292,12 +293,13 @@ public static class FfmpegArgs
     /// A 9:16 copy for Shorts, TikTok and Reels: the middle of the picture at 1080x1920, on the hardware encoder, at no
     /// more than 60 fps and at a rate they keep. Several audio tracks are mixed into one, since they play only the first.
     /// </summary>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps)
+    /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks);
+        AddOneAudioTrack(args, audioTracks, keep);
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
@@ -312,16 +314,21 @@ public static class FfmpegArgs
     /// <summary>Time for a vertical copy: a long session takes a while on the GPU at below-normal priority, with a game open.</summary>
     public static TimeSpan VerticalTimeout(double durationSeconds) => TimeSpan.FromSeconds(Math.Max(15 * 60, durationSeconds * 3));
 
-    private static void AddOneAudioTrack(List<string> args, int audioTracks)
+    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep)
     {
-        if (audioTracks > 1)
+        var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
+        if (tracks.Count > 1)
         {
-            var inputs = string.Concat(Enumerable.Range(0, audioTracks).Select(i => Inv($"[0:a:{i}]")));
-            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={audioTracks}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+            var inputs = string.Concat(tracks.Select(i => Inv($"[0:a:{i}]")));
+            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+        }
+        else if (tracks.Count == 1)
+        {
+            args.AddRange(["-map", "0:v:0", "-map", Inv($"0:a:{tracks[0]}?")]);
         }
         else
         {
-            args.AddRange(["-map", "0:v:0", "-map", "0:a:0?"]);
+            args.AddRange(["-map", "0:v:0", "-an"]);
         }
     }
 

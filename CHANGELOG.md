@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Choose the sound in the copies you share: on a clip with several audio tracks,
+  the buttons above its actions leave the microphone or Discord out of Discord
+  size and Vertical, or make the copy silent. The clip itself keeps every track.
+
 ## 0.8.8
 
 ### Added
