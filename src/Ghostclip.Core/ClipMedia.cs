@@ -16,6 +16,10 @@ public static class ClipMedia
 {
     public const int PeakCount = 400;
 
+    /// <summary>The audio tracks a copy takes, in order: all of them without a choice, and only tracks the clip has.</summary>
+    public static IReadOnlyList<int> TracksToKeep(int total, IReadOnlyList<int>? keep) =>
+        [.. (keep ?? Enumerable.Range(0, Math.Max(0, total))).Where(i => i >= 0 && i < total).Distinct().Order()];
+
     // Peaks are measured on audio resampled to this rate: plenty for a waveform, cheap to scan.
     private const int PeakSampleRate = 8000;
 

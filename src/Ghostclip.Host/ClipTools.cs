@@ -85,7 +85,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// encoder, always as H.264 (Discord doesn't embed HEVC). Retries once,
     /// lower, if the encoder overshoots.
     /// </summary>
-    public async Task<(string Path, long Bytes)> CompressAsync(string clip, CancellationToken ct = default)
+    public async Task<(string Path, long Bytes)> CompressAsync(string clip, IReadOnlyList<int>? tracks = null, CancellationToken ct = default)
     {
         var cfg = config();
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
@@ -100,7 +100,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
 
         var encoder = HardwareEncoder(cfg);
         var output = ClipNaming.DerivedPath(clip, "discord", File.Exists);
-        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, ct).ConfigureAwait(false);
+        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, tracks, ct).ConfigureAwait(false);
         var limitBytes = limit * 1024L * 1024;
         if (size > limitBytes)
         {
@@ -108,7 +108,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             if (retry is not null)
             {
                 log.Information("Compressed clip came out at {Size} bytes, over {Limit} MB; retrying at {Kbps} kbps", size, limit, retry.VideoKbps);
-                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, ct).ConfigureAwait(false);
+                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, tracks, ct).ConfigureAwait(false);
             }
         }
         PartFile.Commit(output);
@@ -117,7 +117,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     /// <summary>Re-encodes the middle of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
-    public async Task<string> VerticalAsync(string clip, CancellationToken ct = default)
+    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, CancellationToken ct = default)
     {
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var encoder = HardwareEncoder(config());
@@ -125,7 +125,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks),
                 FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -210,12 +210,12 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.
-    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, CancellationToken ct)
+    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, IReadOnlyList<int>? tracks, CancellationToken ct)
     {
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks, tracks),
                 TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

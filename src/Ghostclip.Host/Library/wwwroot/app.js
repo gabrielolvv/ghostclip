@@ -137,6 +137,13 @@ function tracksLabel(meta) {
   return count >= 2 ? L('GAME + MIC', 'JOGO + MIC') : count === 1 ? L('GAME', 'JOGO') : L('NO AUDIO', 'SEM ÁUDIO');
 }
 
+// One name per track, for choosing among them. A clip with unnamed tracks only says how many it has.
+function trackNames(meta) {
+  const names = { Game: L('GAME', 'JOGO'), Microphone: 'MIC', Discord: 'DISCORD' };
+  if (meta.audioTitles && meta.audioTitles.length) return meta.audioTitles.map(t => names[t] || t.toUpperCase());
+  return Array.from({ length: meta.audioTracks || 0 }, (_, i) => L(`TRACK ${i + 1}`, `FAIXA ${i + 1}`));
+}
+
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -457,6 +464,8 @@ function openClip(path) {
     return;
   }
   state.current = clip;
+  tracksOff.clear();
+  $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
   $('clip-game').textContent = `${clip.game} · ${stem(clip.path)}`;
@@ -510,6 +519,33 @@ function currentMeta() {
   return entry && entry.meta;
 }
 
+// Tracks left out of the copies for Discord and Shorts. Each clip starts with all of them on.
+const tracksOff = new Set();
+
+function showExportTracks(meta) {
+  const names = trackNames(meta);
+  $('tracks-row').hidden = names.length < 2;
+  const list = $('track-list');
+  list.replaceChildren();
+  names.forEach((name, i) => {
+    const b = el('button', 'act', name);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(!tracksOff.has(i)));
+    b.addEventListener('click', () => {
+      if (!tracksOff.delete(i)) tracksOff.add(i);
+      b.setAttribute('aria-pressed', String(!tracksOff.has(i)));
+    });
+    list.append(b);
+  });
+}
+
+// Nothing when every track stays, and the app takes them all.
+function exportTracks() {
+  const meta = currentMeta();
+  if (!meta || tracksOff.size === 0) return {};
+  return { tracks: trackNames(meta).map((_, i) => i).filter(i => !tracksOff.has(i)) };
+}
+
 function setupTimeline() {
   const meta = currentMeta();
   const clip = state.current;
@@ -527,6 +563,7 @@ function setupTimeline() {
   }
   $('clip-info').textContent = [`${meta.height}P${Math.round(meta.fps)}`, codecLabel(meta.videoCodec),
     tracksLabel(meta), fmtSize(clip.bytes)].join(' · ');
+  showExportTracks(meta);
   $('t-end').textContent = fmtTime(meta.duration);
   placeBookmarks();
   layoutRange();
@@ -720,13 +757,13 @@ $('a-discord').addEventListener('click', () => {
   if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
   toast(L('Compressing on the GPU…', 'Comprimindo na GPU…'));
-  post({ type: 'compress', path: state.current.path });
+  post({ type: 'compress', path: state.current.path, ...exportTracks() });
 });
 $('a-vertical').addEventListener('click', () => {
   if (!state.current || $('a-vertical').classList.contains('busy')) return;
   busy($('a-vertical'), true);
   toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…'));
-  post({ type: 'vertical', path: state.current.path });
+  post({ type: 'vertical', path: state.current.path, ...exportTracks() });
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });

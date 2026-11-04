@@ -47,7 +47,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
 - **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
-  codificado na GPU.
+  codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
+  de áudio entram.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
