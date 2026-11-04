@@ -19,8 +19,31 @@ internal static partial class RecycleBin
     /// <summary>Throws <see cref="IOException"/> if the file wasn't deleted, including when the user chose to keep it.</summary>
     public static void Send(string path, nint owner)
     {
+        var (result, aborted) = Run([path], owner);
+        if (aborted) throw new IOException(L("Kept the clip.", "O clipe foi mantido."));
+        if (result != 0) throw new IOException(L($"Windows couldn't delete the clip (error 0x{result:X}). Is it open in another program?",
+            $"O Windows não conseguiu apagar o clipe (erro 0x{result:X}). Ele está aberto em outro programa?"));
+    }
+
+    /// <summary>
+    /// Several in one go, so a drive with no Recycle Bin asks once and not per file. Returns the ones still there:
+    /// kept, or in use. One in use can stop the rest, which get a try of their own, unless the user said to keep them.
+    /// </summary>
+    public static IReadOnlyList<string> SendAll(IReadOnlyList<string> paths, nint owner)
+    {
+        if (paths.Count == 0) return [];
+        var (result, aborted) = Run(paths, owner);
+        if (result != 0 && !aborted)
+        {
+            foreach (var path in paths.Where(File.Exists)) Run([path], owner);
+        }
+        return [.. paths.Where(File.Exists)];
+    }
+
+    private static (int Result, bool Aborted) Run(IReadOnlyList<string> paths, nint owner)
+    {
         // pFrom is a list of paths, each null-terminated, ended by an extra null.
-        var from = Marshal.StringToHGlobalUni(Path.GetFullPath(path) + "\0");
+        var from = Marshal.StringToHGlobalUni(string.Concat(paths.Select(p => Path.GetFullPath(p) + "\0")));
         try
         {
             var op = new SHFILEOPSTRUCTW
@@ -28,13 +51,11 @@ internal static partial class RecycleBin
                 hwnd = owner,
                 wFunc = FO_DELETE,
                 pFrom = from,
-                // No progress window or prompt for a single clip; errors come back to the page.
+                // No progress window or prompt; errors come back to the page.
                 fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_WANTNUKEWARNING | FOF_NOERRORUI | FOF_SILENT,
             };
             var result = SHFileOperationW(ref op);
-            if (op.fAnyOperationsAborted != 0) throw new IOException(L("Kept the clip.", "O clipe foi mantido."));
-            if (result != 0) throw new IOException(L($"Windows couldn't delete the clip (error 0x{result:X}). Is it open in another program?",
-                $"O Windows não conseguiu apagar o clipe (erro 0x{result:X}). Ele está aberto em outro programa?"));
+            return (result, op.fAnyOperationsAborted != 0);
         }
         finally
         {

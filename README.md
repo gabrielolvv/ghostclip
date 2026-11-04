@@ -37,8 +37,8 @@ QuickSync). There is no CPU encoder fallback.
   replay buffer, for a bank's page or a password.
 - **Per-game profiles** for clip length, audio source and microphone mute.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
-  player and a timeline over the audio waveform; favorites and renaming. It
-  runs only while its window is open.
+  player and a timeline over the audio waveform; favorites, renaming and
+  acting on several at once. It runs only while its window is open.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit

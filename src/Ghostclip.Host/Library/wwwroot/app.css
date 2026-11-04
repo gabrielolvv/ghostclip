@@ -96,6 +96,16 @@ main { min-width: 0; min-height: 0; display: flex; }
 }
 .quick { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; opacity: 0; transition: opacity var(--fast); }
 .card:hover .quick, .card:focus-within .quick { opacity: 1; }
+.pick {
+  position: absolute; left: 6px; top: 6px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px;
+  background: rgba(11, 13, 16, 0.82); border: 1px solid var(--line); color: transparent; opacity: 0; transition: opacity var(--fast);
+}
+.pick svg { width: 14px; height: 14px; }
+.card:hover .pick, .card:focus-within .pick, .selecting .pick { opacity: 1; }
+.card:hover .tag, .card:focus-within .tag, .selecting .tag { left: 34px; }
+.selecting #grid { padding-bottom: 70px; }
+.card.selected { border-color: var(--accent); }
+.card.selected .pick { background: var(--accent); border-color: var(--accent); color: var(--bg, #0B0D10); }
 .quick button {
   display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px;
   background: rgba(11, 13, 16, 0.82); color: var(--text);
@@ -177,6 +187,7 @@ main { min-width: 0; min-height: 0; display: flex; }
   padding: 10px 16px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-strong);
   animation: rise var(--fast) ease-out;
 }
+.selecting .toast { bottom: 80px; }
 .toast.error { border-color: rgba(255, 77, 94, 0.5); color: var(--red); }
 .toast .link { font-size: 12px; color: var(--accent); }
 
