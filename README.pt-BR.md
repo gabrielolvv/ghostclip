@@ -21,7 +21,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 ## Recursos
 
 - **Instant replay** dos últimos 60 s (configurável) no Alt+F10, salvo em MP4
-  numa pasta por jogo, sem reencode.
+  numa pasta por jogo, sem reencode. Uma segunda tecla opcional salva um clipe
+  com duração própria, 15 s de início.
 - **Áudio só do jogo.** Opcionalmente grava só o jogo: sem a chamada do
   Discord, sem música. Ele segue o jogo que você está jogando, não qualquer
   janela em primeiro plano.

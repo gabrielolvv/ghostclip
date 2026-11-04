@@ -30,12 +30,13 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
     internal const string BookmarksFile = "bookmarks.txt";
     private readonly SemaphoreSlim _remuxGate = new(1, 1);
 
-    public ClipSnapshot TakeSnapshot(string game, bool recording)
+    /// <param name="seconds">How much goes in; null is the length set for the game.</param>
+    public ClipSnapshot TakeSnapshot(string game, bool recording, int? seconds = null)
     {
         var sw = Stopwatch.StartNew();
         var now = DateTime.Now;
         var cfg = config();
-        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
+        var plan = ClipPlanner.Plan(SegmentRing.Scan(paths.BufferDir), seconds ?? cfg.ClipSecondsFor(game), GhostclipConfig.SegmentSeconds, recording);
         if (plan.IsEmpty)
         {
             throw new InvalidOperationException(L("Nothing recorded yet: the replay buffer is empty.", "Nada gravado ainda: o buffer de replay está vazio."));

@@ -43,7 +43,7 @@ public class HotkeyAndStatusTests
     public void A_common_shortcut_saved_before_goes_back_to_the_default()
     {
         var config = new GhostclipConfig { Hotkey = "Ctrl+C", ScreenshotHotkey = "Ctrl+V", SessionHotkey = "Alt+F4" }.Normalize();
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8"], config.Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8"], config.ChosenHotkeys);
         Assert.Equal("Ctrl+Alt+C", new GhostclipConfig { Hotkey = "Ctrl+Alt+C" }.Normalize().Hotkey);
     }
 

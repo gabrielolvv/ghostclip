@@ -7,9 +7,9 @@ namespace Ghostclip.Core.Tests;
 public class MicMuteHotkeyTests
 {
     [Fact]
-    public void It_is_alt_f8_and_comes_last_in_the_hotkey_list()
+    public void It_is_alt_f8_and_comes_after_the_session_hotkey()
     {
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8"], new GhostclipConfig().Normalize().Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8"], new GhostclipConfig().Normalize().ChosenHotkeys);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class MicMuteHotkeyTests
         // A clip hotkey picked before this one existed keeps its key.
         var config = new GhostclipConfig { Hotkey = "Alt+F8" }.Normalize();
         Assert.Equal("Alt+F8", config.Hotkey);
-        Assert.Equal(4, config.Hotkeys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(4, config.ChosenHotkeys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class MicMuteHotkeyTests
         // A hand-edited "F8+Alt" is Alt+F8: both registered, the second would fail against Ghostclip itself.
         var config = new GhostclipConfig { Hotkey = "F8 + alt" }.Normalize();
         Assert.NotEqual("Alt+F8", config.MicMuteHotkey);
-        Assert.Equal(4, config.Hotkeys.Select(HotkeyRules.Canonical).Distinct().Count());
+        Assert.Equal(4, config.ChosenHotkeys.Select(HotkeyRules.Canonical).Distinct().Count());
         Assert.Equal("Ctrl+Alt+D9", HotkeyRules.Canonical("alt+control+9"));
         Assert.Equal(HotkeyRules.Canonical("Ctrl+Alt+9"), HotkeyRules.Canonical("Alt + Ctrl + d9"));
     }

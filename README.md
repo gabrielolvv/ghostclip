@@ -21,7 +21,8 @@ QuickSync). There is no CPU encoder fallback.
 ## Features
 
 - **Instant replay** of the last 60 s (configurable) on Alt+F10, saved as MP4
-  in a folder per game, with no re-encode.
+  in a folder per game, with no re-encode. An optional second key saves a clip
+  of its own length, 15 s to start with.
 - **Game-only audio.** Optionally records just the game: no Discord call, no
   music. It follows the game you're playing, not whatever window is in front.
 - **Microphone on its own track,** so you can mute or rebalance it later.
