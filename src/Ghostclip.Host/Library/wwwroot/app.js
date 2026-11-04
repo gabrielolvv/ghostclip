@@ -427,7 +427,7 @@ $('sel-bin').addEventListener('click', () => {
   if (performance.now() - binAskedAt < 600) return;
   post({ type: 'deleteMany', paths: [...selected] });
   clearSelection();
-  document.querySelector('#grid .card')?.focus();
+  document.querySelector('#grid .card')?.focus({ preventScroll: true });
 });
 $('sel-cancel').addEventListener('click', () => {
   if (binAsking) {
@@ -443,7 +443,8 @@ document.addEventListener('keydown', e => {
   if ($('library').hidden || e.target === $('search')) return;
   if (e.key.toLowerCase() === 'a' && e.ctrlKey && !e.altKey) {
     e.preventDefault();
-    $('sel-all').click();
+    // Not under the question: it asked about what was selected then.
+    if (!binAsking) $('sel-all').click();
     return;
   }
   if (selected.size === 0) return;
