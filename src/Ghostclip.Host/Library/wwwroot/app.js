@@ -77,6 +77,8 @@ const state = {
   favorites: false,      // only favorites, across games
   saveKey: 'Alt+F10',    // the clip hotkey as this keyboard prints it, for the empty library
   query: '',
+  sort: 'newest',        // set from what was last chosen, below
+  kind: 'all',
   pendingOpen: null,
   current: null,         // clip shown in the clip view
   start: 0,
@@ -177,9 +179,39 @@ function snapStart(keyframes, seconds) {
 
 function visibleClips() {
   const q = state.query.trim().toLowerCase();
-  return state.clips.filter(c =>
+  const clips = state.clips.filter(c =>
     (state.game === null || c.game === state.game) && (!state.favorites || c.favorite) &&
+    (state.kind === 'all' || (state.kind === 'images') === !!c.image) &&
     (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)));
+  return sortClips(clips);
+}
+
+// The list comes newest first. A sort keeps that order among equals, and a clip whose length isn't known yet goes last.
+function sortClips(clips) {
+  const length = c => (state.meta.get(c.path)?.meta?.duration) ?? -1;
+  switch (state.sort) {
+    case 'oldest': return clips.sort((a, b) => savedDate(a) - savedDate(b));
+    case 'largest': return clips.sort((a, b) => b.bytes - a.bytes);
+    case 'longest': return clips.sort((a, b) => length(b) - length(a));
+    default: return clips;
+  }
+}
+
+function readChoice(key, allowed) {
+  try {
+    const value = localStorage.getItem(key);
+    return allowed.includes(value) ? value : allowed[0];
+  } catch {
+    return allowed[0];
+  }
+}
+
+function keepChoice(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private storage off: the choice lasts until the window closes.
+  }
 }
 
 function renderSidebar() {
@@ -273,7 +305,7 @@ function renderCard(clip) {
   const text = el('div', 'card-text');
   const date = savedDate(clip);
   text.append(el('div', 'card-title', state.game === null ? clip.game : stem(clip.path)),
-    el('div', 'card-sub', `${clockLabel(date)} · ${fmtSize(clip.bytes)}`));
+    el('div', 'card-sub', `${state.sort === 'largest' || state.sort === 'longest' ? `${dayLabel(date)} · ` : ''}${clockLabel(date)} · ${fmtSize(clip.bytes)}`));
   card.append(text);
 
   // With a selection going, or Ctrl or Shift held, a click picks instead of opening.
@@ -318,7 +350,8 @@ let binAsking = false;
 let binAskedAt = 0;
 
 function togglePick(path, range) {
-  const paths = visibleClips().map(c => c.path);
+  // The order on screen: sorting by length can be about to change it.
+  const paths = [...document.querySelectorAll('#grid .card')].map(c => c.dataset.path);
   const from = paths.indexOf(selectAnchor), to = paths.indexOf(path);
   if (range && from >= 0 && to >= 0) {
     for (const p of paths.slice(Math.min(from, to), Math.max(from, to) + 1)) selected.add(p);
@@ -423,18 +456,21 @@ function renderGrid() {
   $('count').textContent = state.clips.length
     ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE') : L('CLIPS', 'CLIPES')}` : '';
 
+  // Grouped by day only while the days are in order. By size or length a day would come up again and again.
+  const byDay = state.sort === 'newest' || state.sort === 'oldest';
   let label = null;
   let cards = null;
   for (const clip of clips) {
-    const day = dayLabel(savedDate(clip));
-    if (day !== label) {
+    const day = byDay ? dayLabel(savedDate(clip)) : '';
+    if (cards === null || day !== label) {
       label = day;
-      grid.append(el('div', 'day', day));
+      if (byDay) grid.append(el('div', 'day', day));
       cards = el('div', 'cards');
       grid.append(cards);
     }
     cards.append(renderCard(clip));
   }
+  askNextLengths();
   showSelection();
 }
 
@@ -449,6 +485,7 @@ function showView(name) {
   $('library').hidden = name !== 'library';
   $('clip').hidden = name !== 'clip';
   $('settings').hidden = name !== 'settings';
+  if (name === 'library') setTimeout(askNextLengths);
   if (name !== 'settings') Settings.stopListening();
   binAsking = false;
   showSelection();
@@ -808,6 +845,54 @@ $('c-yes').addEventListener('click', () => {
 $('open-folder').addEventListener('click', () => post({ type: 'openFolder' }));
 $('empty-folder').addEventListener('click', () => post({ type: 'openFolder' }));
 $('search').addEventListener('input', e => { state.query = e.target.value; renderGrid(); });
+state.sort = readChoice('sort', ['newest', 'oldest', 'largest', 'longest']);
+$('sort').value = state.sort;
+$('kind').value = state.kind;
+$('sort').addEventListener('change', e => { state.sort = e.target.value; keepChoice('sort', state.sort); renderGrid(); });
+// Not remembered, unlike the sort: opening the library to a clip just saved that a filter hides would look like losing it.
+$('kind').addEventListener('change', e => { state.kind = e.target.value; renderGrid(); });
+
+// Sorting by length needs every clip's details, not only the cards on screen. Asked for two at a time and only while
+// the list is showing, so a clip opened meanwhile doesn't wait behind the whole library.
+let lengthsAsked = 0;
+const lengthsFailed = new Set();
+function askNextLengths() {
+  if (state.sort !== 'longest' || $('library').hidden) return;
+  for (const clip of visibleClips()) {
+    if (lengthsAsked >= 2) return;
+    if (clip.image || state.requested.has(clip.path) || lengthsFailed.has(clip.path)) continue;
+    lengthsAsked++;
+    requestMeta(clip.path);
+  }
+}
+
+function lengthAnswered() {
+  lengthsAsked = Math.max(0, lengthsAsked - 1);
+  askNextLengths();
+  resortSoon();
+}
+
+// Clips move as their lengths arrive, every so often. The same cards are moved, not redrawn: a selection, a question
+// and the keyboard's place all stay, and the thumbnails don't fade in again.
+let resortTimer = 0;
+function resortSoon() {
+  if (state.sort !== 'longest' || resortTimer) return;
+  resortTimer = setTimeout(() => {
+    resortTimer = 0;
+    if (state.sort !== 'longest') return;
+    const box = $('grid').querySelector('.cards');
+    if (!box) return;
+    const focused = document.activeElement;
+    const cards = new Map([...box.children].map(c => [c.dataset.path, c]));
+    for (const clip of visibleClips()) {
+      const card = cards.get(clip.path);
+      if (!card) continue;
+      card.querySelector('.thumb').classList.remove('loaded');
+      box.append(card);
+    }
+    if (focused && box.contains(focused)) focused.focus();
+  }, 1500);
+}
 
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
@@ -930,6 +1015,7 @@ function onMessage(message) {
       const card = [...document.querySelectorAll('.card')].find(c => c.dataset.path === message.path);
       if (card) applyMeta(card, message.path);
       if (state.current && state.current.path === message.path) setupTimeline();
+      if (state.sort === 'longest') lengthAnswered();
       break;
     }
     case 'open':
@@ -951,6 +1037,11 @@ function onMessage(message) {
       // A clip whose details can't be read keeps its plain tile and is asked for again when the list next
       // changes (a clip still being copied in, say); only say so when it's open.
       if (message.op === 'meta') state.requested.delete(message.path);
+      if (message.op === 'meta' && state.sort === 'longest') {
+        // Not asked for again by this sort: it would keep failing, one try after another.
+        lengthsFailed.add(message.path);
+        lengthAnswered();
+      }
       if (message.op === 'meta' && !(state.current && state.current.path === message.path)) break;
       toast(message.message || L('Something went wrong.', 'Algo deu errado.'), true);
       break;

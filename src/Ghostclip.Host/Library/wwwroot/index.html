@@ -33,6 +33,17 @@
     <section id="library" class="view">
       <header class="bar">
         <input id="search" type="search" placeholder="Search clips" data-pt-placeholder="Buscar clipes" spellcheck="false" autocomplete="off">
+        <select id="kind" class="field" aria-label="Show" data-pt-label="Mostrar">
+          <option value="all" data-pt="Tudo">Everything</option>
+          <option value="videos" data-pt="Só vídeos">Videos only</option>
+          <option value="images" data-pt="Só prints">Screenshots only</option>
+        </select>
+        <select id="sort" class="field" aria-label="Sort by" data-pt-label="Ordenar por">
+          <option value="newest" data-pt="Mais novos">Newest</option>
+          <option value="oldest" data-pt="Mais antigos">Oldest</option>
+          <option value="largest" data-pt="Maiores">Largest</option>
+          <option value="longest" data-pt="Mais longos">Longest</option>
+        </select>
         <span id="count" class="mono muted"></span>
       </header>
       <div id="problem" class="problem" role="alert" hidden>

@@ -10,6 +10,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Choose the sound in the copies you share: on a clip with several audio tracks,
   the buttons above its actions leave the microphone or Discord out of Discord
   size and Vertical, or make the copy silent. The clip itself keeps every track.
+- Sort the library by newest, oldest, largest or longest, and show only videos
+  or only screenshots, to find what to delete when the disk fills up. The sort
+  is remembered.
 
 ## 0.8.8
 
