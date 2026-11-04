@@ -11,7 +11,9 @@ namespace Ghostclip.Host.Library;
 internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths, Func<GhostclipConfig> current,
     Func<string> clipsRoot, Action<GhostclipConfig> saved, StatusWatcher status)
 {
-    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickFfmpeg";
+    private Mutex? _hotkeyCapture;
+
+    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
 
     public async Task HandleAsync(LibraryRequest r)
     {
@@ -22,6 +24,12 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 break;
             case "saveSettings":
                 Save(r);
+                break;
+            case "hotkeyCaptureStart":
+                CaptureHotkey(true);
+                break;
+            case "hotkeyCaptureEnd":
+                CaptureHotkey(false);
                 break;
             case "pickFolder":
                 using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip saves clips", "Onde o Ghostclip salva os clipes"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
@@ -42,6 +50,18 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                     if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "ffmpegPath", Path: dialog.FileName));
                 }
                 break;
+        }
+    }
+
+    // The tray lets go of its hotkeys while the page waits for one: a key it holds would run its action and never
+    // reach the page. The mutex says so; it closes with this process, so a crash can't leave the hotkeys off.
+    private void CaptureHotkey(bool capturing)
+    {
+        _hotkeyCapture?.Dispose();
+        _hotkeyCapture = capturing ? new Mutex(initiallyOwned: false, LibraryProgram.HotkeyCaptureMutexName) : null;
+        if (EventWaitHandle.TryOpenExisting(Program.HotkeyCaptureEventName, out var changed))
+        {
+            using (changed) changed.Set();
         }
     }
 

@@ -51,6 +51,9 @@ internal sealed class TrayApp : ApplicationContext
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
     private readonly RegisteredWaitHandle _exitRequestWait;
     private readonly EventWaitHandle _updateRequest = new(false, EventResetMode.AutoReset, Program.UpdateEventName);
+    private readonly EventWaitHandle _hotkeyCapture = new(false, EventResetMode.AutoReset, Program.HotkeyCaptureEventName);
+    private readonly RegisteredWaitHandle _hotkeyCaptureWait;
+    private readonly System.Windows.Forms.Timer _hotkeyResume = new() { Interval = 1000 };
     private readonly RegisteredWaitHandle _updateRequestWait;
     private bool _shuttingDown;
     private GhostclipConfig _config;
@@ -155,6 +158,9 @@ internal sealed class TrayApp : ApplicationContext
         _updateRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _updateRequest, (_, _) => _ui.Post(_ => { if (_updateVersion is not null && !_shuttingDown) RestartToUpdate(); }, null),
             null, Timeout.Infinite, executeOnlyOnce: false);
+        _hotkeyCaptureWait = ThreadPool.RegisterWaitForSingleObject(
+            _hotkeyCapture, (_, _) => _ui.Post(_ => OnHotkeyCaptureChanged(), null), null, Timeout.Infinite, executeOnlyOnce: false);
+        _hotkeyResume.Tick += (_, _) => ResumeHotkeys();
 
         RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
@@ -242,6 +248,31 @@ internal sealed class TrayApp : ApplicationContext
         _hotkey.Unregister(HotkeyAction.MicMute);
         _hotkeyLabels.Remove(HotkeyAction.MicMute);
         Register(HotkeyAction.MicMute, previous: null);
+        ApplyTexts();
+    }
+
+    // While the settings page waits for a new hotkey, a key this app holds would run its action instead of reaching
+    // the page. They come back a second after it stops waiting, so a key still down can't run the action it just
+    // chose; the same timer notices a library that died while waiting.
+    private void OnHotkeyCaptureChanged()
+    {
+        if (_shuttingDown) return;
+        if (Library.LibraryProgram.IsCapturingHotkey()) _hotkey.Pause();
+        _hotkeyResume.Stop();
+        _hotkeyResume.Start();
+    }
+
+    private void ResumeHotkeys()
+    {
+        if (_shuttingDown || Library.LibraryProgram.IsCapturingHotkey()) return;
+        _hotkeyResume.Stop();
+        var lost = _hotkey.Resume();
+        if (lost.Count == 0) return;
+        foreach (var action in lost)
+        {
+            _hotkeyLabels.Remove(action);
+            Register(action, previous: null);
+        }
         ApplyTexts();
     }
 
@@ -724,6 +755,9 @@ internal sealed class TrayApp : ApplicationContext
         _exitRequest.Dispose();
         _updateRequestWait.Unregister(null);
         _updateRequest.Dispose();
+        _hotkeyCaptureWait.Unregister(null);
+        _hotkeyCapture.Dispose();
+        _hotkeyResume.Dispose();
         _configWatcher.Dispose();
         _configReload.Dispose();
         StatusFile.Delete(_paths.StatusFile);

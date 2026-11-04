@@ -42,6 +42,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   next settings you saved never reached it: recording went on with the old
   monitor, frame rate and clip length until you saved again or restarted
   Ghostclip. Every save now applies.
+- Choosing a hotkey in Settings no longer runs what that key already does.
+  Pressing Alt+F9 there used to start a session, and the button kept waiting;
+  now the keys are recorded, and saving says if two actions share one. Ghostclip
+  lets go of its hotkeys while the button waits and takes them back right after.
 
 ## 0.8.5
 
