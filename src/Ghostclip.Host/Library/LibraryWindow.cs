@@ -125,7 +125,7 @@ internal sealed partial class LibraryWindow : Form
         catch (Exception ex) when (ex is COMException or WebView2RuntimeNotFoundException or IOException or UnauthorizedAccessException)
         {
             _log.Error(ex, "Could not start the library page");
-            MessageBox.Show(L($"The clip library couldn't start: {ex.Message}", $"A biblioteca de clipes não conseguiu abrir: {ex.Message}"),
+            MessageBox.Show(L($"The clip library couldn't start: {ex.Message}", $"A biblioteca de clipes não conseguiu abrir: {ex.Message}", $"La biblioteca de clips no pudo abrirse: {ex.Message}"),
                 "Ghostclip", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             Close();
         }
@@ -135,7 +135,7 @@ internal sealed partial class LibraryWindow : Form
     {
         if (e.CloseReason == CloseReason.UserClosing && _bridge.HasRunningJobs &&
             MessageBox.Show(this, L("Ghostclip is still working on a clip. Close and stop it?",
-                    "O Ghostclip ainda está trabalhando num clipe. Fechar e interromper?"), "Ghostclip",
+                    "O Ghostclip ainda está trabalhando num clipe. Fechar e interromper?", "Ghostclip todavía está trabajando en un clip. ¿Cerrar e interrumpirlo?"), "Ghostclip",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             e.Cancel = true;

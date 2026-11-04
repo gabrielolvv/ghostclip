@@ -162,7 +162,7 @@ public static class LibraryStore
                 owned = true;
             }
             var name = file is null ? "library.json" : Path.GetFileName(file);
-            if (!owned) throw new IOException(UiText.L($"{name} is busy in another Ghostclip window. Try again.", $"O {name} está ocupado em outra janela do Ghostclip. Tente de novo."));
+            if (!owned) throw new IOException(UiText.L($"{name} is busy in another Ghostclip window. Try again.", $"O {name} está ocupado em outra janela do Ghostclip. Tente de novo.", $"{name} está ocupado en otra ventana de Ghostclip. Inténtalo de nuevo."));
             action();
         }
         finally
@@ -186,7 +186,7 @@ public static class LibraryStore
     {
         if (!TryRead(file, out var state))
         {
-            throw new IOException(UiText.L($"{Path.GetFileName(file)}, where favorites are kept, can't be read. Until it can, favorites can't change and the space limit deletes nothing.", $"Não foi possível ler o {Path.GetFileName(file)}, onde ficam os favoritos. Até que seja possível, os favoritos não mudam e o limite de espaço não apaga nada."));
+            throw new IOException(UiText.L($"{Path.GetFileName(file)}, where favorites are kept, can't be read. Until it can, favorites can't change and the space limit deletes nothing.", $"Não foi possível ler o {Path.GetFileName(file)}, onde ficam os favoritos. Até que seja possível, os favoritos não mudam e o limite de espaço não apaga nada.", $"No se puede leer {Path.GetFileName(file)}, donde se guardan los favoritos. Hasta que se pueda, los favoritos no cambian y el límite de espacio no borra nada."));
         }
         change(state);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);

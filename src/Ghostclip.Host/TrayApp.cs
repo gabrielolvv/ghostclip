@@ -184,7 +184,7 @@ internal sealed class TrayApp : ApplicationContext
         RememberBufferFolder();
         ClearOldBuffers();
         RegisterHotkeys();
-        if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
+        if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas", "Configuración restablecida"), configProblem, ToolTipIcon.Warning);
         // A listed program already in front: the worker hears it before anything it could record.
         CheckPrivateAppNow();
         _worker.Start(_config);
@@ -227,9 +227,9 @@ internal sealed class TrayApp : ApplicationContext
             {
                 _configError = error;
                 _log.Warning("config.json can't be read; keeping the current settings: {Error}", error);
-                Notify(L("Settings not applied", "Configurações não aplicadas"),
+                Notify(L("Settings not applied", "Configurações não aplicadas", "Configuración no aplicada"),
                     L($"config.json can't be read ({error}). Ghostclip keeps the current settings.",
-                        $"Não foi possível ler o config.json ({error}). O Ghostclip mantém as configurações atuais."), ToolTipIcon.Warning);
+                        $"Não foi possível ler o config.json ({error}). O Ghostclip mantém as configurações atuais.", $"No se puede leer config.json ({error}). Ghostclip mantiene la configuración actual."), ToolTipIcon.Warning);
             }
             return;
         }
@@ -332,14 +332,14 @@ internal sealed class TrayApp : ApplicationContext
         else if (old is not null && old != gesture && _hotkey.TryRegister(action, old, out _))
         {
             _hotkeyLabels[action] = KeyLabels.Describe(old);
-            Notify(L("Hotkey not changed", "Hotkey não alterada"),
+            Notify(L("Hotkey not changed", "Hotkey não alterada", "Tecla no cambiada"),
                 L($"{error} Still using {_hotkeyLabels[action]}. Pick another one in Settings.",
-                    $"{error} Continua valendo {_hotkeyLabels[action]}. Escolha outra em Configurações."), ToolTipIcon.Warning);
+                    $"{error} Continua valendo {_hotkeyLabels[action]}. Escolha outra em Configurações.", $"{error} Sigue vigente {_hotkeyLabels[action]}. Elige otra en Configuración."), ToolTipIcon.Warning);
         }
         else
         {
-            Notify(L("Hotkey not available", "Hotkey indisponível"),
-                L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações."), ToolTipIcon.Warning);
+            Notify(L("Hotkey not available", "Hotkey indisponível", "Tecla no disponible"),
+                L($"{error} Pick another one in Settings.", $"{error} Escolha outra em Configurações.", $"{error} Elige otra en Configuración."), ToolTipIcon.Warning);
         }
     }
 
@@ -350,26 +350,26 @@ internal sealed class TrayApp : ApplicationContext
     // Every text the tray shows; again whenever the language changes, and every second of a session.
     private void ApplyTexts()
     {
-        _saveItem.Text = WithHotkey(HotkeyAction.SaveClip, L("Save clip", "Salvar clipe"));
-        _shortClipItem.Text = WithHotkey(HotkeyAction.ShortClip, L($"Save last {_config.ShortClipSeconds} s", $"Salvar últimos {_config.ShortClipSeconds} s"));
+        _saveItem.Text = WithHotkey(HotkeyAction.SaveClip, L("Save clip", "Salvar clipe", "Guardar clip"));
+        _shortClipItem.Text = WithHotkey(HotkeyAction.ShortClip, L($"Save last {_config.ShortClipSeconds} s", $"Salvar últimos {_config.ShortClipSeconds} s", $"Guardar últimos {_config.ShortClipSeconds} s"));
         _shortClipItem.Visible = _config.HasShortClipHotkey;
-        _screenshotItem.Text = WithHotkey(HotkeyAction.Screenshot, L("Take screenshot", "Tirar print"));
+        _screenshotItem.Text = WithHotkey(HotkeyAction.Screenshot, L("Take screenshot", "Tirar print", "Hacer captura"));
         _sessionItem.Text = _session.Running
-            ? WithHotkey(HotkeyAction.Session, L($"Stop session recording · {Clock(_session.Elapsed)}", $"Parar gravação da sessão · {Clock(_session.Elapsed)}"))
-            : WithHotkey(HotkeyAction.Session, L("Record session", "Gravar sessão"));
+            ? WithHotkey(HotkeyAction.Session, L($"Stop session recording · {Clock(_session.Elapsed)}", $"Parar gravação da sessão · {Clock(_session.Elapsed)}", $"Detener grabación de la sesión · {Clock(_session.Elapsed)}"))
+            : WithHotkey(HotkeyAction.Session, L("Record session", "Gravar sessão", "Grabar sesión"));
         _micItem.Text = _micMuted
-            ? WithHotkey(HotkeyAction.MicMute, L("Unmute microphone", "Desmutar microfone"))
-            : WithHotkey(HotkeyAction.MicMute, L("Mute microphone", "Mutar microfone"));
+            ? WithHotkey(HotkeyAction.MicMute, L("Unmute microphone", "Desmutar microfone", "Activar micrófono"))
+            : WithHotkey(HotkeyAction.MicMute, L("Mute microphone", "Mutar microfone", "Silenciar micrófono"));
         _micItem.Enabled = _config.Microphone;
         _pauseItem.Text = _paused
-            ? WithHotkey(HotkeyAction.Pause, L("Resume recording", "Retomar gravação"))
-            : WithHotkey(HotkeyAction.Pause, L("Pause recording", "Pausar gravação"));
-        _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}");
-        _libraryItem.Text = L("Open library", "Abrir biblioteca");
-        _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes");
-        _settingsItem.Text = L("Settings...", "Configurações...");
-        _logsItem.Text = L("Open logs folder", "Abrir pasta de logs");
-        _exitItem.Text = L("Exit", "Sair");
+            ? WithHotkey(HotkeyAction.Pause, L("Resume recording", "Retomar gravação", "Reanudar grabación"))
+            : WithHotkey(HotkeyAction.Pause, L("Pause recording", "Pausar gravação", "Pausar grabación"));
+        _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}", $"Reiniciar para actualizar a {_updateVersion}");
+        _libraryItem.Text = L("Open library", "Abrir biblioteca", "Abrir biblioteca");
+        _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes", "Abrir carpeta de clips");
+        _settingsItem.Text = L("Settings...", "Configurações...", "Configuración...");
+        _logsItem.Text = L("Open logs folder", "Abrir pasta de logs", "Abrir carpeta de registros");
+        _exitItem.Text = L("Exit", "Sair", "Salir");
         UpdateIconText();
         UpdateStatusItem();
     }
@@ -397,9 +397,9 @@ internal sealed class TrayApp : ApplicationContext
         ApplyTexts();
         // The library offers it too, with a button.
         PublishStatus(_status);
-        Notify(L("Update ready", "Atualização pronta"),
+        Notify(L("Update ready", "Atualização pronta", "Actualización lista"),
             L($"Ghostclip {version} installs when you exit Ghostclip or the next time it starts. To install it now, use the library or the tray menu.",
-                $"O Ghostclip {version} será instalado quando você sair do Ghostclip ou na próxima vez que ele abrir. Para instalar agora, use a biblioteca ou o menu da bandeja."), ToolTipIcon.Info);
+                $"O Ghostclip {version} será instalado quando você sair do Ghostclip ou na próxima vez que ele abrir. Para instalar agora, use a biblioteca ou o menu da bandeja.", $"Ghostclip {version} se instala cuando salgas de Ghostclip o la próxima vez que se abra. Para instalarlo ahora, usa la biblioteca o el menú de la bandeja."), ToolTipIcon.Info);
     }
 
     private void RestartToUpdate()
@@ -454,18 +454,18 @@ internal sealed class TrayApp : ApplicationContext
     {
         var state = _status.State switch
         {
-            WorkerState.Recording => L("Recording", "Gravando"),
-            WorkerState.Stopped => L("Not recording", "Sem gravar"),
-            WorkerState.Probing => L("Detecting encoder", "Detectando o encoder"),
-            WorkerState.WaitingForDesktop => L("Paused (screen locked)", "Pausado (tela bloqueada)"),
-            WorkerState.Paused => L("Paused", "Pausado"),
-            _ => L("Starting", "Iniciando"),
+            WorkerState.Recording => L("Recording", "Gravando", "Grabando"),
+            WorkerState.Stopped => L("Not recording", "Sem gravar", "Sin grabar"),
+            WorkerState.Probing => L("Detecting encoder", "Detectando o encoder", "Detectando el encoder"),
+            WorkerState.WaitingForDesktop => L("Paused (screen locked)", "Pausado (tela bloqueada)", "Pausado (pantalla bloqueada)"),
+            WorkerState.Paused => L("Paused", "Pausado", "Pausado"),
+            _ => L("Starting", "Iniciando", "Iniciando"),
         };
-        var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}") : "";
+        var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}", $" · audio: {SpanishRoute(route)}") : "";
         // What the recorder does, not what the tray asked: a mute that didn't reach it shows as the live mic.
-        var mic = (_status.MicrophoneMuted ? L(" · mic muted", " · mic mudo") : _status.Microphone ? " · mic" : "") + (_status.Discord ? " · discord" : "");
+        var mic = (_status.MicrophoneMuted ? L(" · mic muted", " · mic mudo", " · mic silenciado") : _status.Microphone ? " · mic" : "") + (_status.Discord ? " · discord" : "");
         var game = _gamePid != 0 ? _game : _foreground;
-        var session = _session.Running ? L($"● Session {Clock(_session.Elapsed)} · ", $"● Sessão {Clock(_session.Elapsed)} · ") : "";
+        var session = _session.Running ? L($"● Session {Clock(_session.Elapsed)} · ", $"● Sessão {Clock(_session.Elapsed)} · ", $"● Sesión {Clock(_session.Elapsed)} · ") : "";
         _statusItem.Text = $"{session}{state} · {game}{audio}{mic}";
     }
 
@@ -473,6 +473,16 @@ internal sealed class TrayApp : ApplicationContext
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
 
     // The worker names the audio route in English, for its log as well.
+    private static string SpanishRoute(string route) => route switch
+    {
+        "microphone" => "micrófono",
+        "silence" => "silencio",
+        "system without discord" => "sistema sin discord",
+        "starting" => "iniciando",
+        _ when route.StartsWith("game ", StringComparison.Ordinal) => "juego " + route["game ".Length..],
+        _ => route == "system" ? "sistema" : route,
+    };
+
     private static string PortugueseRoute(string route) => route switch
     {
         "system" => "sistema",
@@ -490,12 +500,12 @@ internal sealed class TrayApp : ApplicationContext
         var text = s.State switch
         {
             WorkerState.Recording => L($"Ghostclip: recording ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", audio" : "")})",
-                $"Ghostclip: gravando ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", áudio" : "")})"),
-            WorkerState.Stopped => L("Ghostclip: not recording", "Ghostclip: sem gravar"),
-            WorkerState.Probing => L("Ghostclip: detecting the encoder", "Ghostclip: detectando o encoder"),
-            WorkerState.WaitingForDesktop => L("Ghostclip: paused while the screen is locked", "Ghostclip: pausado enquanto a tela está bloqueada"),
-            WorkerState.Paused => L("Ghostclip: paused, not recording", "Ghostclip: pausado, sem gravar"),
-            _ => L("Ghostclip: starting", "Ghostclip: iniciando"),
+                $"Ghostclip: gravando ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", áudio" : "")})", $"Ghostclip: grabando ({s.Encoder}, {s.Fps:0} fps{(s.Audio ? ", audio" : "")})"),
+            WorkerState.Stopped => L("Ghostclip: not recording", "Ghostclip: sem gravar", "Ghostclip: sin grabar"),
+            WorkerState.Probing => L("Ghostclip: detecting the encoder", "Ghostclip: detectando o encoder", "Ghostclip: detectando el encoder"),
+            WorkerState.WaitingForDesktop => L("Ghostclip: paused while the screen is locked", "Ghostclip: pausado enquanto a tela está bloqueada", "Ghostclip: en pausa mientras la pantalla está bloqueada"),
+            WorkerState.Paused => L("Ghostclip: paused, not recording", "Ghostclip: pausado, sem gravar", "Ghostclip: en pausa, sin grabar"),
+            _ => L("Ghostclip: starting", "Ghostclip: iniciando", "Ghostclip: iniciando"),
         };
         // NotifyIcon.Text is capped at 127 characters.
         _icon.Text = text.Length > 127 ? text[..127] : text;
@@ -514,7 +524,7 @@ internal sealed class TrayApp : ApplicationContext
         CheckPrivateAppNow();
         if (Paused)
         {
-            Notify(L("Clip not saved", "Clipe não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
+            Notify(L("Clip not saved", "Clipe não salvo", "Clip no guardado"), L("Recording is paused.", "A gravação está pausada.", "La grabación está en pausa."), ToolTipIcon.Warning);
             return;
         }
         var game = CurrentGame();
@@ -530,7 +540,7 @@ internal sealed class TrayApp : ApplicationContext
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Warning("Save failed: {Error}", ex.Message);
-            Notify(L("Clip not saved", "Clipe não salvo"), ex.Message, ToolTipIcon.Warning);
+            Notify(L("Clip not saved", "Clipe não salvo", "Clip no guardado"), ex.Message, ToolTipIcon.Warning);
             return;
         }
         // The clip is safe from here on: confirm right away, the MP4 follows.
@@ -561,10 +571,10 @@ internal sealed class TrayApp : ApplicationContext
         {
             if (fromKey && _pausedFor is { } holding)
             {
-                Notify(_paused ? L("Recording stays paused", "A gravação continua pausada") : L("Recording still paused", "Gravação continua pausada"),
+                Notify(_paused ? L("Recording stays paused", "A gravação continua pausada", "La grabación sigue en pausa") : L("Recording still paused", "Gravação continua pausada", "La grabación sigue en pausa"),
                     _paused
-                        ? L($"Also after {holding} leaves the front, until you press it again.", $"Também depois que {holding} sair da frente, até você apertar de novo.")
-                        : L($"{holding} is in front.", $"{holding} está na frente."), ToolTipIcon.None);
+                        ? L($"Also after {holding} leaves the front, until you press it again.", $"Também depois que {holding} sair da frente, até você apertar de novo.", $"También después de que {holding} deje el primer plano, hasta que la pulses de nuevo.")
+                        : L($"{holding} is in front.", $"{holding} está na frente.", $"{holding} está en primer plano."), ToolTipIcon.None);
             }
             return;
         }
@@ -577,13 +587,13 @@ internal sealed class TrayApp : ApplicationContext
         (Paused ? _mutedSound : _unmutedSound).Play();
         if (Paused)
         {
-            Notify(L("Recording paused", "Gravação pausada"),
-                (_pausedFor is { } app ? L($"{app} is in front. ", $"{app} está na frente. ") : "") +
-                L("The replay buffer is deleted, and nothing is recorded until you resume.", "O buffer de replay é apagado, e nada é gravado até você retomar."), ToolTipIcon.None);
+            Notify(L("Recording paused", "Gravação pausada", "Grabación en pausa"),
+                (_pausedFor is { } app ? L($"{app} is in front. ", $"{app} está na frente. ", $"{app} está en primer plano. ") : "") +
+                L("The replay buffer is deleted, and nothing is recorded until you resume.", "O buffer de replay é apagado, e nada é gravado até você retomar.", "El búfer de repetición se borra y no se graba nada hasta que reanudes."), ToolTipIcon.None);
         }
         else
         {
-            Notify(L("Recording resumed", "Gravação retomada"), L("Clips start from now.", "Os clipes começam a partir de agora."), ToolTipIcon.None);
+            Notify(L("Recording resumed", "Gravação retomada", "Grabación reanudada"), L("Clips start from now.", "Os clipes começam a partir de agora.", "Los clips empiezan desde ahora."), ToolTipIcon.None);
         }
     }
 
@@ -599,21 +609,21 @@ internal sealed class TrayApp : ApplicationContext
         (_micMuted ? _mutedSound : _unmutedSound).Play();
         if (_micMuted)
         {
-            Notify(L("Microphone muted", "Microfone mudo"),
-                L("Clips record silence on the microphone track until you press it again.", "Os clipes gravam silêncio na faixa do microfone até você apertar de novo."), ToolTipIcon.None);
+            Notify(L("Microphone muted", "Microfone mudo", "Micrófono silenciado"),
+                L("Clips record silence on the microphone track until you press it again.", "Os clipes gravam silêncio na faixa do microfone até você apertar de novo.", "Los clips graban silencio en la pista del micrófono hasta que lo pulses de nuevo."), ToolTipIcon.None);
         }
         else
         {
             var game = CurrentGame();
             if (_config.MicrophoneMutedFor(game, byHotkey: false))
             {
-                Notify(L("Microphone still muted", "Microfone continua mudo"),
-                    L($"{game}'s profile mutes it.", $"O perfil de {game} deixa o microfone mudo."), ToolTipIcon.None);
+                Notify(L("Microphone still muted", "Microfone continua mudo", "El micrófono sigue silenciado"),
+                    L($"{game}'s profile mutes it.", $"O perfil de {game} deixa o microfone mudo.", $"El perfil de {game} lo silencia."), ToolTipIcon.None);
             }
             else
             {
-                Notify(L("Microphone unmuted", "Microfone desmutado"),
-                    L("The microphone track records again.", "A faixa do microfone volta a gravar."), ToolTipIcon.None);
+                Notify(L("Microphone unmuted", "Microfone desmutado", "Micrófono activado"),
+                    L("The microphone track records again.", "A faixa do microfone volta a gravar.", "La pista del micrófono vuelve a grabar."), ToolTipIcon.None);
             }
         }
         ApplyTexts();
@@ -624,7 +634,7 @@ internal sealed class TrayApp : ApplicationContext
         CheckPrivateAppNow();
         if (Paused)
         {
-            Notify(L("Screenshot not saved", "Print não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
+            Notify(L("Screenshot not saved", "Print não salvo", "Captura no guardada"), L("Recording is paused.", "A gravação está pausada.", "La grabación está en pausa."), ToolTipIcon.Warning);
             return;
         }
         var game = CurrentGame();
@@ -634,12 +644,12 @@ internal sealed class TrayApp : ApplicationContext
             if (_config.ConfirmationSound) _sound.Play();
             _lastClip = path;
             _storage.Enforce();
-            Notify(L("Screenshot saved", "Print salvo"), L($"{game}. Click to open it.", $"{game}. Clique para abrir."), ToolTipIcon.None);
+            Notify(L("Screenshot saved", "Print salvo", "Captura guardada"), L($"{game}. Click to open it.", $"{game}. Clique para abrir.", $"{game}. Haz clic para abrirla."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Warning("Screenshot failed: {Error}", ex.Message);
-            Notify(L("Screenshot not saved", "Print não salvo"), ex.Message, ToolTipIcon.Warning);
+            Notify(L("Screenshot not saved", "Print não salvo", "Captura no guardada"), ex.Message, ToolTipIcon.Warning);
         }
     }
 
@@ -653,17 +663,17 @@ internal sealed class TrayApp : ApplicationContext
         // A session is the buffer kept: there must be a buffer being written.
         if (Paused || _status.State != WorkerState.Recording)
         {
-            Notify(L("Session not started", "Sessão não iniciada"),
-                L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora."), ToolTipIcon.Warning);
+            Notify(L("Session not started", "Sessão não iniciada", "Sesión no iniciada"),
+                L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora.", "Ghostclip no está grabando ahora."), ToolTipIcon.Warning);
             return;
         }
         _session.Start(CurrentGame());
         if (_config.ConfirmationSound) _sound.Play();
-        var stop = _hotkeyLabels.TryGetValue(HotkeyAction.Session, out var s) ? s : L("the tray menu", "o menu da bandeja");
-        var mark = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var c) ? c : L("the clip hotkey", "a hotkey de clipe");
-        Notify(L("Recording the session", "Gravando a sessão"),
+        var stop = _hotkeyLabels.TryGetValue(HotkeyAction.Session, out var s) ? s : L("the tray menu", "o menu da bandeja", "el menú de la bandeja");
+        var mark = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var c) ? c : L("the clip hotkey", "a hotkey de clipe", "la tecla de clip");
+        Notify(L("Recording the session", "Gravando a sessão", "Grabando la sesión"),
             L($"{_session.Game}. {mark} saves a clip and adds a bookmark; {stop} stops.",
-                $"{_session.Game}. {mark} salva um clipe e marca o momento; {stop} para."), ToolTipIcon.None);
+                $"{_session.Game}. {mark} salva um clipe e marca o momento; {stop} para.", $"{_session.Game}. {mark} guarda un clip y añade un marcador; {stop} detiene."), ToolTipIcon.None);
         ApplyTexts();
     }
 
@@ -677,7 +687,7 @@ internal sealed class TrayApp : ApplicationContext
             // Stopped while the recorder was down: the parts before it are saved already.
             if (earlierParts == 0)
             {
-                Notify(L("Session not saved", "Sessão não salva"), L("Nothing was recorded.", "Nada foi gravado."), ToolTipIcon.Warning);
+                Notify(L("Session not saved", "Sessão não salva", "Sesión no guardada"), L("Nothing was recorded.", "Nada foi gravado.", "No se grabó nada."), ToolTipIcon.Warning);
             }
             return;
         }
@@ -695,18 +705,18 @@ internal sealed class TrayApp : ApplicationContext
             _storage.Enforce();
             if (session)
             {
-                Notify(L("Session saved", "Sessão salva"),
+                Notify(L("Session saved", "Sessão salva", "Sesión guardada"),
                     L($"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} bookmarks. Click to open it.",
-                        $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Clique para abrir."), ToolTipIcon.None);
+                        $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Clique para abrir.", $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Haz clic para abrirla."), ToolTipIcon.None);
                 return;
             }
-            Notify(L("Clip saved", "Clipe salvo"),
-                L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir."), ToolTipIcon.None);
+            Notify(L("Clip saved", "Clipe salvo", "Clip guardado"),
+                L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Haz clic para abrirlo."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             _log.Error("Remux failed: {Error}", ex.Message);
-            Notify(L("Clip not saved", "Clipe não salvo"), ex.Message, ToolTipIcon.Error);
+            Notify(L("Clip not saved", "Clipe não salvo", "Clip no guardado"), ex.Message, ToolTipIcon.Error);
         }
     }
 
@@ -762,10 +772,10 @@ internal sealed class TrayApp : ApplicationContext
     private void Welcome()
     {
         _welcomePending = false;
-        var key = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var label) ? label : L("the tray menu", "o menu da bandeja");
-        Notify(L("Ghostclip is recording", "O Ghostclip está gravando"),
+        var key = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var label) ? label : L("the tray menu", "o menu da bandeja", "el menú de la bandeja");
+        Notify(L("Ghostclip is recording", "O Ghostclip está gravando", "Ghostclip está grabando"),
             L($"Press {key} to save the last {_config.ClipSeconds} s. Double-click this icon for your clips and settings.",
-                $"Aperte {key} para salvar os últimos {_config.ClipSeconds} s. Dê dois cliques neste ícone para ver os clipes e as configurações."), ToolTipIcon.None);
+                $"Aperte {key} para salvar os últimos {_config.ClipSeconds} s. Dê dois cliques neste ícone para ver os clipes e as configurações.", $"Pulsa {key} para guardar los últimos {_config.ClipSeconds} s. Haz doble clic en este ícono para ver tus clips y la configuración."), ToolTipIcon.None);
     }
 
     // Saving says so when a clip doesn't fit, but by then the moment has happened: this says it before.
@@ -782,9 +792,9 @@ internal sealed class TrayApp : ApplicationContext
                 if (!drive.IsReady || !_lowDisk.ShouldWarn(root, drive.AvailableFreeSpace, threshold)) continue;
                 var gb = drive.AvailableFreeSpace / 1024.0 / 1024 / 1024;
                 _log.Warning("Drive {Drive} has {Gb:0.0} GB free", root, gb);
-                Notify(L($"Drive {root} is almost full", $"O disco {root} está quase cheio"),
+                Notify(L($"Drive {root} is almost full", $"O disco {root} está quase cheio", $"El disco {root} está casi lleno"),
                     L($"{gb:0.0} GB free. When it fills up, Ghostclip can't record or save clips. A space limit in Settings can make room by itself.",
-                        $"{gb:0.0} GB livres. Quando encher, o Ghostclip não consegue gravar nem salvar clipes. Um limite de espaço em Configurações pode abrir espaço sozinho."), ToolTipIcon.Warning);
+                        $"{gb:0.0} GB livres. Quando encher, o Ghostclip não consegue gravar nem salvar clipes. Um limite de espaço em Configurações pode abrir espaço sozinho.", $"{gb:0.0} GB libres. Cuando se llene, Ghostclip no podrá grabar ni guardar clips. Un límite de espacio en Configuración puede liberar espacio solo."), ToolTipIcon.Warning);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
@@ -800,14 +810,14 @@ internal sealed class TrayApp : ApplicationContext
         {
             _problem = message;
             PublishStatus(_status);
-            Notify(L("Ghostclip is not recording", "O Ghostclip não está gravando"), message, ToolTipIcon.Error);
+            Notify(L("Ghostclip is not recording", "O Ghostclip não está gravando", "Ghostclip no está grabando"), message, ToolTipIcon.Error);
             return;
         }
         // Restarts can come in bursts (monitor unplugged): one balloon a minute.
         if (DateTime.UtcNow - _lastWarningUtc < TimeSpan.FromMinutes(1)) return;
         _lastWarningUtc = DateTime.UtcNow;
-        Notify(L("Recording interrupted", "Gravação interrompida"),
-            L("Ghostclip is restarting the recorder. The buffer is kept.", "O Ghostclip está reiniciando o gravador. O buffer foi mantido."), ToolTipIcon.Warning);
+        Notify(L("Recording interrupted", "Gravação interrompida", "Grabación interrumpida"),
+            L("Ghostclip is restarting the recorder. The buffer is kept.", "O Ghostclip está reiniciando o gravador. O buffer foi mantido.", "Ghostclip está reiniciando el grabador. El búfer se conservó."), ToolTipIcon.Warning);
     }
 
     // The worker restarts recording only when the capture settings changed (GhostclipConfig.SameCaptureAs).

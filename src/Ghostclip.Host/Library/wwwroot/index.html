@@ -12,76 +12,76 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11a7 7 0 0 1 14 0v7l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L5 18z"/><path d="M10 10h.01M14 10h.01"/></svg>
       <span>GHOSTCLIP</span>
     </div>
-    <div id="badge" class="badge mono" title="What the recorder is doing" data-pt-title="O que o gravador está fazendo"><span class="dot"></span><span id="badge-text">CHECKING</span></div>
-    <nav id="games" aria-label="Games" data-pt-label="Jogos"></nav>
+    <div id="badge" class="badge mono" title="What the recorder is doing" data-pt-title="O que o gravador está fazendo" data-es-title="Lo que está haciendo el grabador"><span class="dot"></span><span id="badge-text">CHECKING</span></div>
+    <nav id="games" aria-label="Games" data-pt-label="Jogos" data-es-label="Juegos"></nav>
     <div class="side-foot">
       <div id="update" class="update-card" hidden>
-        <div class="update-head mono" data-pt="ATUALIZAÇÃO">UPDATE</div>
+        <div class="update-head mono" data-pt="ATUALIZAÇÃO" data-es="ACTUALIZACIÓN">UPDATE</div>
         <div id="update-text"></div>
-        <button id="update-now" class="act primary small" type="button" data-pt="Atualizar agora">Update now</button>
-        <button id="update-notes" class="link" type="button" data-pt="O que mudou">What's new</button>
+        <button id="update-now" class="act primary small" type="button" data-pt="Atualizar agora" data-es="Actualizar ahora">Update now</button>
+        <button id="update-notes" class="link" type="button" data-pt="O que mudou" data-es="Novedades">What's new</button>
       </div>
       <button id="nav-settings" class="game" type="button">
-        <span class="name with-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span data-pt="Configurações">Settings</span></span>
+        <span class="name with-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span data-pt="Configurações" data-es="Configuración">Settings</span></span>
       </button>
       <div id="total" class="mono muted"></div>
-      <button id="open-folder" class="link mono" type="button" data-pt="Abrir pasta">Open folder</button>
+      <button id="open-folder" class="link mono" type="button" data-pt="Abrir pasta" data-es="Abrir carpeta">Open folder</button>
     </div>
   </aside>
 
   <main>
     <section id="library" class="view">
       <header class="bar">
-        <input id="search" type="search" placeholder="Search clips" data-pt-placeholder="Buscar clipes" spellcheck="false" autocomplete="off">
-        <select id="kind" class="field" aria-label="Show" data-pt-label="Mostrar">
-          <option value="all" data-pt="Tudo">Everything</option>
-          <option value="videos" data-pt="Só vídeos">Videos only</option>
-          <option value="images" data-pt="Só prints">Screenshots only</option>
+        <input id="search" type="search" placeholder="Search clips" data-pt-placeholder="Buscar clipes" data-es-placeholder="Buscar clips" spellcheck="false" autocomplete="off">
+        <select id="kind" class="field" aria-label="Show" data-pt-label="Mostrar" data-es-label="Mostrar">
+          <option value="all" data-pt="Tudo" data-es="Todo">Everything</option>
+          <option value="videos" data-pt="Só vídeos" data-es="Solo videos">Videos only</option>
+          <option value="images" data-pt="Só prints" data-es="Solo capturas">Screenshots only</option>
         </select>
-        <select id="sort" class="field" aria-label="Sort by" data-pt-label="Ordenar por">
-          <option value="newest" data-pt="Mais novos">Newest</option>
-          <option value="oldest" data-pt="Mais antigos">Oldest</option>
-          <option value="largest" data-pt="Maiores">Largest</option>
-          <option value="longest" data-pt="Mais longos">Longest</option>
+        <select id="sort" class="field" aria-label="Sort by" data-pt-label="Ordenar por" data-es-label="Ordenar por">
+          <option value="newest" data-pt="Mais novos" data-es="Más recientes">Newest</option>
+          <option value="oldest" data-pt="Mais antigos" data-es="Más antiguos">Oldest</option>
+          <option value="largest" data-pt="Maiores" data-es="Más grandes">Largest</option>
+          <option value="longest" data-pt="Mais longos" data-es="Más largos">Longest</option>
         </select>
         <span id="count" class="mono muted"></span>
       </header>
       <div id="problem" class="problem" role="alert" hidden>
-        <strong data-pt="O Ghostclip não está gravando">Ghostclip isn't recording</strong>
+        <strong data-pt="O Ghostclip não está gravando" data-es="Ghostclip no está grabando">Ghostclip isn't recording</strong>
         <span id="problem-text"></span>
       </div>
       <div id="grid"></div>
       <div id="selbar" class="savebar" hidden>
         <span id="selbar-text"></span>
-        <button id="sel-all" class="act" type="button" data-pt="Selecionar tudo">Select all</button>
-        <button id="sel-join" class="act" type="button" title="One video from these clips, oldest first, without re-encoding" data-pt-title="Um vídeo só com estes clipes, do mais antigo ao mais novo, sem recodificar" data-pt="Juntar">Join</button>
+        <button id="sel-all" class="act" type="button" data-pt="Selecionar tudo" data-es="Seleccionar todo">Select all</button>
+        <button id="sel-join" class="act" type="button" title="One video from these clips, oldest first, without re-encoding" data-pt-title="Um vídeo só com estes clipes, do mais antigo ao mais novo, sem recodificar" data-es-title="Un solo video con estos clips, del más antiguo al más reciente, sin recodificar" data-pt="Juntar" data-es="Unir">Join</button>
         <button id="sel-favorite" class="act" type="button"></button>
         <button id="sel-bin" class="act" type="button"></button>
         <button id="sel-cancel" class="act" type="button"></button>
       </div>
       <div id="empty" class="empty" hidden>
-        <h1 data-pt="Seus clipes aparecem aqui">Your clips show up here</h1>
+        <h1 data-pt="Seus clipes aparecem aqui" data-es="Tus clips aparecen aquí">Your clips show up here</h1>
         <p id="empty-hint"></p>
-        <button id="empty-folder" class="act" type="button" data-pt="Abrir pasta">Open folder</button>
+        <button id="empty-folder" class="act" type="button" data-pt="Abrir pasta" data-es="Abrir carpeta">Open folder</button>
       </div>
-      <p id="no-match" class="muted no-match" hidden data-pt="Nenhum clipe encontrado.">No clips match.</p>
+      <p id="no-match" class="muted no-match" hidden data-pt="Nenhum clipe encontrado." data-es="No se encontró ningún clip.">No clips match.</p>
     </section>
 
     <section id="settings" class="view" hidden>
       <header class="bar">
-        <h1 class="view-title" data-pt="Configurações">Settings</h1>
+        <h1 class="view-title" data-pt="Configurações" data-es="Configuración">Settings</h1>
       </header>
       <div id="settings-form" class="settings"></div>
       <div id="savebar" class="savebar" hidden>
         <span id="savebar-text">Unsaved changes</span>
-        <button id="s-discard" class="act" type="button" data-pt="Descartar">Discard</button>
+        <button id="s-discard" class="act" type="button" data-pt="Descartar" data-es="Descartar">Discard</button>
         <button id="s-save" class="act primary" type="button">Save</button>
       </div>
     </section>
 
     <section id="clip" class="view" hidden>
       <header class="bar">
-        <button id="back" class="icon" type="button" aria-label="Back to the library" data-pt-label="Voltar para a biblioteca">
+        <button id="back" class="icon" type="button" aria-label="Back to the library" data-pt-label="Voltar para a biblioteca" data-es-label="Volver a la biblioteca">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
         </button>
         <span id="clip-game"></span>
@@ -90,16 +90,16 @@
       <div class="stage">
         <video id="video" preload="metadata" disablepictureinpicture></video>
         <img id="image" alt="" hidden>
-        <div id="no-video" class="no-video" hidden data-pt="Este PC não consegue mostrar a imagem deste vídeo aqui (o HEVC precisa das Extensões de Vídeo HEVC da Microsoft Store). Você ainda pode cortar, comprimir e copiar o clipe.">This PC can't show this video's picture here (HEVC needs the HEVC Video Extensions from the Microsoft Store). You can still trim, compress and copy the clip.</div>
+        <div id="no-video" class="no-video" hidden data-pt="Este PC não consegue mostrar a imagem deste vídeo aqui (o HEVC precisa das Extensões de Vídeo HEVC da Microsoft Store). Você ainda pode cortar, comprimir e copiar o clipe." data-es="Este PC no puede mostrar la imagen de este video aquí (HEVC necesita las Extensiones de video HEVC de Microsoft Store). Aun así puedes recortar, comprimir y copiar el clip.">This PC can't show this video's picture here (HEVC needs the HEVC Video Extensions from the Microsoft Store). You can still trim, compress and copy the clip.</div>
         <div id="play-hint" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
       </div>
-      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte">
+      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte" data-es-title="Las flechas avanzan o retroceden, Shift+flechas con más precisión, coma y punto fotograma a fotograma, I y O marcan el recorte">
         <canvas id="wave"></canvas>
         <div id="range"></div>
-        <div id="h-start" class="handle" role="slider" aria-label="Trim start" data-pt-label="Início do corte" tabindex="0"></div>
-        <div id="h-end" class="handle" role="slider" aria-label="Trim end" data-pt-label="Fim do corte" tabindex="0"></div>
+        <div id="h-start" class="handle" role="slider" aria-label="Trim start" data-pt-label="Início do corte" data-es-label="Inicio del recorte" tabindex="0"></div>
+        <div id="h-end" class="handle" role="slider" aria-label="Trim end" data-pt-label="Fim do corte" data-es-label="Fin del recorte" tabindex="0"></div>
         <div id="playhead"></div>
       </div>
       <div class="times mono">
@@ -108,47 +108,47 @@
         <span id="t-end"></span>
       </div>
       <div id="tracks-row" class="tracks" hidden>
-        <span class="mono muted" data-pt="SOM NAS CÓPIAS">SOUND IN COPIES</span>
+        <span class="mono muted" data-pt="SOM NAS CÓPIAS" data-es="SONIDO EN LAS COPIAS">SOUND IN COPIES</span>
         <span id="track-list"></span>
-        <span class="muted hint" data-pt="Para o tamanho do Discord e a cópia vertical. Tudo que ficar ligado é misturado numa faixa.">For Discord size and Vertical. What stays on is mixed into one track.</span>
+        <span class="muted hint" data-pt="Para o tamanho do Discord e a cópia vertical. Tudo que ficar ligado é misturado numa faixa." data-es="Para el tamaño de Discord y la copia vertical. Todo lo que quede activado se mezcla en una pista.">For Discord size and Vertical. What stays on is mixed into one track.</span>
       </div>
       <div class="actions">
         <button id="a-trim" class="act primary" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.6 8.6 20 18M8.6 15.4 20 6"/></svg><span data-pt="Salvar corte">Save trim</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.6 8.6 20 18M8.6 15.4 20 6"/></svg><span data-pt="Salvar corte" data-es="Guardar recorte">Save trim</span>
         </button>
         <button id="a-discord" class="act" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg><span data-pt="Tamanho p/ Discord">Discord size</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg><span data-pt="Tamanho p/ Discord" data-es="Tamaño p/ Discord">Discord size</span>
         </button>
-        <button id="a-vertical" class="act" type="button" title="A 9:16 copy of the middle of the picture, for Shorts, TikTok and Reels" data-pt-title="Uma cópia 9:16 do meio da imagem, para Shorts, TikTok e Reels">
+        <button id="a-vertical" class="act" type="button" title="A 9:16 copy of the middle of the picture, for Shorts, TikTok and Reels" data-pt-title="Uma cópia 9:16 do meio da imagem, para Shorts, TikTok e Reels" data-es-title="Una copia 9:16 del centro de la imagen, para Shorts, TikTok y Reels">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/></svg><span>Vertical</span>
         </button>
         <button id="a-copy" class="act" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-pt="Copiar">Copy</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-pt="Copiar" data-es="Copiar">Copy</span>
         </button>
         <button id="a-favorite" class="act" type="button" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg><span data-pt="Favorito">Favorite</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg><span data-pt="Favorito" data-es="Favorito">Favorite</span>
         </button>
         <button id="a-rename" class="act" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg><span data-pt="Renomear">Rename</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg><span data-pt="Renomear" data-es="Renombrar">Rename</span>
         </button>
         <button id="a-folder" class="act" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg><span data-pt="Pasta">Folder</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg><span data-pt="Pasta" data-es="Carpeta">Folder</span>
         </button>
         <span class="spacer"></span>
-        <button id="a-delete" class="act danger" type="button" aria-label="Delete clip" data-pt-label="Apagar clipe">
+        <button id="a-delete" class="act danger" type="button" aria-label="Delete clip" data-pt-label="Apagar clipe" data-es-label="Eliminar clip">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
         </button>
       </div>
       <form id="rename" class="confirm rename" hidden>
-        <input id="rename-name" class="field" type="text" spellcheck="false" autocomplete="off" aria-label="New name" data-pt-label="Novo nome">
+        <input id="rename-name" class="field" type="text" spellcheck="false" autocomplete="off" aria-label="New name" data-pt-label="Novo nome" data-es-label="Nuevo nombre">
         <span id="rename-ext" class="mono muted"></span>
-        <button id="r-yes" class="act primary" type="submit" data-pt="Renomear">Rename</button>
-        <button id="r-no" class="act" type="button" data-pt="Cancelar">Cancel</button>
+        <button id="r-yes" class="act primary" type="submit" data-pt="Renomear" data-es="Renombrar">Rename</button>
+        <button id="r-no" class="act" type="button" data-pt="Cancelar" data-es="Cancelar">Cancel</button>
       </form>
       <div id="confirm" class="confirm" hidden>
-        <span data-pt="Apagar este clipe? Ele vai para a Lixeira.">Delete this clip? It goes to the Recycle Bin.</span>
-        <button id="c-yes" class="act danger" type="button" data-pt="Apagar">Delete</button>
-        <button id="c-no" class="act" type="button" data-pt="Cancelar">Cancel</button>
+        <span data-pt="Apagar este clipe? Ele vai para a Lixeira." data-es="¿Eliminar este clip? Va a la Papelera de reciclaje.">Delete this clip? It goes to the Recycle Bin.</span>
+        <button id="c-yes" class="act danger" type="button" data-pt="Apagar" data-es="Eliminar">Delete</button>
+        <button id="c-no" class="act" type="button" data-pt="Cancelar" data-es="Cancelar">Cancel</button>
       </div>
     </section>
   </main>
@@ -156,7 +156,7 @@
 
 <div id="toast" class="toast" hidden>
   <span id="toast-text"></span>
-  <button id="toast-show" class="link" type="button" hidden data-pt="Mostrar">Show</button>
+  <button id="toast-show" class="link" type="button" hidden data-pt="Mostrar" data-es="Mostrar">Show</button>
 </div>
 
 <script src="app.js"></script>

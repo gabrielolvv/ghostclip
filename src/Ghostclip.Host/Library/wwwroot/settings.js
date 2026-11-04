@@ -17,103 +17,103 @@ const Settings = (() => {
 
   // Built on every render, in the page's language.
   const sections = () => [
-    { title: L('GENERAL', 'GERAL'), fields: [
+    { title: L('GENERAL', 'GERAL', 'GENERAL'), fields: [
       // Each language is named in itself, so it can be found whichever one the page is in.
-      { key: 'language', label: L('Language', 'Idioma'), hint: L('Changes when you save, without touching recording.', 'Muda ao salvar, sem mexer na gravação.'), type: 'select',
-        options: [['Auto', L('Same as Windows', 'Igual ao Windows')], ['English', 'English'], ['Portuguese', 'Português']] },
+      { key: 'language', label: L('Language', 'Idioma', 'Idioma'), hint: L('Changes when you save, without touching recording.', 'Muda ao salvar, sem mexer na gravação.', 'Cambia al guardar, sin afectar la grabación.'), type: 'select',
+        options: [['Auto', L('Same as Windows', 'Igual ao Windows', 'Igual que Windows')], ['English', 'English'], ['Portuguese', 'Português'], ['Spanish', 'Español']] },
     ] },
-    { title: L('CLIPS', 'CLIPES'), fields: [
-      { key: 'hotkey', label: L('Save a clip', 'Salvar um clipe'), hint: L('Click, then press the keys. During a session it also adds a bookmark.', 'Clique e aperte as teclas. Durante uma sessão, também marca o momento.'), type: 'hotkey' },
-      { key: 'screenshotHotkey', label: L('Take a screenshot', 'Tirar print'), hint: L('Saved as a JPEG next to the clips.', 'Salvo em JPEG junto dos clipes.'), type: 'hotkey' },
-      { key: 'sessionHotkey', label: L('Record a session', 'Gravar sessão'),
-        hint: L('Press to start and again to stop. Keeps everything in between: about 9 GB an hour at 20 Mbps.', 'Aperte para começar e de novo para parar. Guarda tudo entre os dois: uns 9 GB por hora a 20 Mbps.'), type: 'hotkey' },
-      { key: 'pauseHotkey', label: L('Pause recording', 'Pausar a gravação'),
+    { title: L('CLIPS', 'CLIPES', 'CLIPS'), fields: [
+      { key: 'hotkey', label: L('Save a clip', 'Salvar um clipe', 'Guardar un clip'), hint: L('Click, then press the keys. During a session it also adds a bookmark.', 'Clique e aperte as teclas. Durante uma sessão, também marca o momento.', 'Haz clic y pulsa las teclas. Durante una sesión, también añade un marcador.'), type: 'hotkey' },
+      { key: 'screenshotHotkey', label: L('Take a screenshot', 'Tirar print', 'Hacer una captura'), hint: L('Saved as a JPEG next to the clips.', 'Salvo em JPEG junto dos clipes.', 'Se guarda como JPEG junto a los clips.'), type: 'hotkey' },
+      { key: 'sessionHotkey', label: L('Record a session', 'Gravar sessão', 'Grabar sesión'),
+        hint: L('Press to start and again to stop. Keeps everything in between: about 9 GB an hour at 20 Mbps.', 'Aperte para começar e de novo para parar. Guarda tudo entre os dois: uns 9 GB por hora a 20 Mbps.', 'Pulsa para empezar y otra vez para parar. Guarda todo lo que hay en medio: unos 9 GB por hora a 20 Mbps.'), type: 'hotkey' },
+      { key: 'pauseHotkey', label: L('Pause recording', 'Pausar a gravação', 'Pausar la grabación'),
         hint: L('Optional: stops recording and deletes the replay buffer until you press it again, for a bank’s page or a password. The tray menu does it too. Ghostclip records again when it restarts.',
-          'Opcional: para a gravação e apaga o buffer de replay até você apertar de novo, para a página do banco ou uma senha. O menu da bandeja também faz isso. O Ghostclip volta a gravar quando reinicia.'), type: 'hotkey', optional: true },
-      { key: 'privateApps', label: L('Pause for these programs', 'Pausar para estes programas'),
+          'Opcional: para a gravação e apaga o buffer de replay até você apertar de novo, para a página do banco ou uma senha. O menu da bandeja também faz isso. O Ghostclip volta a gravar quando reinicia.', 'Opcional: detiene la grabación y borra el búfer de repetición hasta que la pulses de nuevo, para la página del banco o una contraseña. El menú de la bandeja también lo hace. Ghostclip vuelve a grabar cuando se reinicia.'), type: 'hotkey', optional: true },
+      { key: 'privateApps', label: L('Pause for these programs', 'Pausar para estes programas', 'Pausar para estos programas'),
         hint: L('While one is the active window, recording pauses by itself and the replay buffer is deleted. Beside another active window it can still be recorded. Names as in the Details tab of Task Manager, separated by commas. Programs only: not a website in a browser, and Store apps may not be recognized.',
-          'Enquanto um deles for a janela ativa, a gravação pausa sozinha e o buffer de replay é apagado. Ao lado de outra janela ativa, ele ainda pode ser gravado. Nomes como na aba Detalhes do Gerenciador de Tarefas, separados por vírgula. Só programas: não um site no navegador, e apps da Store podem não ser reconhecidos.'),
+          'Enquanto um deles for a janela ativa, a gravação pausa sozinha e o buffer de replay é apagado. Ao lado de outra janela ativa, ele ainda pode ser gravado. Nomes como na aba Detalhes do Gerenciador de Tarefas, separados por vírgula. Só programas: não um site no navegador, e apps da Store podem não ser reconhecidos.', 'Mientras uno de ellos sea la ventana activa, la grabación se pausa sola y el búfer de repetición se borra. Junto a otra ventana activa, todavía se puede grabar. Nombres como en la pestaña Detalles del Administrador de tareas, separados por comas. Solo programas: no un sitio web en un navegador, y puede que las apps de la Store no se reconozcan.'),
         type: 'names', placeholder: 'KeePass, Bitwarden' },
-      { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
+      { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe', 'Duración del clip'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.', 'Segundos antes de la tecla que entran en el clip.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
-      { key: 'shortClipHotkey', label: L('Save a short clip', 'Salvar um clipe curto'),
+      { key: 'shortClipHotkey', label: L('Save a short clip', 'Salvar um clipe curto', 'Guardar un clip corto'),
         hint: L('Optional: a second key that saves a clip of its own length. No key is taken until you choose one.',
-          'Opcional: uma segunda tecla que salva um clipe com duração própria. Nenhuma tecla é ocupada até você escolher uma.'), type: 'hotkey', optional: true },
-      { key: 'shortClipSeconds', label: L('Short clip length', 'Duração do clipe curto'),
+          'Opcional: uma segunda tecla que salva um clipe com duração própria. Nenhuma tecla é ocupada até você escolher uma.', 'Opcional: una segunda tecla que guarda un clip con su propia duración. No se ocupa ninguna tecla hasta que elijas una.'), type: 'hotkey', optional: true },
+      { key: 'shortClipSeconds', label: L('Short clip length', 'Duração do clipe curto', 'Duración del clip corto'),
         hint: L('The same in every game. With a key chosen, if it is longer than the clip length, the replay buffer keeps that much too.',
-          'A mesma em todos os jogos. Com uma tecla escolhida, se for maior que a duração do clipe, o buffer de replay também guarda esse tanto.'),
+          'A mesma em todos os jogos. Com uma tecla escolhida, se for maior que a duração do clipe, o buffer de replay também guarda esse tanto.', 'La misma en todos los juegos. Con una tecla elegida, si es mayor que la duración del clip, el búfer de repetición también guarda ese tiempo.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
-      { key: 'clipsFolder', label: L('Clips folder', 'Pasta de clipes'), hint: L('A folder per game goes inside.', 'Dentro dela fica uma pasta por jogo.'),
-        type: 'path', pick: 'pickFolder', empty: () => s.saved && s.saved.resolvedClipsFolder, reset: L('Default', 'Padrão') },
-      { key: 'confirmationSound', label: L('Confirmation sounds', 'Sons de confirmação'),
-        hint: L('When a clip, screenshot or session is saved. Muting the microphone always sounds.', 'Ao salvar um clipe, print ou sessão. Mutar o microfone sempre toca.'), type: 'switch' },
-      { key: 'discordLimitMB', label: L('Discord size limit', 'Limite de tamanho do Discord'), hint: L('10 MB on a free account.', '10 MB numa conta gratuita.'),
+      { key: 'clipsFolder', label: L('Clips folder', 'Pasta de clipes', 'Carpeta de clips'), hint: L('A folder per game goes inside.', 'Dentro dela fica uma pasta por jogo.', 'Dentro va una carpeta por juego.'),
+        type: 'path', pick: 'pickFolder', empty: () => s.saved && s.saved.resolvedClipsFolder, reset: L('Default', 'Padrão', 'Predeterminada') },
+      { key: 'confirmationSound', label: L('Confirmation sounds', 'Sons de confirmação', 'Sonidos de confirmación'),
+        hint: L('When a clip, screenshot or session is saved. Muting the microphone always sounds.', 'Ao salvar um clipe, print ou sessão. Mutar o microfone sempre toca.', 'Al guardar un clip, una captura o una sesión. Silenciar el micrófono siempre suena.'), type: 'switch' },
+      { key: 'discordLimitMB', label: L('Discord size limit', 'Limite de tamanho do Discord', 'Límite de tamaño de Discord'), hint: L('10 MB on a free account.', '10 MB numa conta gratuita.', '10 MB en una cuenta gratuita.'),
         type: 'number', unit: 'MB', min: 1, max: 4096 },
-      { key: 'storageLimitGB', label: L('Space for clips', 'Espaço para clipes'),
+      { key: 'storageLimitGB', label: L('Space for clips', 'Espaço para clipes', 'Espacio para clips'),
         hint: L('0 keeps everything. Past the limit the oldest are deleted for good; favorites and clips you renamed never are.',
-          '0 guarda tudo. Passando do limite, os mais antigos são apagados de vez; favoritos e clipes renomeados nunca.')
-          + (s.storageBytes != null ? L(` Using ${fmtSize(s.storageBytes)} now.`, ` Usando ${fmtSize(s.storageBytes)} agora.`) : ''),
+          '0 guarda tudo. Passando do limite, os mais antigos são apagados de vez; favoritos e clipes renomeados nunca.', '0 guarda todo. Al pasar el límite, los más antiguos se eliminan definitivamente; los favoritos y los clips renombrados nunca.')
+          + (s.storageBytes != null ? L(` Using ${fmtSize(s.storageBytes)} now.`, ` Usando ${fmtSize(s.storageBytes)} agora.`, ` Usando ${fmtSize(s.storageBytes)} ahora.`) : ''),
         type: 'number', unit: 'GB', min: 0, max: 100000 },
     ] },
-    { title: L('VIDEO', 'VÍDEO'), note: L('Changing these restarts recording and clears the replay buffer.', 'Mudar estas opções reinicia a gravação e limpa o buffer de replay.'), fields: [
-      { key: 'fps', label: L('Frame rate', 'Taxa de quadros'), hint: L('Capturing below the monitor’s refresh rate costs less.', 'Capturar abaixo da taxa de atualização do monitor custa menos.'),
+    { title: L('VIDEO', 'VÍDEO', 'VIDEO'), note: L('Changing these restarts recording and clears the replay buffer.', 'Mudar estas opções reinicia a gravação e limpa o buffer de replay.', 'Cambiar estas opciones reinicia la grabación y limpia el búfer de repetición.'), fields: [
+      { key: 'fps', label: L('Frame rate', 'Taxa de quadros', 'Fotogramas por segundo'), hint: L('Capturing below the monitor’s refresh rate costs less.', 'Capturar abaixo da taxa de atualização do monitor custa menos.', 'Capturar por debajo de la frecuencia de actualización del monitor cuesta menos.'),
         type: 'number', unit: 'FPS', min: 24, max: 144 },
-      { key: 'bitrateMbps', label: 'Bitrate', hint: L('20 Mbps at 1080p60 is about 150 MB a minute.', '20 Mbps em 1080p60 dá uns 150 MB por minuto.'),
+      { key: 'bitrateMbps', label: 'Bitrate', hint: L('20 Mbps at 1080p60 is about 150 MB a minute.', '20 Mbps em 1080p60 dá uns 150 MB por minuto.', '20 Mbps en 1080p60 son unos 150 MB por minuto.'),
         type: 'number', unit: 'MBPS', min: 2, max: 150 },
-      { key: 'codec', label: 'Codec', hint: L('H.264 plays everywhere. HEVC looks better at the same size.', 'H.264 toca em qualquer lugar. HEVC fica melhor no mesmo tamanho.'),
+      { key: 'codec', label: 'Codec', hint: L('H.264 plays everywhere. HEVC looks better at the same size.', 'H.264 toca em qualquer lugar. HEVC fica melhor no mesmo tamanho.', 'H.264 se reproduce en cualquier lado. HEVC se ve mejor con el mismo tamaño.'),
         type: 'segmented', options: [['H264', 'H.264'], ['Hevc', 'HEVC']] },
-      { key: 'encoder', label: 'Encoder', hint: L('Always the GPU; never a CPU encoder.', 'Sempre a GPU; nunca um encoder de CPU.'), type: 'select', detected: true,
+      { key: 'encoder', label: 'Encoder', hint: L('Always the GPU; never a CPU encoder.', 'Sempre a GPU; nunca um encoder de CPU.', 'Siempre la GPU; nunca un encoder de CPU.'), type: 'select', detected: true,
         options: [['Auto', 'Auto'], ['Nvenc', 'NVIDIA NVENC'], ['Amf', 'AMD AMF'], ['Qsv', 'Intel QuickSync']] },
-      { key: 'outputHeight', label: L('Resolution', 'Resolução'), hint: L('Scaling down happens on the GPU.', 'A redução de escala acontece na GPU.'), type: 'select', number: true,
+      { key: 'outputHeight', label: L('Resolution', 'Resolução', 'Resolución'), hint: L('Scaling down happens on the GPU.', 'A redução de escala acontece na GPU.', 'La reducción de escala se hace en la GPU.'), type: 'select', number: true,
         options: [[0, 'Monitor'], [2160, '2160p'], [1440, '1440p'], [1080, '1080p'], [720, '720p']] },
-      { key: 'monitor', label: 'Monitor', hint: L('The screen to record, with either capture method.', 'A tela a gravar, com qualquer um dos métodos de captura.'), type: 'monitor', min: 0, max: 16 },
-      { key: 'bufferFolder', label: L('Replay buffer folder', 'Pasta do buffer de replay'),
+      { key: 'monitor', label: 'Monitor', hint: L('The screen to record, with either capture method.', 'A tela a gravar, com qualquer um dos métodos de captura.', 'La pantalla que se graba, con cualquiera de los dos métodos de captura.'), type: 'monitor', min: 0, max: 16 },
+      { key: 'bufferFolder', label: L('Replay buffer folder', 'Pasta do buffer de replay', 'Carpeta del búfer de repetición'),
         hint: L('The buffer writes to its drive all the time while recording. Another drive spares the system’s SSD. Changing it clears the buffer.',
-          'O buffer escreve no disco o tempo todo enquanto grava. Outro disco poupa o SSD do sistema. Mudar a pasta limpa o buffer.'),
-        type: 'path', pick: 'pickBufferFolder', empty: () => L('With Ghostclip’s data, on the system drive', 'Com os dados do Ghostclip, no disco do sistema'), reset: L('Default', 'Padrão') },
-      { key: 'capture', label: L('Capture', 'Captura'),
+          'O buffer escreve no disco o tempo todo enquanto grava. Outro disco poupa o SSD do sistema. Mudar a pasta limpa o buffer.', 'El búfer escribe en su disco todo el tiempo mientras graba. Otro disco cuida el SSD del sistema. Cambiar la carpeta limpia el búfer.'),
+        type: 'path', pick: 'pickBufferFolder', empty: () => L('With Ghostclip’s data, on the system drive', 'Com os dados do Ghostclip, no disco do sistema', 'Con los datos de Ghostclip, en el disco del sistema'), reset: L('Default', 'Padrão', 'Predeterminada') },
+      { key: 'capture', label: L('Capture', 'Captura', 'Captura'),
         hint: L('Try Windows Graphics Capture if games lose FPS while recording. On Windows 10 it may show a yellow border.',
-          'Experimente o Windows Graphics Capture se os jogos perderem FPS gravando. No Windows 10 pode aparecer uma borda amarela.'),
+          'Experimente o Windows Graphics Capture se os jogos perderem FPS gravando. No Windows 10 pode aparecer uma borda amarela.', 'Prueba Windows Graphics Capture si los juegos pierden FPS al grabar. En Windows 10 puede aparecer un borde amarillo.'),
         type: 'select', options: [['DesktopDuplication', 'Desktop Duplication'], ['GraphicsCapture', 'Windows Graphics Capture']] },
     ], more: [
-      { key: 'input', label: L('Color conversion', 'Conversão de cor'),
+      { key: 'input', label: L('Color conversion', 'Conversão de cor', 'Conversión de color'),
         hint: L('Auto uses what was measured to cost least. Through memory is a last resort for drivers where neither works; NVIDIA and AMD only.',
-          'Auto usa o que foi medido como mais barato. Pela memória é o último recurso para drivers em que nenhum dos dois funciona; só NVIDIA e AMD.'), type: 'select',
-        options: [['Auto', 'Auto'], ['Direct', L('In the encoder', 'No encoder')], ['Nv12', L('On the GPU first', 'Na GPU antes')], ['Memory', L('Through memory', 'Pela memória')]] },
-      { key: 'qsvAsyncDepth', label: L('QuickSync queue', 'Fila do QuickSync'), hint: L('1 uses the least memory. Raise it if clips drop frames.', '1 usa menos memória. Aumente se os clipes perderem quadros.'),
+          'Auto usa o que foi medido como mais barato. Pela memória é o último recurso para drivers em que nenhum dos dois funciona; só NVIDIA e AMD.', 'Auto usa lo que se midió como más barato. Por memoria es el último recurso para drivers donde ninguno de los dos funciona; solo NVIDIA y AMD.'), type: 'select',
+        options: [['Auto', 'Auto'], ['Direct', L('In the encoder', 'No encoder', 'En el encoder')], ['Nv12', L('On the GPU first', 'Na GPU antes', 'Primero en la GPU')], ['Memory', L('Through memory', 'Pela memória', 'Por memoria')]] },
+      { key: 'qsvAsyncDepth', label: L('QuickSync queue', 'Fila do QuickSync', 'Cola de QuickSync'), hint: L('1 uses the least memory. Raise it if clips drop frames.', '1 usa menos memória. Aumente se os clipes perderem quadros.', '1 usa menos memoria. Súbela si los clips pierden fotogramas.'),
         type: 'number', min: 1, max: 8 },
     ] },
-    { title: L('AUDIO', 'ÁUDIO'), fields: [
-      { key: 'systemAudio', label: L('Record sound', 'Gravar som'), hint: L('Turning it off restarts recording.', 'Desligar reinicia a gravação.'), type: 'switch' },
-      { key: 'audioSource', label: L('Sound to record', 'Som a gravar'),
-        hint: L('Game only leaves Discord and music out. Switches without a restart.', 'Só o jogo deixa Discord e música de fora. Troca sem reiniciar.'), type: 'segmented',
-        options: [['System', L('Everything', 'Tudo')], ['GameOnly', L('Game only', 'Só o jogo')]] },
-      { key: 'discordTrack', label: L('Discord on its own track', 'Discord em faixa própria'),
+    { title: L('AUDIO', 'ÁUDIO', 'AUDIO'), fields: [
+      { key: 'systemAudio', label: L('Record sound', 'Gravar som', 'Grabar sonido'), hint: L('Turning it off restarts recording.', 'Desligar reinicia a gravação.', 'Desactivarlo reinicia la grabación.'), type: 'switch' },
+      { key: 'audioSource', label: L('Sound to record', 'Som a gravar', 'Sonido a grabar'),
+        hint: L('Game only leaves Discord and music out. Switches without a restart.', 'Só o jogo deixa Discord e música de fora. Troca sem reiniciar.', 'Solo el juego deja fuera Discord y la música. Cambia sin reiniciar.'), type: 'segmented',
+        options: [['System', L('Everything', 'Tudo', 'Todo')], ['GameOnly', L('Game only', 'Só o jogo', 'Solo el juego')]] },
+      { key: 'discordTrack', label: L('Discord on its own track', 'Discord em faixa própria', 'Discord en su propia pista'),
         hint: L('The Discord app goes to a separate track and out of the main one, so a call can be muted later. Turning it on or off restarts recording.',
-          'O app do Discord vai para uma faixa separada e sai da principal, para dar para silenciar a call depois. Ligar ou desligar reinicia a gravação.'), type: 'switch' },
-      { key: 'microphone', label: L('Microphone', 'Microfone'), hint: L('On its own track. Turning it on or off restarts recording.', 'Numa faixa separada. Ligar ou desligar reinicia a gravação.'),
+          'O app do Discord vai para uma faixa separada e sai da principal, para dar para silenciar a call depois. Ligar ou desligar reinicia a gravação.', 'La app de Discord va a una pista separada y sale de la principal, para poder silenciar la llamada después. Activarlo o desactivarlo reinicia la grabación.'), type: 'switch' },
+      { key: 'microphone', label: L('Microphone', 'Microfone', 'Micrófono'), hint: L('On its own track. Turning it on or off restarts recording.', 'Numa faixa separada. Ligar ou desligar reinicia a gravação.', 'En su propia pista. Activarlo o desactivarlo reinicia la grabación.'),
         type: 'switch' },
-      { key: 'micMuteHotkey', label: L('Mute the microphone', 'Mutar o microfone'),
+      { key: 'micMuteHotkey', label: L('Mute the microphone', 'Mutar o microfone', 'Silenciar el micrófono'),
         hint: L('Press to mute the microphone track and again to unmute it, without restarting recording. Works while the microphone is on.',
-          'Aperte para mutar a faixa do microfone e de novo para desmutar, sem reiniciar a gravação. Funciona com o microfone ligado.'), type: 'hotkey' },
-      { key: 'audioOffsetMs', label: L('Audio offset', 'Atraso do áudio'), hint: L('Positive delays the sound. For a constant lip-sync error.', 'Positivo atrasa o som. Para um erro constante de sincronia labial.'),
+          'Aperte para mutar a faixa do microfone e de novo para desmutar, sem reiniciar a gravação. Funciona com o microfone ligado.', 'Pulsa para silenciar la pista del micrófono y otra vez para activarla, sin reiniciar la grabación. Funciona con el micrófono activado.'), type: 'hotkey' },
+      { key: 'audioOffsetMs', label: L('Audio offset', 'Atraso do áudio', 'Desfase del audio'), hint: L('Positive delays the sound. For a constant lip-sync error.', 'Positivo atrasa o som. Para um erro constante de sincronia labial.', 'Positivo retrasa el sonido. Para un error constante de sincronía labial.'),
         type: 'number', unit: 'MS', min: -1000, max: 1000 },
     ] },
-    { title: L('GAME PROFILES', 'PERFIS POR JOGO'), profiles: true },
-    { title: L('ADVANCED', 'AVANÇADO'), fields: [
-      { key: 'gamePriority', label: L('Games first', 'Prioridade para os jogos'),
-        hint: L('Recording yields the CPU and GPU to the game. Turn it off if clips stutter.', 'A gravação cede a CPU e a GPU para o jogo. Desligue se os clipes travarem.'), type: 'switch' },
-      { key: 'clearBufferOnExit', label: L('Delete the replay buffer on exit', 'Apagar o buffer de replay ao sair'),
+    { title: L('GAME PROFILES', 'PERFIS POR JOGO', 'PERFILES POR JUEGO'), profiles: true },
+    { title: L('ADVANCED', 'AVANÇADO', 'AVANZADO'), fields: [
+      { key: 'gamePriority', label: L('Games first', 'Prioridade para os jogos', 'Prioridad a los juegos'),
+        hint: L('Recording yields the CPU and GPU to the game. Turn it off if clips stutter.', 'A gravação cede a CPU e a GPU para o jogo. Desligue se os clipes travarem.', 'La grabación cede la CPU y la GPU al juego. Desactívalo si los clips se traban.'), type: 'switch' },
+      { key: 'clearBufferOnExit', label: L('Delete the replay buffer on exit', 'Apagar o buffer de replay ao sair', 'Borrar el búfer de repetición al salir'),
         hint: L('The buffer is your last moments of screen. Off, it stays on disk until Ghostclip next starts, and clips can reach back across a quick restart.',
-          'O buffer são os últimos momentos da sua tela. Desligado, ele fica no disco até o Ghostclip abrir de novo, e os clipes alcançam o que veio antes de um reinício rápido.'), type: 'switch' },
-      { key: 'startWithWindows', label: L('Start with Windows', 'Iniciar com o Windows'), hint: L('Installed copies only.', 'Só em cópias instaladas.'), type: 'switch' },
-      { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído'), reset: L('Use bundled', 'Usar o incluído') },
-      { key: 'logLevel', label: L('Log detail', 'Detalhe do log'), type: 'select',
-        options: [['Error', L('Errors', 'Erros')], ['Warning', L('Warnings', 'Avisos')], ['Information', 'Normal'], ['Debug', L('Everything', 'Tudo')]] },
-      { label: L('Diagnostics', 'Diagnóstico'),
+          'O buffer são os últimos momentos da sua tela. Desligado, ele fica no disco até o Ghostclip abrir de novo, e os clipes alcançam o que veio antes de um reinício rápido.', 'El búfer son los últimos momentos de tu pantalla. Desactivado, se queda en el disco hasta que Ghostclip vuelva a abrirse, y los clips alcanzan lo que hubo antes de un reinicio rápido.'), type: 'switch' },
+      { key: 'startWithWindows', label: L('Start with Windows', 'Iniciar com o Windows', 'Iniciar con Windows'), hint: L('Installed copies only.', 'Só em cópias instaladas.', 'Solo en copias instaladas.'), type: 'switch' },
+      { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído', 'Incluido'), reset: L('Use bundled', 'Usar o incluído', 'Usar el incluido') },
+      { key: 'logLevel', label: L('Log detail', 'Detalhe do log', 'Detalle del registro'), type: 'select',
+        options: [['Error', L('Errors', 'Erros', 'Errores')], ['Warning', L('Warnings', 'Avisos', 'Advertencias')], ['Information', 'Normal'], ['Debug', L('Everything', 'Tudo', 'Todo')]] },
+      { label: L('Diagnostics', 'Diagnóstico', 'Diagnóstico'),
         hint: L('Copies your GPU, Windows and recording details, to paste in a bug report or an FPS test.',
-          'Copia sua placa de vídeo, o Windows e os detalhes da gravação, para colar num relato de problema ou teste de FPS.'),
-        type: 'action', text: L('Copy diagnostics', 'Copiar diagnóstico'), action: 'diagnostics' },
+          'Copia sua placa de vídeo, o Windows e os detalhes da gravação, para colar num relato de problema ou teste de FPS.', 'Copia tu tarjeta gráfica, Windows y los detalles de la grabación, para pegarlos en un reporte de problema o una prueba de FPS.'),
+        type: 'action', text: L('Copy diagnostics', 'Copiar diagnóstico', 'Copiar diagnóstico'), action: 'diagnostics' },
     ] },
   ];
 
@@ -142,9 +142,9 @@ const Settings = (() => {
     const bar = $('savebar');
     bar.hidden = !dirty();
     bar.classList.toggle('warn', s.confirming);
-    $('savebar-text').textContent = s.confirming ? s.confirmText : L('Unsaved changes', 'Alterações não salvas');
+    $('savebar-text').textContent = s.confirming ? s.confirmText : L('Unsaved changes', 'Alterações não salvas', 'Cambios sin guardar');
     // The bar's text says what saving costs (a restart, deleted clips); the button only confirms it.
-    $('s-save').textContent = s.confirming ? L('Save anyway', 'Salvar mesmo assim') : L('Save', 'Salvar');
+    $('s-save').textContent = s.confirming ? L('Save anyway', 'Salvar mesmo assim', 'Guardar igualmente') : L('Save', 'Salvar', 'Guardar');
   }
 
   // Controls
@@ -165,24 +165,24 @@ const Settings = (() => {
   // A monitor on another GPU is recorded by Windows Graphics Capture only.
   function monitorOptions(value) {
     const list = s.monitors.slice().sort((a, b) => a.index - b.index);
-    const named = m => m.name || (m.builtIn ? L('Built-in screen', 'Tela integrada') : `Monitor ${m.index + 1}`);
+    const named = m => m.name || (m.builtIn ? L('Built-in screen', 'Tela integrada', 'Pantalla integrada') : `Monitor ${m.index + 1}`);
     const options = list.map(m => {
       const twins = list.filter(o => named(o) === named(m));
       const parts = [named(m)];
       if (twins.length > 1) parts.push(place(m, twins));
       parts.push(`${m.width}×${m.height}`);
-      if (m.primary) parts.push(L('main', 'principal'));
-      if (m.otherGpu) parts.push(L('Windows Graphics Capture only', 'só Windows Graphics Capture'));
+      if (m.primary) parts.push(L('main', 'principal', 'principal'));
+      if (m.otherGpu) parts.push(L('Windows Graphics Capture only', 'só Windows Graphics Capture', 'solo Windows Graphics Capture'));
       return [m.index, parts.join(' · ')];
     });
-    if (!list.some(m => m.index === value)) options.push([value, L(`Monitor ${value + 1} (not connected)`, `Monitor ${value + 1} (desconectado)`)]);
+    if (!list.some(m => m.index === value)) options.push([value, L(`Monitor ${value + 1} (not connected)`, `Monitor ${value + 1} (desconectado)`, `Monitor ${value + 1} (desconectado)`)]);
     return options;
   }
 
   function place(m, twins) {
     const lefts = twins.map(t => t.left), tops = twins.map(t => t.top);
-    if (twins.length === 2 && lefts[0] !== lefts[1]) return m.left === Math.min(...lefts) ? L('on the left', 'à esquerda') : L('on the right', 'à direita');
-    if (twins.length === 2 && tops[0] !== tops[1]) return m.top === Math.min(...tops) ? L('on top', 'em cima') : L('below', 'embaixo');
+    if (twins.length === 2 && lefts[0] !== lefts[1]) return m.left === Math.min(...lefts) ? L('on the left', 'à esquerda', 'a la izquierda') : L('on the right', 'à direita', 'a la derecha');
+    if (twins.length === 2 && tops[0] !== tops[1]) return m.top === Math.min(...tops) ? L('on top', 'em cima', 'arriba') : L('below', 'embaixo', 'abajo');
     // Three or more: numbered by where they sit, top to bottom, left to right.
     const order = twins.slice().sort((a, b) => a.top - b.top || a.left - b.left);
     return `#${order.indexOf(m) + 1}`;
@@ -258,7 +258,7 @@ const Settings = (() => {
         if (!options.some(([v]) => v === value)) options.push([value, String(value)]);
         for (const [v, text] of options) {
           const detected = field.detected && v !== 'Auto' && s.encoders.includes(v);
-          const o = el('option', '', detected ? `${text} · ${L('detected', 'detectado')}` : text);
+          const o = el('option', '', detected ? `${text} · ${L('detected', 'detectado', 'detectado')}` : text);
           o.value = String(v);
           o.selected = v === value;
           select.append(o);
@@ -272,7 +272,7 @@ const Settings = (() => {
       case 'path': {
         const shown = el('span', 'path' + (value ? '' : ' placeholder'), value || field.empty() || '');
         shown.title = shown.textContent;
-        const change = el('button', 'act small', L('Change', 'Alterar'));
+        const change = el('button', 'act small', L('Change', 'Alterar', 'Cambiar'));
         change.type = 'button';
         change.addEventListener('click', () => post({ type: field.pick }));
         const parts = [shown, change];
@@ -305,7 +305,7 @@ const Settings = (() => {
       }
       case 'hotkey': {
         // The saved hotkey as the app names it on this keyboard; a new one as you pressed it.
-        const shown = !value ? L('Choose a key', 'Escolher tecla')
+        const shown = !value ? L('Choose a key', 'Escolher tecla', 'Elegir tecla')
           : value === (s.saved && s.saved[field.key])
             ? ((s.hotkeyLabels || {})[field.key] || value)
             : ((s.recordedLabels || {})[field.key] || value);
@@ -322,9 +322,9 @@ const Settings = (() => {
         }
         if (!field.optional || !value) return b;
         // An optional hotkey can go back to taking no key at all.
-        const remove = el('button', 'act small', L('Remove', 'Remover'));
+        const remove = el('button', 'act small', L('Remove', 'Remover', 'Quitar'));
         remove.type = 'button';
-        remove.setAttribute('aria-label', `${L('Remove', 'Remover')}: ${field.label}`);
+        remove.setAttribute('aria-label', `${L('Remove', 'Remover', 'Quitar')}: ${field.label}`);
         remove.addEventListener('click', () => { s.draft[field.key] = ''; s.refocus = field.key; changed(); render(); });
         return [b, remove];
       }
@@ -364,7 +364,7 @@ const Settings = (() => {
     stopListening();
     s.listening = { button, key: field.key, label: field.label, before: button.textContent };
     button.classList.add('listening');
-    button.textContent = L('Press keys…', 'Aperte as teclas…');
+    button.textContent = L('Press keys…', 'Aperte as teclas…', 'Pulsa las teclas…');
     // The tray lets go of its hotkeys meanwhile: one it holds would run its action and never get here.
     post({ type: 'hotkeyCaptureStart' });
   }
@@ -387,13 +387,13 @@ const Settings = (() => {
     const main = keyName(e);
     if (!main) return; // only modifiers so far
     if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && !ALONE.test(main)) {
-      s.listening.button.textContent = L('Add Ctrl, Alt or Shift', 'Adicione Ctrl, Alt ou Shift');
+      s.listening.button.textContent = L('Add Ctrl, Alt or Shift', 'Adicione Ctrl, Alt ou Shift', 'Añade Ctrl, Alt o Shift');
       return;
     }
     const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
     const combo = [...mods, main].join('+');
     if (COMMON.has(combo)) {
-      s.listening.button.textContent = L('Programs use that one: pick another', 'Os programas usam essa: escolha outra');
+      s.listening.button.textContent = L('Programs use that one: pick another', 'Os programas usam essa: escolha outra', 'Los programas usan esa: elige otra');
       return;
     }
     // What the key prints ("´", "ç"), for people; the stored name is for Windows.
@@ -418,11 +418,11 @@ const Settings = (() => {
     const list = s.draft.profiles || (s.draft.profiles = []);
     if (list.length === 0) {
       box.append(el('div', 'empty-row', L('No game profiles. A profile changes clip length, sound or the microphone for one game.',
-        'Nenhum perfil de jogo. Um perfil muda a duração do clipe, o som ou o microfone de um jogo.')));
+        'Nenhum perfil de jogo. Um perfil muda a duração do clipe, o som ou o microfone de um jogo.', 'Sin perfiles de juego. Un perfil cambia la duración del clip, el sonido o el micrófono para un juego.')));
     } else {
       const head = el('div', 'profile profile-head');
-      head.append(el('span', '', L('GAME', 'JOGO')), el('span', '', L('LENGTH (S)', 'DURAÇÃO (S)')), el('span', '', L('SOUND', 'SOM')),
-        el('span', '', L('MICROPHONE', 'MICROFONE')), el('span'));
+      head.append(el('span', '', L('GAME', 'JOGO', 'JUEGO')), el('span', '', L('LENGTH (S)', 'DURAÇÃO (S)', 'DURACIÓN (S)')), el('span', '', L('SOUND', 'SOM', 'SONIDO')),
+        el('span', '', L('MICROPHONE', 'MICROFONE', 'MICRÓFONO')), el('span'));
       box.append(head);
     }
     const options = (select, pairs, value) => {
@@ -437,9 +437,9 @@ const Settings = (() => {
       const line = el('div', 'profile');
       const game = el('input', 'field');
       game.value = p.game || '';
-      game.placeholder = L('Game name', 'Nome do jogo');
+      game.placeholder = L('Game name', 'Nome do jogo', 'Nombre del juego');
       game.setAttribute('list', 'games-list');
-      game.setAttribute('aria-label', L('Game', 'Jogo'));
+      game.setAttribute('aria-label', L('Game', 'Jogo', 'Juego'));
       game.addEventListener('input', () => { p.game = game.value; changed(); });
 
       const length = el('input', 'field');
@@ -448,7 +448,7 @@ const Settings = (() => {
       length.max = 600;
       length.placeholder = String(s.draft.clipSeconds);
       length.value = p.clipSeconds ?? '';
-      length.setAttribute('aria-label', L('Clip length', 'Duração do clipe'));
+      length.setAttribute('aria-label', L('Clip length', 'Duração do clipe', 'Duración del clip'));
       length.addEventListener('input', () => {
         if (length.value === '') delete p.clipSeconds; else p.clipSeconds = Math.round(Number(length.value));
         changed();
@@ -460,16 +460,16 @@ const Settings = (() => {
       });
 
       const sound = el('select', 'field');
-      sound.setAttribute('aria-label', L('Sound', 'Som'));
-      options(sound, [['', L('Default', 'Padrão')], ['System', L('Everything', 'Tudo')], ['GameOnly', L('Game only', 'Só o jogo')]], p.audioSource || '');
+      sound.setAttribute('aria-label', L('Sound', 'Som', 'Sonido'));
+      options(sound, [['', L('Default', 'Padrão', 'Predeterminada')], ['System', L('Everything', 'Tudo', 'Todo')], ['GameOnly', L('Game only', 'Só o jogo', 'Solo el juego')]], p.audioSource || '');
       sound.addEventListener('change', () => {
         if (sound.value === '') delete p.audioSource; else p.audioSource = sound.value;
         changed();
       });
 
       const mic = el('select', 'field');
-      mic.setAttribute('aria-label', L('Microphone', 'Microfone'));
-      options(mic, [['', L('Default', 'Padrão')], ['true', L('Muted', 'Mudo')], ['false', L('Not muted', 'Ativo')]], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
+      mic.setAttribute('aria-label', L('Microphone', 'Microfone', 'Micrófono'));
+      options(mic, [['', L('Default', 'Padrão', 'Predeterminada')], ['true', L('Muted', 'Mudo', 'Silenciado')], ['false', L('Not muted', 'Ativo', 'Activo')]], p.muteMicrophone === undefined || p.muteMicrophone === null ? '' : String(p.muteMicrophone));
       mic.addEventListener('change', () => {
         if (mic.value === '') delete p.muteMicrophone; else p.muteMicrophone = mic.value === 'true';
         changed();
@@ -477,14 +477,14 @@ const Settings = (() => {
 
       const remove = el('button', 'icon');
       remove.type = 'button';
-      remove.setAttribute('aria-label', L(`Remove ${p.game || 'profile'}`, `Remover ${p.game || 'perfil'}`));
+      remove.setAttribute('aria-label', L(`Remove ${p.game || 'profile'}`, `Remover ${p.game || 'perfil'}`, `Quitar ${p.game || 'perfil'}`));
       remove.append(icon('<path d="M6 6l12 12M18 6L6 18"/>'));
       remove.addEventListener('click', () => { list.splice(i, 1); changed(); render(); });
 
       line.append(game, length, sound, mic, remove);
       box.append(line);
     });
-    const add = el('button', 'act small', L('Add a game', 'Adicionar um jogo'));
+    const add = el('button', 'act small', L('Add a game', 'Adicionar um jogo', 'Añadir un juego'));
     add.type = 'button';
     add.addEventListener('click', () => {
       list.push({ game: '' });
@@ -506,7 +506,7 @@ const Settings = (() => {
     const scroll = $('settings').scrollTop;
     form.replaceChildren();
     if (!s.draft) {
-      form.append(el('p', 'muted', s.unreadable || L('Loading…', 'Carregando…')));
+      form.append(el('p', 'muted', s.unreadable || L('Loading…', 'Carregando…', 'Cargando…')));
       $('savebar').hidden = true;
       return;
     }
@@ -518,7 +518,7 @@ const Settings = (() => {
       for (const field of section.fields || []) card.append(row(field, control(field)));
       if (section.more) {
         const more = el('details', 'more');
-        more.append(el('summary', '', L('Encoder options', 'Opções do encoder')));
+        more.append(el('summary', '', L('Encoder options', 'Opções do encoder', 'Opciones del encoder')));
         for (const field of section.more) more.append(row(field, control(field)));
         card.append(more);
       }
@@ -533,7 +533,7 @@ const Settings = (() => {
   function badge(status) {
     s.status = status || null;
     const box = $('badge');
-    let text = L('NOT RUNNING', 'DESLIGADO');
+    let text = L('NOT RUNNING', 'DESLIGADO', 'APAGADO');
     let kind = '';
     if (status) {
       switch (status.state) {
@@ -541,11 +541,11 @@ const Settings = (() => {
           text = ['REC', status.encoder, status.fps ? `${status.fps} FPS` : null].filter(Boolean).join(' · ');
           kind = 'rec';
           break;
-        case 'WaitingForDesktop': text = L('PAUSED · SCREEN LOCKED', 'PAUSADO · TELA BLOQUEADA'); kind = 'wait'; break;
-        case 'Paused': text = L('PAUSED', 'PAUSADO'); kind = 'wait'; break;
-        case 'Probing': text = L('DETECTING ENCODER', 'DETECTANDO ENCODER'); kind = 'wait'; break;
-        case 'Stopped': text = L('NOT RECORDING', 'SEM GRAVAR'); break;
-        default: text = L('STARTING', 'INICIANDO'); kind = 'wait'; break;
+        case 'WaitingForDesktop': text = L('PAUSED · SCREEN LOCKED', 'PAUSADO · TELA BLOQUEADA', 'PAUSADO · PANTALLA BLOQUEADA'); kind = 'wait'; break;
+        case 'Paused': text = L('PAUSED', 'PAUSADO', 'PAUSADO'); kind = 'wait'; break;
+        case 'Probing': text = L('DETECTING ENCODER', 'DETECTANDO ENCODER', 'DETECTANDO ENCODER'); kind = 'wait'; break;
+        case 'Stopped': text = L('NOT RECORDING', 'SEM GRAVAR', 'SIN GRABAR'); break;
+        default: text = L('STARTING', 'INICIANDO', 'INICIANDO'); kind = 'wait'; break;
       }
     }
     box.className = `badge mono ${kind}`;
@@ -559,7 +559,7 @@ const Settings = (() => {
     $('update').hidden = !update;
     $('update-text').textContent = update
       ? L(`Ghostclip ${update} is ready to install. It restarts in a few seconds; recording picks up again.`,
-        `O Ghostclip ${update} está pronto para instalar. Ele reinicia em alguns segundos e volta a gravar.`)
+        `O Ghostclip ${update} está pronto para instalar. Ele reinicia em alguns segundos e volta a gravar.`, `Ghostclip ${update} está listo para instalarse. Se reinicia en unos segundos y vuelve a grabar.`)
       : '';
   }
 
@@ -567,7 +567,7 @@ const Settings = (() => {
     const b = $('update-now');
     if (b.classList.contains('busy')) return;
     b.classList.add('busy');
-    b.textContent = L('Updating…', 'Atualizando…');
+    b.textContent = L('Updating…', 'Atualizando…', 'Actualizando…');
     post({ type: 'update' });
   });
   $('update-notes').addEventListener('click', () => {
@@ -577,7 +577,7 @@ const Settings = (() => {
   // The page's language changed (or the page just opened): the badge and the form are built again,
   // keeping any edits in progress.
   function translate() {
-    if (s.status === undefined) $('badge-text').textContent = L('CHECKING', 'VERIFICANDO');
+    if (s.status === undefined) $('badge-text').textContent = L('CHECKING', 'VERIFICANDO', 'VERIFICANDO');
     else badge(s.status);
     render();
   }
@@ -602,8 +602,8 @@ const Settings = (() => {
     const seen = new Set();
     for (const p of s.draft.profiles || []) {
       const name = (p.game || '').trim().toLowerCase();
-      if (!name) return L('Give each game profile a name, or remove it.', 'Dê um nome a cada perfil de jogo ou remova-o.');
-      if (seen.has(name)) return L(`There are two profiles for ${p.game.trim()}. Keep one.`, `Há dois perfis para ${p.game.trim()}. Mantenha um.`);
+      if (!name) return L('Give each game profile a name, or remove it.', 'Dê um nome a cada perfil de jogo ou remova-o.', 'Dale un nombre a cada perfil de juego o quítalo.');
+      if (seen.has(name)) return L(`There are two profiles for ${p.game.trim()}. Keep one.`, `Há dois perfis para ${p.game.trim()}. Mantenha um.`, `Hay dos perfiles para ${p.game.trim()}. Conserva uno.`);
       seen.add(name);
     }
     return null;
@@ -665,13 +665,13 @@ const Settings = (() => {
         s.recordedLabels = {};
         s.confirming = false;
         render();
-        toast(L('Settings saved', 'Configurações salvas'));
+        toast(L('Settings saved', 'Configurações salvas', 'Configuración guardada'));
         return true;
       case 'error':
         if (message.op === 'update') {
           // The page's toast says why; the button can be tried again.
           $('update-now').classList.remove('busy');
-          $('update-now').textContent = L('Update now', 'Atualizar agora');
+          $('update-now').textContent = L('Update now', 'Atualizar agora', 'Actualizar ahora');
           return false;
         }
         if (message.op === 'settings') {
@@ -686,7 +686,7 @@ const Settings = (() => {
         $('s-save').classList.remove('busy');
         s.confirming = false;
         updateBar();
-        toast(message.message || L('Settings not saved.', 'Configurações não salvas.'), true);
+        toast(message.message || L('Settings not saved.', 'Configurações não salvas.', 'Configuración no guardada.'), true);
         return true;
     }
     return false;

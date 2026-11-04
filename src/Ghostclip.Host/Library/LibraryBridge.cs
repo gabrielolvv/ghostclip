@@ -143,7 +143,7 @@ internal sealed class LibraryBridge : IDisposable
                 else
                 {
                     _window.Post(new LibraryEvent("error", Op: r.Type,
-                        Message: L("Ghostclip isn't running in the tray, so there is nothing to update from.", "O Ghostclip não está rodando na bandeja, então não há de onde atualizar.")));
+                        Message: L("Ghostclip isn't running in the tray, so there is nothing to update from.", "O Ghostclip não está rodando na bandeja, então não há de onde atualizar.", "Ghostclip no se está ejecutando en la bandeja, así que no hay desde dónde actualizar.")));
                 }
                 return;
             }
@@ -201,7 +201,7 @@ internal sealed class LibraryBridge : IDisposable
             if (r.Path is not { } path || !RootAvailable || !ClipLibrary.IsInside(Root, path))
             {
                 _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path,
-                    Message: L("That file isn't in your clips folder.", "Esse arquivo não está na sua pasta de clipes.")));
+                    Message: L("That file isn't in your clips folder.", "Esse arquivo não está na sua pasta de clipes.", "Ese archivo no está en tu carpeta de clips.")));
                 return;
             }
 
@@ -322,7 +322,7 @@ internal sealed class LibraryBridge : IDisposable
         {
             _window.Post(new LibraryEvent("clips", Clips: [], Root: Root, HotkeyLabels: SaveHotkeyLabel()));
             _window.Post(new LibraryEvent("error", Op: "list",
-                Message: L($"Your clips folder isn't available: {_rootError}", $"Sua pasta de clipes não está disponível: {_rootError}")));
+                Message: L($"Your clips folder isn't available: {_rootError}", $"Sua pasta de clipes não está disponível: {_rootError}", $"Tu carpeta de clips no está disponible: {_rootError}")));
         }
         if (!_listed) _status.Push(always: true);
         _listed = true;

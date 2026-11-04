@@ -35,7 +35,7 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
 
     // The worker runs without culture data, so it can't tell what Windows speaks: it gets the language already decided.
     private static GhostclipConfig ForWorker(GhostclipConfig config) =>
-        config with { Language = UiText.Portuguese ? UiLanguage.Portuguese : UiLanguage.English };
+        config with { Language = UiText.Current };
 
     private volatile IpcMessage _foreground = new() { Type = IpcType.Foreground, Game = ClipNaming.FallbackGame };
 
@@ -91,7 +91,7 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
             if (!File.Exists(exe))
             {
                 ErrorReported?.Invoke(L($"The capture worker is missing ({exe}). Reinstall Ghostclip.",
-                    $"O processo de captura não foi encontrado ({exe}). Reinstale o Ghostclip."), true);
+                    $"O processo de captura não foi encontrado ({exe}). Reinstale o Ghostclip.", $"No se encontró el proceso de captura ({exe}). Reinstala Ghostclip."), true);
                 return;
             }
 

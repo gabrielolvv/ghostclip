@@ -91,24 +91,24 @@ public static class ClipNaming
         if (stem.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) stem = stem[..^extension.Length].TrimEnd();
         if (stem.Length == 0)
         {
-            throw new InvalidOperationException(UiText.L("Type a name.", "Digite um nome."));
+            throw new InvalidOperationException(UiText.L("Type a name.", "Digite um nome.", "Escribe un nombre."));
         }
         if (stem.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || stem.EndsWith('.') || ReservedNames.Contains(stem.Split('.')[0]))
         {
             throw new InvalidOperationException(UiText.L(
                 "Windows can't use that name. Leave out \\ / : * ? \" < > | and don't end it with a dot.",
-                "O Windows não aceita esse nome. Tire \\ / : * ? \" < > | e não termine com ponto."));
+                "O Windows não aceita esse nome. Tire \\ / : * ? \" < > | e não termine com ponto.", "Windows no acepta ese nombre. Quita \\ / : * ? \" < > | y no lo termines con un punto."));
         }
         if (stem.Length > 150)
         {
-            throw new InvalidOperationException(UiText.L("That name is too long.", "Esse nome é longo demais."));
+            throw new InvalidOperationException(UiText.L("That name is too long.", "Esse nome é longo demais.", "Ese nombre es demasiado largo."));
         }
         var target = Path.Combine(Path.GetDirectoryName(path) ?? "", stem + extension);
         if (string.Equals(target, path, StringComparison.Ordinal)) return null;
         // Only the case changed: the same file on Windows, so it's not taken.
         if (!string.Equals(target, path, StringComparison.OrdinalIgnoreCase) && exists(target))
         {
-            throw new InvalidOperationException(UiText.L($"There is already a file called {stem}{extension} here.", $"Já existe um arquivo chamado {stem}{extension} aqui."));
+            throw new InvalidOperationException(UiText.L($"There is already a file called {stem}{extension} here.", $"Já existe um arquivo chamado {stem}{extension} aqui.", $"Ya existe un archivo llamado {stem}{extension} aquí."));
         }
         return target;
     }

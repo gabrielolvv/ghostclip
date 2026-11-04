@@ -49,7 +49,7 @@ internal static partial class LibraryProgram
             {
                 Log.Warning("WebView2 Runtime not found; the clip library can't open");
                 var answer = MessageBox.Show(L("The clip library needs the Microsoft Edge WebView2 Runtime. Download it now?",
-                        "A biblioteca de clipes precisa do Microsoft Edge WebView2 Runtime. Baixar agora?"),
+                        "A biblioteca de clipes precisa do Microsoft Edge WebView2 Runtime. Baixar agora?", "La biblioteca de clips necesita Microsoft Edge WebView2 Runtime. ¿Descargarlo ahora?"),
                     "Ghostclip", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
                 if (answer == DialogResult.Yes)
                 {

@@ -54,7 +54,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
   que o Ghostclip não criou nunca são tocados.
-- **Inglês ou português,** ou o idioma do Windows, trocado na hora.
+- **Inglês, português ou espanhol,** ou o idioma do Windows, trocado na hora.
 
 ## Instalar
 
