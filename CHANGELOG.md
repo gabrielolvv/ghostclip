@@ -9,6 +9,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 - After a new install, a notification says that Ghostclip is recording, which
   key saves a clip and where to find the library, once recording has started.
+- A warning when the drive with the replay buffer or the clips is almost full,
+  before recording or saving fails, once until it has room again.
 
 ## 0.8.9
 
