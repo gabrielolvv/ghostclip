@@ -149,6 +149,12 @@ public sealed record GhostclipConfig
     /// <summary>The recorder runs below normal priority on the CPU and GPU (<see cref="RecorderPriority"/>). Applies live.</summary>
     public bool GamePriority { get; set; } = true;
 
+    /// <summary>
+    /// The folder to keep the replay buffer in, since it writes to its drive all the time. Null keeps it with
+    /// Ghostclip's other data. Changing it restarts recording. See <see cref="GhostclipPaths.BufferDirFor"/>.
+    /// </summary>
+    public string? BufferFolder { get; set; }
+
     /// <summary>Null uses Videos\Ghostclip.</summary>
     public string? ClipsFolder { get; set; }
 
@@ -206,6 +212,7 @@ public sealed record GhostclipConfig
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),
         OutputHeight = OutputHeight <= 0 ? 0 : Math.Clamp(OutputHeight, 360, 4320),
         Monitor = Math.Max(0, Monitor),
+        BufferFolder = string.IsNullOrWhiteSpace(BufferFolder) ? null : BufferFolder.Trim(),
         AudioOffsetMs = Math.Clamp(AudioOffsetMs, -1000, 1000),
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
@@ -256,5 +263,6 @@ public sealed record GhostclipConfig
         Encoder == other.Encoder && Input == other.Input && OutputHeight == other.OutputHeight &&
         Monitor == other.Monitor && SystemAudio == other.SystemAudio && Microphone == other.Microphone &&
         DiscordTrack == other.DiscordTrack && AudioOffsetMs == other.AudioOffsetMs && QsvAsyncDepth == other.QsvAsyncDepth &&
-        FfmpegPath == other.FfmpegPath && Capture == other.Capture;
+        FfmpegPath == other.FfmpegPath && Capture == other.Capture &&
+        string.Equals(BufferFolder, other.BufferFolder, StringComparison.OrdinalIgnoreCase);
 }

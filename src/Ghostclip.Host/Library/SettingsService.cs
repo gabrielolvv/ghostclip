@@ -13,7 +13,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 {
     private Mutex? _hotkeyCapture;
 
-    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
+    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickBufferFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
 
     public async Task HandleAsync(LibraryRequest r)
     {
@@ -37,6 +37,12 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                     var folder = current().ResolvedClipsFolder;
                     if (Directory.Exists(folder)) dialog.InitialDirectory = folder;
                     if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "clipsFolder", Path: dialog.SelectedPath));
+                }
+                break;
+            case "pickBufferFolder":
+                using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip keeps the replay buffer", "Onde o Ghostclip guarda o buffer de replay"), UseDescriptionForTitle = true, ShowNewFolderButton = true })
+                {
+                    if (dialog.ShowDialog(window) == DialogResult.OK) window.Post(new LibraryEvent("picked", Op: "bufferFolder", Path: dialog.SelectedPath));
                 }
                 break;
             case "pickFfmpeg":
@@ -116,6 +122,11 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;
         }
+        if (BufferFolderProblem(config) is { } folderError)
+        {
+            window.Post(new LibraryEvent("error", Op: r.Type, Message: folderError));
+            return;
+        }
         // What the tray is recording with is what the file says now, not what this window opened with.
         if (!ConfigStore.TryRead(paths.ConfigFile, out var before, out var error))
         {
@@ -171,6 +182,26 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["shortClipHotkey"] = KeyLabels.Describe(config.ShortClipHotkey),
         ["pauseHotkey"] = KeyLabels.Describe(config.PauseHotkey),
     };
+
+    // Said here rather than as a recorder that stops: it must be a whole path to a folder that takes files.
+    private static string? BufferFolderProblem(GhostclipConfig config)
+    {
+        if (config.BufferFolder is not { } folder) return null;
+        var message = L($"The replay buffer can't be kept in {folder}. Choose another folder.", $"Não dá para guardar o buffer de replay em {folder}. Escolha outra pasta.");
+        if (!Path.IsPathFullyQualified(folder)) return message;
+        try
+        {
+            Directory.CreateDirectory(folder);
+            var probe = Path.Combine(folder, $"ghostclip-{Guid.NewGuid():N}.tmp");
+            File.WriteAllBytes(probe, []);
+            File.Delete(probe);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return message;
+        }
+    }
 
     // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
     private static string? HotkeyProblem(GhostclipConfig config)

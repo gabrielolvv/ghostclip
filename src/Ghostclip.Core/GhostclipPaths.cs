@@ -21,6 +21,14 @@ public sealed record GhostclipPaths(string DataDir)
     /// <summary>Hard-linked snapshots waiting to be remuxed. Survives a crash mid-save.</summary>
     public string PendingDir => Path.Combine(DataDir, "Pending");
 
+    /// <summary>The buffer with this config: a folder of ours inside the chosen one, so nothing else there is ever touched.</summary>
+    public string BufferDirFor(GhostclipConfig config) =>
+        string.IsNullOrWhiteSpace(config.BufferFolder) ? BufferDir : Path.Combine(config.BufferFolder, "GhostclipBuffer");
+
+    /// <summary>Beside the buffer, since a save hard-links segments here and a hard link stays on its drive.</summary>
+    public string PendingDirFor(GhostclipConfig config) =>
+        string.IsNullOrWhiteSpace(config.BufferFolder) ? PendingDir : Path.Combine(config.BufferFolder, "GhostclipPending");
+
     public string LogsDir => Path.Combine(DataDir, "Logs");
 
     public string ConfigFile => Path.Combine(DataDir, "config.json");

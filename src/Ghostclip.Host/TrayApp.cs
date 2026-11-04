@@ -118,7 +118,7 @@ internal sealed class TrayApp : ApplicationContext
 
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
         _screenshots = new ScreenshotTaker(() => _config, Log.ForContext<ScreenshotTaker>());
-        _session = new SessionRecorder(paths, _saver, Log.ForContext<SessionRecorder>());
+        _session = new SessionRecorder(paths, () => _config, _saver, Log.ForContext<SessionRecorder>());
         _storage = new StorageKeeper(paths, () => _config, Log.ForContext<StorageKeeper>());
         // The menu shows how long the session has been running.
         _session.Ticked += ApplyTexts;

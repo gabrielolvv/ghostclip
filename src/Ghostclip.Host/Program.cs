@@ -46,6 +46,15 @@ internal static class Program
             {
                 StopRunningInstance();
                 Autostart.Remove();
+                // A buffer kept on another drive goes too: the folders are ours, whatever else is around them.
+                if (ConfigStore.TryRead(GhostclipPaths.Default.ConfigFile, out var config, out string? unreadable) && unreadable is null)
+                {
+                    foreach (var dir in new[] { GhostclipPaths.Default.BufferDirFor(config!), GhostclipPaths.Default.PendingDirFor(config!) })
+                    {
+                        try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                    }
+                }
                 // The installer only removes its own folder; settings, buffer and logs live next to it.
                 try { Directory.Delete(GhostclipPaths.Default.DataDir, recursive: true); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
