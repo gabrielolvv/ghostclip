@@ -3,7 +3,7 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
-## Unreleased
+## 0.8.11
 
 ### Added
 
@@ -12,6 +12,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   replay buffer is deleted, and it goes on when another program becomes active.
   It takes up to half a second to notice, and beside another active window the
   program can still be recorded. Programs only: not a website in a browser.
+- Spanish: the tray, notifications, library, settings and site. Like Portuguese,
+  it follows Windows, or can be picked in Settings.
 
 ### Changed
 
@@ -30,13 +32,6 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the tray and its other hotkeys while it copies.
 - In Settings, choosing or removing an optional hotkey keeps the keyboard's place
   instead of going back to the top of the page.
-
-## Unreleased
-
-### Added
-
-- Spanish: the tray, notifications, library, settings and site. Like Portuguese,
-  it follows Windows, or can be picked in Settings.
 
 ## 0.8.10
 
