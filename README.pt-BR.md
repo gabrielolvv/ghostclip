@@ -130,7 +130,8 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
   gravado e tem configurações e pastas. O ponto do ícone fica vermelho
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
-  limite do Discord, mostre na pasta ou mande para a Lixeira.
+  limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as
+  setas navegam, vírgula e ponto andam quadro a quadro, e I e O marcam o corte.
 - As configurações são uma página da biblioteca (a engrenagem na barra
   lateral, ou Configurações no menu da bandeja). Elas ficam em
   `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão, a bandeja aplica

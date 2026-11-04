@@ -11,6 +11,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   key saves a clip and where to find the library, once recording has started.
 - A warning when the drive with the replay buffer or the clips is almost full,
   before recording or saving fails, once until it has room again.
+- Shortcuts in the library's player, besides Space and Esc: the arrows seek 5 s,
+  or 1 s with Shift, comma and period go frame by frame, and I and O mark where
+  the trim starts and ends.
 
 ## 0.8.9
 
