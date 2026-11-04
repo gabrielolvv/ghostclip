@@ -46,6 +46,7 @@ internal sealed class LibraryBridge : IDisposable
         _meta = new ClipMetaService(paths, _tools, log);
         _status = new StatusWatcher(window, paths);
         _settings = new SettingsService(window, paths, () => _config, () => Root, OnSettingsSaved, _status);
+        window.Deactivate += (_, _) => _settings.WindowDeactivated();
         Directory.CreateDirectory(ThumbsDir);
 
         // Folder changes arrive in bursts (a save is create, then rename); one "changed" per quiet half second.

@@ -14,13 +14,21 @@ internal static partial class LibraryProgram
     public const string MutexName = @"Local\Ghostclip.Library";
     public const string PipeName = "Ghostclip.Library";
 
+    /// <summary>Exists while the settings page waits for a new hotkey, and goes with the library if it dies.</summary>
+    public const string HotkeyCaptureMutexName = @"Local\Ghostclip.HotkeyCapture";
+
     /// <summary>Opens the library on its settings page: "Ghostclip.exe --library --settings".</summary>
     public const string SettingsArgument = "--settings";
 
     /// <summary>True while a library window is open in this session.</summary>
-    public static bool IsOpen()
+    public static bool IsOpen() => Exists(MutexName);
+
+    /// <summary>True while the settings page waits for a new hotkey.</summary>
+    public static bool IsCapturingHotkey() => Exists(HotkeyCaptureMutexName);
+
+    private static bool Exists(string mutexName)
     {
-        if (!Mutex.TryOpenExisting(MutexName, out var mutex)) return false;
+        if (!Mutex.TryOpenExisting(mutexName, out var mutex)) return false;
         mutex.Dispose();
         return true;
     }

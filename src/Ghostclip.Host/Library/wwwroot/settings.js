@@ -286,7 +286,7 @@ const Settings = (() => {
         const b = el('button', 'act hotkey', shown);
         b.type = 'button';
         b.setAttribute('aria-label', `${field.label}: ${shown}`);
-        b.addEventListener('click', () => listen(b, field.key));
+        b.addEventListener('click', () => listen(b, field));
         // Listening ends when focus leaves the field, so a key pressed elsewhere never becomes the hotkey.
         b.addEventListener('blur', () => stopListening());
         if (!field.optional || !value) return b;
@@ -329,19 +329,23 @@ const Settings = (() => {
     return VK_NAMES[vk] || KEY_NAMES[e.key] || null;
   }
 
-  function listen(button, key) {
+  function listen(button, field) {
     stopListening();
-    s.listening = { button, key, before: button.textContent };
+    s.listening = { button, key: field.key, label: field.label, before: button.textContent };
     button.classList.add('listening');
     button.textContent = L('Press keys…', 'Aperte as teclas…');
+    // The tray lets go of its hotkeys meanwhile: one it holds would run its action and never get here.
+    post({ type: 'hotkeyCaptureStart' });
   }
 
   function stopListening(text) {
     if (!s.listening) return;
-    const { button, before } = s.listening;
+    const { button, label, before } = s.listening;
     button.classList.remove('listening');
     button.textContent = text || before;
+    button.setAttribute('aria-label', `${label}: ${button.textContent}`);
     s.listening = null;
+    post({ type: 'hotkeyCaptureEnd' });
   }
 
   document.addEventListener('keydown', e => {

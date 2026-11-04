@@ -14,7 +14,8 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
 {
     private const int BaseId = 0x4743;
     private static readonly nint HWND_MESSAGE = -3;
-    private readonly HashSet<HotkeyAction> _registered = [];
+    private readonly Dictionary<HotkeyAction, (uint Modifiers, Keys Key)> _registered = [];
+    private bool _paused;
 
     public HotkeyWindow() => CreateHandle(new CreateParams { Parent = HWND_MESSAGE });
 
@@ -27,19 +28,41 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
         {
             return false;
         }
-        if (!Native.RegisterHotKey(Handle, BaseId + (int)action, modifiers | Native.MOD_NOREPEAT, (uint)key))
+        // While paused it only takes its place: Resume registers it with the others.
+        if (!_paused && !Register(action, modifiers, key))
         {
             error = L($"{gesture} is already taken by another program.", $"{gesture} já está em uso por outro programa.");
             return false;
         }
-        _registered.Add(action);
+        _registered[action] = (modifiers, key);
         return true;
+    }
+
+    private bool Register(HotkeyAction action, uint modifiers, Keys key) =>
+        Native.RegisterHotKey(Handle, BaseId + (int)action, modifiers | Native.MOD_NOREPEAT, (uint)key);
+
+    /// <summary>Gives every key back to Windows for a moment, keeping which ones they were.</summary>
+    public void Pause()
+    {
+        if (_paused) return;
+        _paused = true;
+        foreach (var action in _registered.Keys) Native.UnregisterHotKey(Handle, BaseId + (int)action);
+    }
+
+    /// <summary>Takes the keys back. Returns the actions whose key another program took meanwhile; they no longer have one.</summary>
+    public IReadOnlyList<HotkeyAction> Resume()
+    {
+        if (!_paused) return [];
+        _paused = false;
+        var lost = _registered.Where(r => !Register(r.Key, r.Value.Modifiers, r.Value.Key)).Select(r => r.Key).ToList();
+        foreach (var action in lost) _registered.Remove(action);
+        return lost;
     }
 
     /// <summary>Lets go of every hotkey, so they can be registered again in another arrangement.</summary>
     public void UnregisterAll()
     {
-        foreach (var action in _registered.ToList()) Unregister(action);
+        foreach (var action in _registered.Keys.ToList()) Unregister(action);
     }
 
     /// <summary>Parses "Alt+F10", "Ctrl+Shift+F9", "Win+Alt+9"...</summary>

@@ -17,6 +17,9 @@ internal static class Program
     /// <summary>Set by the library's "Update now": the tray restarts into the update it has downloaded.</summary>
     public const string UpdateEventName = @"Local\Ghostclip.Update";
 
+    /// <summary>Set by the library when the settings page starts or stops waiting for a new hotkey.</summary>
+    public const string HotkeyCaptureEventName = @"Local\Ghostclip.HotkeyCapture.Changed";
+
     /// <summary>Held by the tray for as long as it runs: one per user session.</summary>
     private const string HostMutexName = @"Local\Ghostclip.Host";
 
