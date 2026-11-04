@@ -216,6 +216,12 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             _state = WorkerState.Stopped;
             await StopRecorderAsync().ConfigureAwait(false);
+            // A segment a save is still reading gets a second try; a stale one goes on the next start anyway.
+            if (_config.ClearBufferOnExit && ClearBuffer(BufferDir) > 0)
+            {
+                await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
+                ClearBuffer(BufferDir);
+            }
         }
     }
 

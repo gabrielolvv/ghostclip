@@ -103,6 +103,9 @@ const Settings = (() => {
     { title: L('ADVANCED', 'AVANÇADO'), fields: [
       { key: 'gamePriority', label: L('Games first', 'Prioridade para os jogos'),
         hint: L('Recording yields the CPU and GPU to the game. Turn it off if clips stutter.', 'A gravação cede a CPU e a GPU para o jogo. Desligue se os clipes travarem.'), type: 'switch' },
+      { key: 'clearBufferOnExit', label: L('Delete the replay buffer on exit', 'Apagar o buffer de replay ao sair'),
+        hint: L('The buffer is your last moments of screen. Off, it stays on disk until Ghostclip next starts, and clips can reach back across a quick restart.',
+          'O buffer são os últimos momentos da sua tela. Desligado, ele fica no disco até o Ghostclip abrir de novo, e os clipes alcançam o que veio antes de um reinício rápido.'), type: 'switch' },
       { key: 'startWithWindows', label: L('Start with Windows', 'Iniciar com o Windows'), hint: L('Installed copies only.', 'Só em cópias instaladas.'), type: 'switch' },
       { key: 'ffmpegPath', label: 'FFmpeg', type: 'path', pick: 'pickFfmpeg', empty: () => L('Bundled', 'Incluído'), reset: L('Use bundled', 'Usar o incluído') },
       { key: 'logLevel', label: L('Log detail', 'Detalhe do log'), type: 'select',
