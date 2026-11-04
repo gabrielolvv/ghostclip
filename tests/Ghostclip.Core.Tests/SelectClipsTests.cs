@@ -16,6 +16,14 @@ public class SelectClipsTests
     }
 
     [Fact]
+    public void The_page_is_told_how_many_moved_and_how_many_stayed()
+    {
+        var json = JsonSerializer.Serialize(new LibraryEvent("done", Op: "deleteMany", Moved: 3, Kept: 1), LibraryJson.Default.LibraryEvent);
+        Assert.Contains("\"moved\":3", json);
+        Assert.Contains("\"kept\":1", json);
+    }
+
+    [Fact]
     public void Requests_for_one_clip_have_no_list()
     {
         Assert.Null(JsonSerializer.Deserialize("""{"type":"favorite","path":"a.mp4"}""", LibraryJson.Default.LibraryRequest)!.Paths);

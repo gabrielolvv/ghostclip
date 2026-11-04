@@ -168,15 +168,28 @@ internal sealed class LibraryBridge : IDisposable
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
                 return;
             }
-            if (r.Type == "favoriteMany")
+            if (r.Type is "favoriteMany" or "deleteMany")
             {
-                // One write for the whole selection. A path outside the clips folder is ignored, as the page never sends one.
-                var favorites = (r.Paths ?? []).Where(p => RootAvailable && ClipLibrary.IsInside(Root, p)).ToList();
-                LibraryStore.Update(_paths.LibraryFile, s =>
+                // One write, and one question from Windows, for the whole selection. A path outside the clips folder
+                // is ignored, as the page never sends one.
+                var selection = (r.Paths ?? []).Where(p => RootAvailable && ClipLibrary.IsInside(Root, p)).ToList();
+                if (r.Type == "favoriteMany")
                 {
-                    foreach (var p in favorites) s.SetFavorite(p, r.Favorite);
+                    LibraryStore.Update(_paths.LibraryFile, s =>
+                    {
+                        foreach (var p in selection) s.SetFavorite(p, r.Favorite);
+                    });
+                    await ListAsync().ConfigureAwait(true);
+                    return;
+                }
+                var kept = RecycleBin.SendAll(selection, _window.Handle);
+                var moved = selection.Except(kept).ToList();
+                // In the Recycle Bin already: a favorites file that can't be written mustn't report them as kept.
+                UpdateLibraryQuietly(s =>
+                {
+                    foreach (var p in moved) s.Forget(p);
                 });
-                await ListAsync().ConfigureAwait(true);
+                _window.Post(new LibraryEvent("done", Op: r.Type, Moved: moved.Count, Kept: kept.Count));
                 return;
             }
             if (r.Path is not { } path || !RootAvailable || !ClipLibrary.IsInside(Root, path))

@@ -308,8 +308,7 @@ function applyMeta(card, path) {
 const selected = new Set();
 let selectAnchor = null;
 let binAsking = false;
-let binWaiting = 0;
-let binMoved = 0;
+let binAskedAt = 0;
 
 function togglePick(path, range) {
   const paths = visibleClips().map(c => c.path);
@@ -317,8 +316,8 @@ function togglePick(path, range) {
   if (range && from >= 0 && to >= 0) {
     for (const p of paths.slice(Math.min(from, to), Math.max(from, to) + 1)) selected.add(p);
   } else {
-    if (!selected.delete(path)) selected.add(path);
-    selectAnchor = path;
+    selectAnchor = selected.delete(path) ? null : path;
+    if (selectAnchor) selected.add(path);
   }
   binAsking = false;
   showSelection();
@@ -373,11 +372,14 @@ $('sel-favorite').addEventListener('click', () => {
 $('sel-bin').addEventListener('click', () => {
   if (!binAsking) {
     binAsking = true;
+    binAskedAt = performance.now();
     showSelection();
+    // The answer is under the pointer: a double click can't send them unread, and a key held down lands on Keep.
+    $('sel-cancel').focus();
     return;
   }
-  binWaiting += selected.size;
-  for (const path of selected) post({ type: 'delete', path });
+  if (performance.now() - binAskedAt < 600) return;
+  post({ type: 'deleteMany', paths: [...selected] });
   clearSelection();
 });
 $('sel-cancel').addEventListener('click', () => {
@@ -389,17 +391,10 @@ $('sel-cancel').addEventListener('click', () => {
   }
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && selected.size > 0 && !$('library').hidden) clearSelection();
+  if (e.key !== 'Escape' || selected.size === 0 || $('library').hidden || e.target === $('search')) return;
+  if (binAsking) $('sel-cancel').click();
+  else clearSelection();
 });
-
-// One message for the whole selection, once the last delete answered.
-function binAnswered(moved) {
-  binWaiting--;
-  if (moved) binMoved++;
-  if (binWaiting > 0) return;
-  if (binMoved > 0) toast(L(`Moved ${binMoved} to the Recycle Bin`, `${binMoved} movidos para a Lixeira`));
-  binMoved = 0;
-}
 
 function renderGrid() {
   const grid = $('grid');
@@ -407,6 +402,8 @@ function renderGrid() {
   const clips = visibleClips();
   const shown = new Set(clips.map(c => c.path));
   for (const path of selected) if (!shown.has(path)) selected.delete(path);
+  // The list changed under the question: it is asked again about what is there now.
+  binAsking = false;
   $('empty').hidden = state.clips.length > 0;
   $('empty-hint').textContent = L(`Press ${state.saveKey} in a game to save a clip.`, `Aperte ${state.saveKey} num jogo para salvar um clipe.`);
   $('no-match').hidden = state.clips.length === 0 || clips.length > 0;
@@ -440,6 +437,8 @@ function showView(name) {
   $('clip').hidden = name !== 'clip';
   $('settings').hidden = name !== 'settings';
   if (name !== 'settings') Settings.stopListening();
+  binAsking = false;
+  showSelection();
   // The sidebar marks where you are: a game, or Settings.
   document.body.classList.toggle('settings-open', name === 'settings');
   $('nav-settings').classList.toggle('on', name === 'settings');
@@ -815,9 +814,16 @@ function onDone(message) {
     case 'copy':
       toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
       break;
+    case 'deleteMany':
+      if (message.kept > 0) {
+        toast(L(`Moved: ${message.moved}. Not moved: ${message.kept}, open in another program or kept by you.`,
+          `Movidos: ${message.moved}. Não movidos: ${message.kept}, abertos em outro programa ou mantidos por você.`), true);
+      } else {
+        toast(L(`Moved ${message.moved} to the Recycle Bin`, message.moved === 1 ? '1 item movido para a Lixeira' : `${message.moved} itens movidos para a Lixeira`));
+      }
+      break;
     case 'delete':
-      if (binWaiting > 0) binAnswered(true);
-      else toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
+      toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
       if (state.current && state.current.path === message.path) {
         state.current = null;
         showView('library');
@@ -892,7 +898,6 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
-      if (message.op === 'delete' && binWaiting > 0) binAnswered(false);
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
       if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;

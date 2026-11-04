@@ -187,6 +187,7 @@ main { min-width: 0; min-height: 0; display: flex; }
   padding: 10px 16px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-strong);
   animation: rise var(--fast) ease-out;
 }
+.selecting .toast { bottom: 80px; }
 .toast.error { border-color: rgba(255, 77, 94, 0.5); color: var(--red); }
 .toast .link { font-size: 12px; color: var(--accent); }
 
