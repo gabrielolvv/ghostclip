@@ -15,9 +15,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Changed
 
-- The replay buffer is deleted when you exit Ghostclip, since it holds your last
-  moments of screen. Settings > Advanced can keep it on disk until the next
-  start, as before.
+- The replay buffer is deleted when you exit Ghostclip or Windows shuts down,
+  since it holds your last moments of screen. If Windows cuts that short, it goes
+  the next time Ghostclip starts. Settings > Advanced can keep it on disk until
+  then, as before.
 
 ## 0.8.10
 
