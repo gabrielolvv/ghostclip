@@ -225,6 +225,14 @@ function renderCard(clip) {
   card.dataset.path = clip.path;
   const thumb = el('div', 'thumb');
   card.append(thumb);
+  const pick = el('button', 'pick');
+  pick.type = 'button';
+  pick.setAttribute('role', 'checkbox');
+  pick.setAttribute('aria-checked', String(selected.has(clip.path)));
+  pick.setAttribute('aria-label', L(`Select ${fileName(clip.path)}`, `Selecionar ${fileName(clip.path)}`));
+  pick.append(icon('<path d="M5 12l5 5 9-10"/>'));
+  pick.addEventListener('click', e => { e.stopPropagation(); togglePick(clip.path, e.shiftKey); });
+  thumb.append(pick);
   if (clip.image) {
     // A screenshot is its own thumbnail.
     thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT')));
@@ -261,8 +269,21 @@ function renderCard(clip) {
     el('div', 'card-sub', `${clockLabel(date)} · ${fmtSize(clip.bytes)}`));
   card.append(text);
 
-  card.addEventListener('click', () => openClip(clip.path));
-  card.addEventListener('keydown', e => { if (e.key === 'Enter') openClip(clip.path); });
+  // With a selection going, or Ctrl or Shift held, a click picks instead of opening.
+  card.addEventListener('click', e => {
+    if (selected.size > 0 || e.ctrlKey || e.shiftKey) togglePick(clip.path, e.shiftKey);
+    else openClip(clip.path);
+  });
+  card.addEventListener('keydown', e => {
+    if (e.target !== card) return;
+    if (e.key === ' ') {
+      e.preventDefault();
+      togglePick(clip.path, e.shiftKey);
+    } else if (e.key === 'Enter') {
+      if (selected.size > 0) togglePick(clip.path, e.shiftKey);
+      else openClip(clip.path);
+    }
+  });
   if (!clip.image) {
     applyMeta(card, clip.path);
     if (!state.meta.has(clip.path)) observer.observe(card);
@@ -281,10 +302,111 @@ function applyMeta(card, path) {
   if (entry.meta && !thumb.querySelector('.chip')) thumb.append(el('span', 'chip', fmtTime(entry.meta.duration)));
 }
 
+// Selection: acting on several clips at once. Only what is on screen stays selected, so an action never
+// touches a clip hidden by the search or another game.
+
+const selected = new Set();
+let selectAnchor = null;
+let binAsking = false;
+let binWaiting = 0;
+let binMoved = 0;
+
+function togglePick(path, range) {
+  const paths = visibleClips().map(c => c.path);
+  const from = paths.indexOf(selectAnchor), to = paths.indexOf(path);
+  if (range && from >= 0 && to >= 0) {
+    for (const p of paths.slice(Math.min(from, to), Math.max(from, to) + 1)) selected.add(p);
+  } else {
+    if (!selected.delete(path)) selected.add(path);
+    selectAnchor = path;
+  }
+  binAsking = false;
+  showSelection();
+}
+
+function clearSelection() {
+  selected.clear();
+  selectAnchor = null;
+  binAsking = false;
+  showSelection();
+}
+
+function selectedClips() { return state.clips.filter(c => selected.has(c.path)); }
+
+// The cards stay as they are: a redraw would lose the keyboard's place in the grid.
+function showSelection() {
+  document.body.classList.toggle('selecting', selected.size > 0);
+  for (const card of document.querySelectorAll('#grid .card')) {
+    const on = selected.has(card.dataset.path);
+    card.classList.toggle('selected', on);
+    card.querySelector('.pick').setAttribute('aria-checked', String(on));
+  }
+  const bar = $('selbar');
+  bar.hidden = selected.size === 0;
+  bar.classList.toggle('warn', binAsking);
+  if (selected.size === 0) return;
+  const clips = selectedClips();
+  const favorites = clips.filter(c => c.favorite).length;
+  const count = selected.size;
+  const items = L(`${count} ${count === 1 ? 'item' : 'items'}`, `${count} ${count === 1 ? 'item' : 'itens'}`);
+  const also = favorites === 0 ? '' : L(` ${favorites} of them ${favorites === 1 ? 'is a favorite' : 'are favorites'}.`,
+    ` ${favorites === 1 ? '1 é favorito' : `${favorites} são favoritos`}.`);
+  $('selbar-text').textContent = binAsking
+    ? L(`Send ${items} to the Recycle Bin?${also}`, `Mandar ${items} para a Lixeira?${also}`)
+    : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`);
+  $('sel-all').hidden = binAsking;
+  $('sel-favorite').hidden = binAsking;
+  $('sel-favorite').textContent = favorites === clips.length ? L('Remove from favorites', 'Tirar dos favoritos') : L('Add to favorites', 'Adicionar aos favoritos');
+  $('sel-bin').textContent = binAsking ? L('Send to Recycle Bin', 'Mandar para a Lixeira') : L('Recycle Bin', 'Lixeira');
+  $('sel-cancel').textContent = binAsking ? L('Keep them', 'Manter') : L('Cancel', 'Cancelar');
+}
+
+$('sel-all').addEventListener('click', () => {
+  for (const c of visibleClips()) selected.add(c.path);
+  showSelection();
+});
+$('sel-favorite').addEventListener('click', () => {
+  const clips = selectedClips();
+  post({ type: 'favoriteMany', paths: clips.map(c => c.path), favorite: clips.some(c => !c.favorite) });
+  clearSelection();
+});
+$('sel-bin').addEventListener('click', () => {
+  if (!binAsking) {
+    binAsking = true;
+    showSelection();
+    return;
+  }
+  binWaiting += selected.size;
+  for (const path of selected) post({ type: 'delete', path });
+  clearSelection();
+});
+$('sel-cancel').addEventListener('click', () => {
+  if (binAsking) {
+    binAsking = false;
+    showSelection();
+  } else {
+    clearSelection();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && selected.size > 0 && !$('library').hidden) clearSelection();
+});
+
+// One message for the whole selection, once the last delete answered.
+function binAnswered(moved) {
+  binWaiting--;
+  if (moved) binMoved++;
+  if (binWaiting > 0) return;
+  if (binMoved > 0) toast(L(`Moved ${binMoved} to the Recycle Bin`, `${binMoved} movidos para a Lixeira`));
+  binMoved = 0;
+}
+
 function renderGrid() {
   const grid = $('grid');
   grid.replaceChildren();
   const clips = visibleClips();
+  const shown = new Set(clips.map(c => c.path));
+  for (const path of selected) if (!shown.has(path)) selected.delete(path);
   $('empty').hidden = state.clips.length > 0;
   $('empty-hint').textContent = L(`Press ${state.saveKey} in a game to save a clip.`, `Aperte ${state.saveKey} num jogo para salvar um clipe.`);
   $('no-match').hidden = state.clips.length === 0 || clips.length > 0;
@@ -303,6 +425,7 @@ function renderGrid() {
     }
     cards.append(renderCard(clip));
   }
+  showSelection();
 }
 
 // Clip view
@@ -693,7 +816,8 @@ function onDone(message) {
       toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
       break;
     case 'delete':
-      toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
+      if (binWaiting > 0) binAnswered(true);
+      else toast(L('Moved to the Recycle Bin', 'Movido para a Lixeira'));
       if (state.current && state.current.path === message.path) {
         state.current = null;
         showView('library');
@@ -767,7 +891,8 @@ function onMessage(message) {
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
-      if (message.op === 'favorite') post({ type: 'list' });
+      if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
+      if (message.op === 'delete' && binWaiting > 0) binAnswered(false);
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
       if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;

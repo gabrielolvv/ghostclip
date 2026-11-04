@@ -168,6 +168,17 @@ internal sealed class LibraryBridge : IDisposable
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
                 return;
             }
+            if (r.Type == "favoriteMany")
+            {
+                // One write for the whole selection. A path outside the clips folder is ignored, as the page never sends one.
+                var favorites = (r.Paths ?? []).Where(p => RootAvailable && ClipLibrary.IsInside(Root, p)).ToList();
+                LibraryStore.Update(_paths.LibraryFile, s =>
+                {
+                    foreach (var p in favorites) s.SetFavorite(p, r.Favorite);
+                });
+                await ListAsync().ConfigureAwait(true);
+                return;
+            }
             if (r.Path is not { } path || !RootAvailable || !ClipLibrary.IsInside(Root, path))
             {
                 _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path,

@@ -15,6 +15,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - Vertical in the library makes a 9:16 copy of a clip for Shorts, TikTok and
   Reels: the middle of the picture at 1080x1920, encoded on the GPU, with the
   audio tracks mixed into one, saved next to the clip.
+- Select several clips in the library to send them to the Recycle Bin or
+  favorite them at once: the box on a clip, Ctrl+click or Space to pick,
+  Shift+click for a range, Select all for what's on screen. Sending asks first,
+  and says if any of them is a favorite.
 
 ## 0.8.6
 
