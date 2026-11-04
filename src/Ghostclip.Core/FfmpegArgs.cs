@@ -301,13 +301,16 @@ public static class FfmpegArgs
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
-            "-vf", "crop='min(iw,trunc(ih*9/16/2)*2)':ih,scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
+            "-vf", "crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
             "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"), "-g", Inv($"{fps * 2}"),
             "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
         return args;
     }
+
+    /// <summary>Time for a vertical copy: a long session takes a while on the GPU at below-normal priority, with a game open.</summary>
+    public static TimeSpan VerticalTimeout(double durationSeconds) => TimeSpan.FromSeconds(Math.Max(15 * 60, durationSeconds * 3));
 
     private static void AddOneAudioTrack(List<string> args, int audioTracks)
     {

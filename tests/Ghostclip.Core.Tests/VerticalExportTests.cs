@@ -13,7 +13,7 @@ public class VerticalExportTests
     public void It_keeps_the_middle_of_the_picture_at_1080_by_1920()
     {
         var filter = VideoFilter(FfmpegArgs.Vertical("in.mp4", "out.mp4", "h264_nvenc", 1, 60));
-        Assert.StartsWith("crop='min(iw,trunc(ih*9/16/2)*2)':ih,scale=1080:1920", filter);
+        Assert.StartsWith("crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',scale=1080:1920", filter);
         Assert.EndsWith("format=nv12", filter);
     }
 
@@ -37,6 +37,15 @@ public class VerticalExportTests
         Assert.Equal("12000k", Option(args, "-b:v"));
         Assert.Equal("12000k", Option(args, "-maxrate"));
         Assert.Equal("out.mp4", args[^1]);
+    }
+
+    [Theory]
+    [InlineData(10, 15)]
+    [InlineData(300, 15)]
+    [InlineData(3600, 180)]
+    public void A_long_session_gets_time_to_finish(double seconds, int minutes)
+    {
+        Assert.Equal(TimeSpan.FromMinutes(minutes), FfmpegArgs.VerticalTimeout(seconds));
     }
 
     [Fact]

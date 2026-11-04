@@ -126,7 +126,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         try
         {
             r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps),
-                TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+                FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
