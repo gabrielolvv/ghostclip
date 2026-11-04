@@ -142,6 +142,11 @@ installer and the minimal FFmpeg is described in
 | Command | Does |
 |---|---|
 | `Ghostclip.exe --save` | The running instance saves a clip |
+| `Ghostclip.exe --save-short` | Saves a short clip, of the length in Settings > Clips. Its buffer only holds more than the clip length while the short clip has a key |
+| `Ghostclip.exe --screenshot` | Takes a screenshot |
+| `Ghostclip.exe --session` | Starts or stops a session |
+| `Ghostclip.exe --mute` | Mutes or unmutes the microphone track |
+| `Ghostclip.exe --pause` | Pauses or resumes recording |
 | `Ghostclip.exe --trim <clip> <start> <end>` | Writes `<clip>_trim.mp4` by stream copy |
 | `Ghostclip.exe --compress <clip>` | Writes `<clip>_discord.mp4` under the Discord limit |
 

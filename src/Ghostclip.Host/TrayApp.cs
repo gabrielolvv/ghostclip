@@ -48,8 +48,7 @@ internal sealed class TrayApp : ApplicationContext
     // Muted by the hotkey. Never saved: Ghostclip always starts with the microphone on.
     private bool _micMuted;
     private bool _paused;
-    private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
-    private readonly RegisteredWaitHandle _saveRequestWait;
+    private readonly List<(EventWaitHandle Request, RegisteredWaitHandle Wait)> _commands = [];
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
     private readonly RegisteredWaitHandle _exitRequestWait;
     private readonly EventWaitHandle _updateRequest = new(false, EventResetMode.AutoReset, Program.UpdateEventName);
@@ -154,8 +153,12 @@ internal sealed class TrayApp : ApplicationContext
         // An exit request set before this instance existed (by the installer's hook,
         // while some other process kept the event alive) is not meant for it.
         _exitRequest.Reset();
-        _saveRequestWait = ThreadPool.RegisterWaitForSingleObject(
-            _saveRequest, (_, _) => _ui.Post(_ => SaveClip(), null), null, Timeout.Infinite, executeOnlyOnce: false);
+        foreach (var command in Enum.GetValues<TrayCommand>())
+        {
+            var request = new EventWaitHandle(false, EventResetMode.AutoReset, TrayCommands.EventName(command));
+            _commands.Add((request, ThreadPool.RegisterWaitForSingleObject(
+                request, (_, _) => _ui.Post(_ => RunCommand(command), null), null, Timeout.Infinite, executeOnlyOnce: false)));
+        }
         _exitRequestWait = ThreadPool.RegisterWaitForSingleObject(
             _exitRequest, (_, _) => _ui.Post(_ => Exit(), null), null, Timeout.Infinite, executeOnlyOnce: true);
         // The library's "Update now" button, the same as "Restart to update" in this menu.
@@ -258,6 +261,21 @@ internal sealed class TrayApp : ApplicationContext
         _hotkeyLabels.Remove(HotkeyAction.MicMute);
         Register(HotkeyAction.MicMute, previous: null);
         ApplyTexts();
+    }
+
+    // From another launch of Ghostclip.exe: the same as the hotkeys, whether or not they have a key.
+    private void RunCommand(TrayCommand command)
+    {
+        if (_shuttingDown) return;
+        switch (command)
+        {
+            case TrayCommand.SaveClip: SaveClip(); break;
+            case TrayCommand.ShortClip: SaveClip(_config.ShortClipSeconds); break;
+            case TrayCommand.Screenshot: TakeScreenshot(); break;
+            case TrayCommand.Session: ToggleSession(); break;
+            case TrayCommand.MicMute: ToggleMicrophone(); break;
+            case TrayCommand.Pause: TogglePause(); break;
+        }
     }
 
     // While the settings page waits for a new hotkey, a key this app holds would run its action instead of reaching
@@ -830,8 +848,11 @@ internal sealed class TrayApp : ApplicationContext
         _hotkey.Dispose();
         _foregroundTimer.Dispose();
         _updateTimer.Dispose();
-        _saveRequestWait.Unregister(null);
-        _saveRequest.Dispose();
+        foreach (var (request, wait) in _commands)
+        {
+            wait.Unregister(null);
+            request.Dispose();
+        }
         _exitRequestWait.Unregister(null);
         _exitRequest.Dispose();
         _updateRequestWait.Unregister(null);
