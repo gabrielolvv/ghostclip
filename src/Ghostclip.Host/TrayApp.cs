@@ -506,7 +506,7 @@ internal sealed class TrayApp : ApplicationContext
         if (_paused)
         {
             Notify(L("Recording paused", "Gravação pausada"),
-                L("The replay buffer was deleted. Nothing is recorded until you resume.", "O buffer de replay foi apagado. Nada é gravado até você retomar."), ToolTipIcon.None);
+                L("The replay buffer is deleted, and nothing is recorded until you resume.", "O buffer de replay é apagado, e nada é gravado até você retomar."), ToolTipIcon.None);
         }
         else
         {
@@ -549,6 +549,11 @@ internal sealed class TrayApp : ApplicationContext
 
     private async void TakeScreenshot()
     {
+        if (_paused)
+        {
+            Notify(L("Screenshot not saved", "Print não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
+            return;
+        }
         var game = CurrentGame();
         try
         {

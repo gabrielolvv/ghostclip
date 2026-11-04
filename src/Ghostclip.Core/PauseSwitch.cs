@@ -5,6 +5,7 @@ public sealed class PauseSwitch
 {
     private readonly Lock _lock = new();
     private bool _paused;
+    private bool _clearBuffer;
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public bool Paused
@@ -18,6 +19,26 @@ public sealed class PauseSwitch
         get { lock (_lock) return _changed.Task; }
     }
 
+    /// <summary>
+    /// The recorder has to stop: it is paused, or was since the buffer was last cleared. A pause and a resume in a row,
+    /// to get rid of what was just on screen, can both land before the recorder loop looks.
+    /// </summary>
+    public bool MustStop
+    {
+        get { lock (_lock) return _paused || _clearBuffer; }
+    }
+
+    /// <summary>Whether a pause still wants the buffer cleared, and forgets it: take it before clearing, so a later pause asks again.</summary>
+    public bool TakeBufferClear()
+    {
+        lock (_lock)
+        {
+            var clear = _clearBuffer;
+            _clearBuffer = false;
+            return clear;
+        }
+    }
+
     public void Set(bool paused)
     {
         TaskCompletionSource changed;
@@ -25,6 +46,7 @@ public sealed class PauseSwitch
         {
             if (_paused == paused) return;
             _paused = paused;
+            _clearBuffer |= paused;
             changed = _changed;
             _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }

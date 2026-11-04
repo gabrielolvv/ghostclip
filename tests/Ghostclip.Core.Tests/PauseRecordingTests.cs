@@ -118,6 +118,53 @@ public class PauseRecordingTests
     }
 
     [Fact]
+    public void A_pause_over_before_the_recorder_looked_still_stops_it_and_clears_the_buffer()
+    {
+        // Pause and resume in a row, to get rid of what was just on screen.
+        var pause = new PauseSwitch();
+        pause.Set(true);
+        pause.Set(false);
+        Assert.False(pause.Paused);
+        Assert.True(pause.MustStop);
+        Assert.True(pause.TakeBufferClear());
+        Assert.False(pause.MustStop);
+        Assert.False(pause.TakeBufferClear());
+    }
+
+    [Fact]
+    public void While_paused_it_stays_stopped_after_the_buffer_is_cleared()
+    {
+        var pause = new PauseSwitch();
+        pause.Set(true);
+        Assert.True(pause.TakeBufferClear());
+        Assert.True(pause.MustStop);
+        pause.Set(false);
+        Assert.False(pause.MustStop);
+    }
+
+    [Fact]
+    public void A_pause_during_the_clearing_asks_for_another_one()
+    {
+        var pause = new PauseSwitch();
+        pause.Set(true);
+        pause.TakeBufferClear();
+        pause.Set(false);
+        pause.Set(true);
+        pause.Set(false);
+        Assert.True(pause.MustStop);
+        Assert.True(pause.TakeBufferClear());
+    }
+
+    [Fact]
+    public void Recording_on_from_the_start_never_asks_to_stop()
+    {
+        var pause = new PauseSwitch();
+        pause.Set(false);
+        Assert.False(pause.MustStop);
+        Assert.False(pause.TakeBufferClear());
+    }
+
+    [Fact]
     public void Setting_the_same_value_wakes_nobody()
     {
         var pause = new PauseSwitch();

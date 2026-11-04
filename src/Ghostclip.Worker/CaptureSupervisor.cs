@@ -19,6 +19,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private static readonly TimeSpan StallLimit = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan StartGrace = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan ClearPatience = TimeSpan.FromSeconds(10);
 
     private readonly GhostclipPaths _paths;
     private readonly IpcChannel _channel;
@@ -121,7 +122,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             while (!ct.IsCancellationRequested)
             {
-                if (_pause.Paused)
+                if (_pause.MustStop)
                 {
                     await WaitWhilePausedAsync(ct).ConfigureAwait(false);
                     continue;
@@ -148,7 +149,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     continue;
                 }
                 forceProbe = false;
-                if (_pause.Paused) continue;
+                if (_pause.MustStop) continue;
                 if (choice is null)
                 {
                     // Never fall back to a CPU encoder: it would cost far more FPS than promised.
@@ -191,7 +192,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     backoff = TimeSpan.FromSeconds(1);
                 }
                 await SendAsync(new IpcMessage { Type = IpcType.Error, Message = $"Recording stopped ({errors}). Restarting." }, ct).ConfigureAwait(false);
-                await Task.Delay(backoff, ct).ConfigureAwait(false);
+                var pauseChanged = _pause.Changed;
+                if (!_pause.MustStop) await Task.WhenAny(Task.Delay(backoff, ct), pauseChanged).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
                 backoff = TimeSpan.FromTicks(Math.Min(backoff.Ticks * 2, MaxBackoff.Ticks));
             }
         }
@@ -269,7 +272,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         while (true)
         {
             var pauseChanged = _pause.Changed;
-            if (_pause.Paused)
+            if (_pause.MustStop)
             {
                 await StopRecorderAsync().ConfigureAwait(false);
                 return Outcome.Paused;
@@ -307,7 +310,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     _log.Information("Capture settings changed; restarting the recorder with an empty buffer");
                     await StopRecorderAsync().ConfigureAwait(false);
                     // Segments in two formats can't be joined by stream copy.
-                    DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
+                    ClearBuffer();
                     return Outcome.Reconfigured;
                 }
                 nextConfig = _configs.NextAsync(ct);
@@ -322,8 +325,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
     }
 
-    // Nothing is captured and the buffer is deleted until the tray says to go on. Settings saved meanwhile apply
-    // right away: with no buffer there is nothing to restart. A segment a save is still reading is deleted next pass.
+    // Nothing is captured and the buffer is deleted until the tray says to go on, even if it already has. Settings
+    // saved meanwhile apply right away: with no buffer there is nothing to restart. A segment a save is still reading
+    // is deleted on a later pass; recording doesn't go on beside it for a while, or the next clip would include it.
     private async Task WaitWhilePausedAsync(CancellationToken ct)
     {
         _state = WorkerState.Paused;
@@ -339,13 +343,23 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             _discord = null;
             _discordPid = 0;
         }
+        var sinceResume = Stopwatch.StartNew();
         while (true)
         {
             var changed = _pause.Changed;
-            if (!_pause.Paused) break;
-            DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
+            _pause.TakeBufferClear();
+            var left = ClearBuffer();
+            if (_pause.Paused)
+            {
+                sinceResume.Restart();
+            }
+            else if (!_pause.MustStop && (left == 0 || sinceResume.Elapsed > ClearPatience))
+            {
+                if (left > 0) _log.Warning("{Left} segments could not be deleted after pausing", left);
+                break;
+            }
             var nextConfig = _configs.NextAsync(ct);
-            if (await Task.WhenAny(changed, nextConfig, Task.Delay(2000, ct)).ConfigureAwait(false) == nextConfig)
+            if (await Task.WhenAny(changed, nextConfig, Task.Delay(left > 0 ? 250 : 2000, ct)).ConfigureAwait(false) == nextConfig)
             {
                 _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
                 SetLogLevel(_config.LogLevel);
@@ -353,6 +367,14 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
             ct.ThrowIfCancellationRequested();
         }
         _log.Information("Recording resumed");
+    }
+
+    // Numbering starts over with an empty buffer, so what described the old segments goes too. Returns the segments left.
+    private int ClearBuffer()
+    {
+        DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
+        foreach (var session in AudioSync.Scan(_paths.BufferDir)) AudioSync.Delete(_paths.BufferDir, session);
+        return SegmentRing.Scan(_paths.BufferDir).Count;
     }
 
     // Quiet wait while Windows refuses the desktop: no FFmpeg runs, no restart
@@ -367,7 +389,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
         }
-        while (!InputDesktop.IsAvailable());
+        while (!InputDesktop.IsAvailable() && !_pause.MustStop);
         // Give the unlock animation a moment before Desktop Duplication starts.
         await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
         _log.Information("Desktop available again after {Seconds:0} s", waited.Elapsed.TotalSeconds);
@@ -378,7 +400,11 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _log.Error("{Message}", message);
         _state = WorkerState.Stopped;
         await SendAsync(new IpcMessage { Type = IpcType.Error, Message = message, Fatal = true }, ct).ConfigureAwait(false);
-        // Nothing to do until the user changes something.
+        // Nothing to do until the user changes something, or pauses: the buffer still has to go.
+        var pauseChanged = _pause.Changed;
+        if (_pause.MustStop) return;
+        var nextConfig = _configs.NextAsync(ct);
+        if (await Task.WhenAny(nextConfig, pauseChanged).ConfigureAwait(false) != nextConfig) return;
         _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
         SetLogLevel(_config.LogLevel);
     }
