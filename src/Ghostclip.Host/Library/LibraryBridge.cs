@@ -168,7 +168,7 @@ internal sealed class LibraryBridge : IDisposable
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
                 return;
             }
-            if (r.Type is "favoriteMany" or "deleteMany")
+            if (r.Type is "favoriteMany" or "deleteMany" or "joinClips")
             {
                 // One write, and one question from Windows, for the whole selection. A path outside the clips folder
                 // is ignored, as the page never sends one.
@@ -180,6 +180,12 @@ internal sealed class LibraryBridge : IDisposable
                         foreach (var p in selection) s.SetFavorite(p, r.Favorite);
                     });
                     await ListAsync().ConfigureAwait(true);
+                    return;
+                }
+                if (r.Type == "joinClips")
+                {
+                    var joined = await Job(_tools.JoinAsync(selection, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Output: joined));
                     return;
                 }
                 var kept = RecycleBin.SendAll(selection, _window.Handle);

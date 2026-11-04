@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Join in the library's selection bar makes one video from several clips, oldest
+  first, without re-encoding, saved next to the oldest. Clips recorded with
+  other video settings can't be joined this way, and Ghostclip says which.
+
 ## 0.8.7
 
 ### Added
