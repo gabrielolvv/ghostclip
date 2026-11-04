@@ -74,6 +74,7 @@ main { min-width: 0; min-height: 0; display: flex; }
   transition: border-color var(--fast);
 }
 #search:focus { border-color: var(--accent); }
+.bar select.field { flex: none; }
 #search::placeholder { color: var(--muted); }
 
 .day { margin: 6px 0 10px; font: 11px var(--mono); letter-spacing: 0.14em; color: var(--muted); }

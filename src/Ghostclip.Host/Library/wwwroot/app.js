@@ -77,6 +77,8 @@ const state = {
   favorites: false,      // only favorites, across games
   saveKey: 'Alt+F10',    // the clip hotkey as this keyboard prints it, for the empty library
   query: '',
+  sort: 'newest',        // set from what was last chosen, below
+  kind: 'all',
   pendingOpen: null,
   current: null,         // clip shown in the clip view
   start: 0,
@@ -177,9 +179,39 @@ function snapStart(keyframes, seconds) {
 
 function visibleClips() {
   const q = state.query.trim().toLowerCase();
-  return state.clips.filter(c =>
+  const clips = state.clips.filter(c =>
     (state.game === null || c.game === state.game) && (!state.favorites || c.favorite) &&
+    (state.kind === 'all' || (state.kind === 'images') === !!c.image) &&
     (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)));
+  return sortClips(clips);
+}
+
+// The list comes newest first. A sort keeps that order among equals, and a clip whose length isn't known yet goes last.
+function sortClips(clips) {
+  const length = c => (state.meta.get(c.path)?.meta?.duration) ?? -1;
+  switch (state.sort) {
+    case 'oldest': return clips.sort((a, b) => savedDate(a) - savedDate(b));
+    case 'largest': return clips.sort((a, b) => b.bytes - a.bytes);
+    case 'longest': return clips.sort((a, b) => length(b) - length(a));
+    default: return clips;
+  }
+}
+
+function readChoice(key, allowed) {
+  try {
+    const value = localStorage.getItem(key);
+    return allowed.includes(value) ? value : allowed[0];
+  } catch {
+    return allowed[0];
+  }
+}
+
+function keepChoice(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private storage off: the choice lasts until the window closes.
+  }
 }
 
 function renderSidebar() {
@@ -423,18 +455,22 @@ function renderGrid() {
   $('count').textContent = state.clips.length
     ? `${clips.length} ${clips.length === 1 ? L('CLIP', 'CLIPE') : L('CLIPS', 'CLIPES')}` : '';
 
+  // Grouped by day only while the days are in order. By size or length a day would come up again and again.
+  const byDay = state.sort === 'newest' || state.sort === 'oldest';
   let label = null;
   let cards = null;
   for (const clip of clips) {
-    const day = dayLabel(savedDate(clip));
-    if (day !== label) {
+    const day = byDay ? dayLabel(savedDate(clip)) : '';
+    if (cards === null || day !== label) {
       label = day;
-      grid.append(el('div', 'day', day));
+      if (byDay) grid.append(el('div', 'day', day));
       cards = el('div', 'cards');
       grid.append(cards);
     }
     cards.append(renderCard(clip));
   }
+  // Sorting by length needs them all, not only the cards on screen.
+  if (state.sort === 'longest') for (const clip of clips) if (!clip.image) requestMeta(clip.path);
   showSelection();
 }
 
@@ -808,6 +844,22 @@ $('c-yes').addEventListener('click', () => {
 $('open-folder').addEventListener('click', () => post({ type: 'openFolder' }));
 $('empty-folder').addEventListener('click', () => post({ type: 'openFolder' }));
 $('search').addEventListener('input', e => { state.query = e.target.value; renderGrid(); });
+state.sort = readChoice('sort', ['newest', 'oldest', 'largest', 'longest']);
+state.kind = readChoice('kind', ['all', 'videos', 'images']);
+$('sort').value = state.sort;
+$('kind').value = state.kind;
+$('sort').addEventListener('change', e => { state.sort = e.target.value; keepChoice('sort', state.sort); renderGrid(); });
+$('kind').addEventListener('change', e => { state.kind = e.target.value; keepChoice('kind', state.kind); renderGrid(); });
+
+// While sorting by length, clips move as their lengths arrive: at most twice a second, and not under an open question.
+let resortTimer = 0;
+function resortSoon() {
+  clearTimeout(resortTimer);
+  resortTimer = setTimeout(() => {
+    if (binAsking) resortSoon();
+    else if (!$('library').hidden) renderGrid();
+  }, 500);
+}
 
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
@@ -930,6 +982,7 @@ function onMessage(message) {
       const card = [...document.querySelectorAll('.card')].find(c => c.dataset.path === message.path);
       if (card) applyMeta(card, message.path);
       if (state.current && state.current.path === message.path) setupTimeline();
+      if (state.sort === 'longest') resortSoon();
       break;
     }
     case 'open':
