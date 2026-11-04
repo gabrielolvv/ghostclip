@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Diagnostics;
-using System.Threading.Channels;
 using Ghostclip.Core;
 using Ghostclip.Worker.Native;
 using Serilog;
@@ -27,7 +26,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private readonly ILogger _log;
     private readonly EncoderProber _prober;
     private readonly JobObject _job = new();
-    private readonly Channel<GhostclipConfig> _configs = Channel.CreateUnbounded<GhostclipConfig>();
+    private readonly ConfigInbox _configs = new();
     private AudioCapture? _audio;
     private AudioCapture? _mic;
     private AudioCapture? _discord;
@@ -58,7 +57,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     {
         // The messages the tray shows from here follow the language too.
         UiText.Use(config.Language);
-        _configs.Writer.TryWrite(config);
+        _configs.Post(config);
     }
 
     /// <summary>The host saw a different program in the foreground.</summary>
@@ -104,7 +103,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
 
     public async Task RunAsync(CancellationToken ct)
     {
-        _config = await _configs.Reader.ReadAsync(ct).ConfigureAwait(false);
+        _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
         SetLogLevel(_config.LogLevel);
         DeleteStaleSegments();
 
@@ -254,7 +253,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _log.Information("Recording with {Encoder}, {Fps} fps, {Bitrate} Mbps, audio tracks [{Tracks}], from segment {Start}",
             settings.Describe(), settings.Fps, settings.BitrateMbps, string.Join(", ", titles), start);
 
-        var nextConfig = _configs.Reader.ReadAsync(ct).AsTask();
+        var nextConfig = _configs.NextAsync(ct);
         var syncMeasured = first is null;
         while (true)
         {
@@ -279,7 +278,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
 
             if (done == nextConfig)
             {
-                var config = await nextConfig.ConfigureAwait(false);
+                var config = await _configs.TakeAsync(ct).ConfigureAwait(false);
                 var restart = !config.SameCaptureAs(_config);
                 if (config.GamePriority != _config.GamePriority) _runner.ApplyPriority(RecorderPriority.For(config.GamePriority));
                 _config = config;
@@ -293,7 +292,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
                     return Outcome.Reconfigured;
                 }
-                nextConfig = _configs.Reader.ReadAsync(ct).AsTask();
+                nextConfig = _configs.NextAsync(ct);
                 continue;
             }
 
@@ -329,7 +328,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _state = WorkerState.Stopped;
         await SendAsync(new IpcMessage { Type = IpcType.Error, Message = message, Fatal = true }, ct).ConfigureAwait(false);
         // Nothing to do until the user changes something.
-        _config = await _configs.Reader.ReadAsync(ct).ConfigureAwait(false);
+        _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
         SetLogLevel(_config.LogLevel);
     }
 
