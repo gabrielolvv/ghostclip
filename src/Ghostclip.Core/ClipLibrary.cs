@@ -5,7 +5,7 @@ namespace Ghostclip.Core;
 
 /// <summary>One saved clip or screenshot as the library shows it.</summary>
 /// <param name="RelativeUrl">Path under the clips folder, escaped per segment, for the library's virtual host.</param>
-/// <param name="Derived">A _trim, _discord or _vertical copy of another clip.</param>
+/// <param name="Derived">A _trim, _discord, _vertical or _joined copy of another clip.</param>
 /// <param name="LastWriteUtc">With <paramref name="Bytes"/>, tells a replaced file from the one it replaced.</param>
 /// <param name="Image">A screenshot rather than a video.</param>
 public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived, DateTime LastWriteUtc, bool Image = false);
@@ -77,13 +77,13 @@ public static partial class ClipLibrary
     /// <summary>
     /// Whether <paramref name="stem"/> (a file name without extension) is one Ghostclip gives in the
     /// game folder <paramref name="folder"/>: Game_&lt;time&gt;, a number when two saves shared a second,
-    /// then any _trim/_discord/_vertical copies of copies. Telegram's video_&lt;time&gt; in its own folder is not.
+    /// then any _trim/_discord/_vertical/_joined copies of copies. Telegram's video_&lt;time&gt; in its own folder is not.
     /// </summary>
     public static bool IsGhostclipName(string folder, string stem) =>
-        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical)(_\d+)?)*$",
+        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical|_joined)(_\d+)?)*$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    /// <summary>The save time in Game_YYYY-MM-DD_HH-MM-SS[_n][_trim|_discord|_vertical[_n]]....mp4, or null.</summary>
+    /// <summary>The save time in Game_YYYY-MM-DD_HH-MM-SS[_n][_trim|_discord|_vertical|_joined[_n]]....mp4, or null.</summary>
     public static DateTime? TimeFromName(string fileName)
     {
         var m = SavedName().Match(Path.GetFileNameWithoutExtension(fileName));
@@ -106,9 +106,9 @@ public static partial class ClipLibrary
             .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
             .Select(Uri.EscapeDataString));
 
-    [GeneratedRegex(@"_(?<time>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(_\d+)?(_(trim|discord|vertical)(_\d+)?)*$")]
+    [GeneratedRegex(@"_(?<time>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(_\d+)?(_(trim|discord|vertical|joined)(_\d+)?)*$")]
     private static partial Regex SavedName();
 
-    [GeneratedRegex(@"_(trim|discord|vertical)(_\d+)?$")]
+    [GeneratedRegex(@"_(trim|discord|vertical|joined)(_\d+)?$")]
     private static partial Regex DerivedSuffix();
 }

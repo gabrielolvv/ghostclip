@@ -239,7 +239,7 @@ function renderCard(clip) {
     thumb.style.backgroundImage = `url("${clip.url}?v=${encodeURIComponent(clip.version)}")`;
   } else if (clip.derived) {
     const name = fileName(clip.path);
-    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : L('TRIM', 'CORTE')));
+    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : /_joined(_\d+)?\.mp4$/i.test(name) ? L('JOINED', 'JUNTOS') : L('TRIM', 'CORTE')));
   } else if (clip.bookmarks) {
     thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`)));
   }
@@ -354,6 +354,7 @@ function showSelection() {
     ? L(`Send ${items} to the Recycle Bin?${also}`, `Mandar ${items} para a Lixeira?${also}`)
     : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`);
   $('sel-all').hidden = binAsking;
+  $('sel-join').hidden = binAsking || count < 2 || clips.some(c => c.image);
   $('sel-favorite').hidden = binAsking;
   $('sel-favorite').textContent = favorites === clips.length ? L('Remove from favorites', 'Tirar dos favoritos') : L('Add to favorites', 'Adicionar aos favoritos');
   $('sel-bin').textContent = binAsking ? L('Send to Recycle Bin', 'Mandar para a Lixeira') : L('Recycle Bin', 'Lixeira');
@@ -363,6 +364,11 @@ function showSelection() {
 $('sel-all').addEventListener('click', () => {
   for (const c of visibleClips()) selected.add(c.path);
   showSelection();
+});
+$('sel-join').addEventListener('click', () => {
+  toast(L('Joining the clips…', 'Juntando os clipes…'));
+  post({ type: 'joinClips', paths: selectedClips().map(c => c.path) });
+  clearSelection();
 });
 $('sel-favorite').addEventListener('click', () => {
   const clips = selectedClips();
@@ -813,6 +819,9 @@ function onDone(message) {
       break;
     case 'copy':
       toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.'));
+      break;
+    case 'joinClips':
+      toast(L('Joined clip saved', 'Clipe unido salvo'), false, open);
       break;
     case 'deleteMany':
       if (message.kept > 0) {

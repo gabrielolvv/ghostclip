@@ -10,7 +10,7 @@ namespace Ghostclip.Host;
 internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec, IReadOnlyList<string> AudioTitles);
 
 /// <summary>
-/// Trimming, "compress for Discord" and the vertical copy. All run at below-normal
+/// Trimming, "compress for Discord", the vertical copy and joining. All run at below-normal
 /// priority, so a game in the foreground keeps the CPU.
 /// </summary>
 internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> config, ILogger log)
@@ -141,6 +141,72 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         PartFile.Commit(output);
         log.Information("Vertical copy of {Clip}: {Output}", clip, output);
         return output;
+    }
+
+    /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
+    public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
+    {
+        var ordered = ClipJoiner.InOrder(clips.Where(c => !ClipLibrary.IsImage(c)), File.GetLastWriteTime);
+        if (ordered.Count < 2) throw new InvalidOperationException(L("Select at least two clips to join.", "Selecione pelo menos dois clipes para juntar."));
+
+        var sources = new List<JoinSource>();
+        foreach (var clip in ordered) sources.Add(await JoinSourceAsync(clip, ct).ConfigureAwait(false));
+        if (ClipJoiner.FirstMismatch(sources) is { } other)
+        {
+            var name = Path.GetFileName(other.Path);
+            throw new InvalidOperationException(L($"{name} was recorded with other settings, so it can't join the rest without re-encoding.",
+                $"{name} foi gravado com outros ajustes, então não dá para juntar com os demais sem recodificar."));
+        }
+
+        // A join still running on these clips holds the .part: this one takes the next name.
+        var output = ClipNaming.DerivedPath(ordered[0], "joined", p => File.Exists(p) || File.Exists(PartFile.For(p)));
+        var list = Path.Combine(paths.DataDir, $"join-{Guid.NewGuid():N}.ffconcat");
+        ProcessResult r;
+        try
+        {
+            await File.WriteAllTextAsync(list, FfmpegArgs.ConcatList(ordered), ct).ConfigureAwait(false);
+            // Stream copy runs at about the speed of the disk.
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Join(list, PartFile.For(output)),
+                TimeSpan.FromMinutes(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        finally
+        {
+            File.Delete(list);
+        }
+        if (!r.Succeeded || ClipJoiner.LostAClip(r.StdErr))
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not join the clips: {r.FirstError}", $"Não foi possível juntar os clipes: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Joined {Count} clips into {Output}", ordered.Count, output);
+        return output;
+    }
+
+    private async Task<JoinSource> JoinSourceAsync(string clip, CancellationToken ct)
+    {
+        var r = await ProcessRunner.RunAsync(Ffprobe(), [
+            "-v", "error", "-show_data_hash", "md5", "-show_entries", "stream=codec_type,codec_name,width,height,sample_rate,channels,extradata_hash:stream_tags=handler_name", "-of", "json", clip,
+        ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}"));
+
+        using var json = JsonDocument.Parse(r.StdOut);
+        var video = "";
+        var audio = new List<string>();
+        foreach (var s in json.RootElement.GetProperty("streams").EnumerateArray())
+        {
+            // Everything the probe said about the track, in one text to compare. The name is in there: the result
+            // keeps the first clip's, so a Discord track must not end up called Microphone.
+            var format = string.Join(' ', s.EnumerateObject().Where(p => p.Name != "codec_type").Select(p => $"{p.Name}={p.Value}"));
+            if (s.GetProperty("codec_type").GetString() == "audio") audio.Add(format);
+            else if (video.Length == 0) video = format;
+        }
+        return new JoinSource(clip, video, audio);
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.

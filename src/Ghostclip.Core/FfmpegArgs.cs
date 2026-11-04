@@ -325,6 +325,13 @@ public static class FfmpegArgs
         }
     }
 
+    /// <summary>Several clips into one by stream copy, every track included. See <see cref="ClipJoiner"/>.</summary>
+    public static IReadOnlyList<string> Join(string concatListPath, string outputPath) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", concatListPath,
+        "-map", "0", "-c", "copy", "-avoid_negative_ts", "make_zero", "-movflags", "+faststart", "-f", "mp4", outputPath,
+    ];
+
     /// <summary>An ffconcat list. Paths use forward slashes and single quotes are escaped.</summary>
     public static string ConcatList(IEnumerable<string> files)
     {
