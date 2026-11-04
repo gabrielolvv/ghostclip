@@ -9,7 +9,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 - Join in the library's selection bar makes one video from several clips, oldest
   first, without re-encoding, saved next to the oldest. Clips recorded with
-  other video settings can't be joined this way, and Ghostclip says which.
+  other video settings or other audio tracks can't be joined this way, and
+  Ghostclip says which.
 
 ## 0.8.7
 

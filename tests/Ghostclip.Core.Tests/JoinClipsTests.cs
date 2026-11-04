@@ -12,14 +12,25 @@ public class JoinClipsTests
     public void They_join_oldest_first_whatever_order_they_were_picked_in()
     {
         string[] picked = [@"B\B_2026-11-04_12-00-00.mp4", @"A\A_2026-11-03_09-00-00.mp4", @"A\A_2026-11-04_10-00-00_trim.mp4"];
-        Assert.Equal([@"A\A_2026-11-03_09-00-00.mp4", @"A\A_2026-11-04_10-00-00_trim.mp4", @"B\B_2026-11-04_12-00-00.mp4"], ClipJoiner.InOrder(picked));
+        Assert.Equal([@"A\A_2026-11-03_09-00-00.mp4", @"A\A_2026-11-04_10-00-00_trim.mp4", @"B\B_2026-11-04_12-00-00.mp4"], ClipJoiner.InOrder(picked, _ => DateTime.MinValue));
     }
 
     [Fact]
-    public void A_clip_without_a_time_in_its_name_keeps_a_stable_place()
+    public void A_clip_renamed_by_hand_goes_by_its_file_s_date()
     {
-        string[] picked = [@"A\renamed.mp4", @"A\A_2026-11-03_09-00-00.mp4", @"A\another.mp4"];
-        Assert.Equal([@"A\another.mp4", @"A\renamed.mp4", @"A\A_2026-11-03_09-00-00.mp4"], ClipJoiner.InOrder(picked));
+        string[] picked = [@"A\best.mp4", @"A\A_2026-11-03_09-00-00.mp4", @"A\first.mp4"];
+        var files = new Dictionary<string, DateTime> { [picked[0]] = new(2026, 11, 5, 0, 0, 0), [picked[2]] = new(2026, 11, 1, 0, 0, 0) };
+        Assert.Equal([@"A\first.mp4", @"A\A_2026-11-03_09-00-00.mp4", @"A\best.mp4"], ClipJoiner.InOrder(picked, p => files[p]));
+    }
+
+    [Theory]
+    [InlineData("[in#0/concat @ 0000] Impossible to open 'C:/x/gone.mp4'", true)]
+    [InlineData("[in#0/concat @ 0000] Error during demuxing: I/O error", true)]
+    [InlineData("", false)]
+    [InlineData("[aost#0:1/copy @ 0000] Non-monotonic DTS; previous: 96256, current: 96000", false)]
+    public void A_clip_it_couldn_t_read_counts_as_a_failure(string errors, bool lost)
+    {
+        Assert.Equal(lost, ClipJoiner.LostAClip(errors));
     }
 
     [Fact]
