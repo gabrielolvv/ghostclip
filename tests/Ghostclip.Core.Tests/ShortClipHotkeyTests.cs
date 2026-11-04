@@ -43,6 +43,8 @@ public class ShortClipHotkeyTests
     [Theory]
     [InlineData("Alt+F10")]
     [InlineData("f10 + alt")]
+    [InlineData("Alt+F11")]
+    [InlineData("Alt+F9")]
     [InlineData("Alt+F8")]
     public void On_a_key_another_action_uses_it_goes_back_to_off(string key)
     {
@@ -55,10 +57,18 @@ public class ShortClipHotkeyTests
     [Fact]
     public void A_moved_hotkey_never_lands_on_it()
     {
-        // The screenshot hotkey on the clip's key moves to the first free spare: Alt+F12 is this one's here.
-        var config = new GhostclipConfig { Hotkey = "Alt+F11", ShortClipHotkey = "Alt+F12" }.Normalize();
-        Assert.Equal("Alt+F12", config.ShortClipHotkey);
-        Assert.Equal("Ctrl+Alt+F11", config.ScreenshotHotkey);
+        // A hotkey on the clip's key moves to the first free spare: Alt+F12 is this one's here.
+        var screenshot = new GhostclipConfig { Hotkey = "Alt+F11", ShortClipHotkey = "Alt+F12" }.Normalize();
+        Assert.Equal("Alt+F12", screenshot.ShortClipHotkey);
+        Assert.Equal("Ctrl+Alt+F11", screenshot.ScreenshotHotkey);
+
+        var session = new GhostclipConfig { Hotkey = "Alt+F9", ShortClipHotkey = "Alt+F12" }.Normalize();
+        Assert.Equal("Alt+F12", session.ShortClipHotkey);
+        Assert.Equal("Ctrl+Alt+F11", session.SessionHotkey);
+
+        var mute = new GhostclipConfig { Hotkey = "Alt+F8", ShortClipHotkey = "Alt+F12" }.Normalize();
+        Assert.Equal("Alt+F12", mute.ShortClipHotkey);
+        Assert.Equal("Ctrl+Alt+F11", mute.MicMuteHotkey);
     }
 
     [Fact]

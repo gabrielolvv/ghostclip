@@ -154,8 +154,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         var keys = config.ChosenHotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
         if (keys.Distinct().Count() < keys.Count)
         {
-            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session and muting the microphone each need a hotkey of their own.",
-                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão e mutar o microfone precisam de uma hotkey diferente cada.");
+            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session and muting the microphone can't share a hotkey.",
+                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão e mutar o microfone não podem usar a mesma hotkey.");
         }
         return null;
     }
