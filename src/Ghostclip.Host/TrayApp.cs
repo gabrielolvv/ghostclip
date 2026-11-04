@@ -183,6 +183,8 @@ internal sealed class TrayApp : ApplicationContext
         ClearOldBuffers();
         RegisterHotkeys();
         if (configProblem is not null) Notify(L("Settings reset", "Configurações redefinidas"), configProblem, ToolTipIcon.Warning);
+        // A listed program already in front: the worker hears it before anything it could record.
+        CheckPrivateAppNow();
         _worker.Start(_config);
         PublishStatus(_status);
         _ = RecoverPendingAsync();
@@ -412,12 +414,12 @@ internal sealed class TrayApp : ApplicationContext
     private void CheckForeground()
     {
         var front = ForegroundGame.Detect();
-        var privateApp = _config.IsPrivateApp(front.Process) ? front.Process : null;
+        var privateApp = _config.PausingApp(_pausedFor, front.Process, front.Game);
         if (privateApp != _pausedFor)
         {
             var before = Paused;
             _pausedFor = privateApp;
-            PauseChanged(before);
+            PauseChanged(before, fromKey: false);
         }
         if (front.Game != _foreground)
         {
@@ -426,7 +428,7 @@ internal sealed class TrayApp : ApplicationContext
             UpdateStatusItem();
         }
 
-        var isGame = front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
+        var isGame = privateApp is null && front.ProcessId != 0 && (front.Fullscreen || _config.ProfileFor(front.Game) is not null);
         if (isGame && front.ProcessId != _gamePid)
         {
             SetGame(front.Game, front.ProcessId);
@@ -507,6 +509,7 @@ internal sealed class TrayApp : ApplicationContext
     // Without a length, the one set for the game.
     private void SaveClip(int? seconds = null)
     {
+        CheckPrivateAppNow();
         if (Paused)
         {
             Notify(L("Clip not saved", "Clipe não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
@@ -537,23 +540,33 @@ internal sealed class TrayApp : ApplicationContext
     {
         var before = Paused;
         _paused = !_paused;
-        PauseChanged(before);
+        PauseChanged(before, fromKey: true);
+    }
+
+    // A key pressed the moment a listed program comes to the front must not save what it shows.
+    private void CheckPrivateAppNow()
+    {
+        if (_config.PrivateApps.Count > 0) CheckForeground();
     }
 
     // The key or menu, or a program from Settings > Clips in front: paused while either says so.
-    private void PauseChanged(bool before)
+    private void PauseChanged(bool before, bool fromKey)
     {
         ApplyTexts();
         if (Paused == before)
         {
-            if (_pausedFor is { } holding && !_paused)
+            if (fromKey && _pausedFor is { } holding)
             {
-                Notify(L("Recording still paused", "Gravação continua pausada"), L($"{holding} is in front.", $"{holding} está na frente."), ToolTipIcon.None);
+                Notify(_paused ? L("Recording stays paused", "A gravação continua pausada") : L("Recording still paused", "Gravação continua pausada"),
+                    _paused
+                        ? L($"Also after {holding} leaves the front, until you press it again.", $"Também depois que {holding} sair da frente, até você apertar de novo.")
+                        : L($"{holding} is in front.", $"{holding} está na frente."), ToolTipIcon.None);
             }
             return;
         }
-        // A session is the buffer kept, and the buffer is about to go: saved as it is.
-        if (Paused && _session.Running) StopSession();
+        // A session is the buffer kept, and the buffer is about to go: saved as it is. For a listed program it goes on
+        // in a new part afterwards, since a moment in a password manager shouldn't end it (see OnStatus).
+        if (Paused && _pausedFor is null && _session.Running) StopSession();
         _worker.SetPaused(Paused);
         _log.Information(Paused ? "Recording paused ({App})" : "Recording resumed", _pausedFor ?? "from the tray");
         // A balloon doesn't show over a fullscreen game: the tone says it there, even with the other sounds off.
@@ -604,6 +617,7 @@ internal sealed class TrayApp : ApplicationContext
 
     private async void TakeScreenshot()
     {
+        CheckPrivateAppNow();
         if (Paused)
         {
             Notify(L("Screenshot not saved", "Print não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);

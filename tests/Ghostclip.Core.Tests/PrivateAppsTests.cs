@@ -67,6 +67,43 @@ public class PrivateAppsTests
     }
 
     [Fact]
+    public void A_program_in_front_pauses_by_its_process_or_its_own_name()
+    {
+        var config = With("KeePass", "Secret Vault");
+        Assert.Equal("KeePass", config.PausingApp(null, "KeePass", "KeePass Password Safe"));
+        Assert.Equal("Secret Vault", config.PausingApp(null, "vault64", "Secret Vault"));
+        Assert.Null(config.PausingApp(null, "chrome", "Google Chrome"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("explorer")]
+    [InlineData("EXPLORER")]
+    [InlineData("Ghostclip")]
+    public void The_taskbar_or_the_tray_menu_taking_the_focus_changes_nothing(string? process)
+    {
+        Assert.Equal("KeePass", With("KeePass").PausingApp("KeePass", process, null));
+    }
+
+    [Fact]
+    public void Another_program_in_front_goes_on()
+    {
+        Assert.Null(With("KeePass").PausingApp("KeePass", "chrome", "Google Chrome"));
+    }
+
+    [Fact]
+    public void The_taskbar_doesn_t_start_a_pause_by_itself()
+    {
+        Assert.Null(With("KeePass").PausingApp(null, "explorer", "Windows Explorer"));
+    }
+
+    [Fact]
+    public void Taking_the_program_off_the_list_goes_on_even_from_the_taskbar()
+    {
+        Assert.Null(new GhostclipConfig().Normalize().PausingApp("KeePass", "explorer", null));
+    }
+
+    [Fact]
     public void Changing_it_keeps_recording()
     {
         var a = new GhostclipConfig();

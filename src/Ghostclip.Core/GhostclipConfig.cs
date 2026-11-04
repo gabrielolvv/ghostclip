@@ -252,6 +252,19 @@ public sealed record GhostclipConfig
     public bool IsPrivateApp(string? process) =>
         !string.IsNullOrWhiteSpace(process) && PrivateApps.Contains(AppName(process), StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The listed program recording is paused for, or null. <paramref name="process"/> and <paramref name="name"/> are
+    /// the program in front: the taskbar, Alt+Tab, the tray's menu and the library take the focus with the program
+    /// still on screen, so they change nothing until another program has it.
+    /// </summary>
+    public string? PausingApp(string? current, string? process, string? name)
+    {
+        if (IsPrivateApp(process)) return process;
+        if (IsPrivateApp(name)) return name;
+        var passing = process is null || process.Equals("explorer", StringComparison.OrdinalIgnoreCase) || process.Equals("Ghostclip", StringComparison.OrdinalIgnoreCase);
+        return passing && IsPrivateApp(current) ? current : null;
+    }
+
     public GameProfile? ProfileFor(string? game) =>
         game is null ? null : Profiles.FirstOrDefault(p => string.Equals(p.Game, game, StringComparison.OrdinalIgnoreCase));
 

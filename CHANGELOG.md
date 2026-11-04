@@ -8,9 +8,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 ### Added
 
 - Settings > Clips > Pause for these programs: while a password manager or a
-  bank's app you list is in front, recording pauses by itself and the replay
-  buffer is deleted, and it goes on when the program leaves the front. Programs
-  only: it can't tell a website in a browser.
+  bank's app you list is the active window, recording pauses by itself and the
+  replay buffer is deleted, and it goes on when another program becomes active.
+  It takes up to half a second to notice, and beside another active window the
+  program can still be recorded. Programs only: not a website in a browser.
 
 ## 0.8.10
 
