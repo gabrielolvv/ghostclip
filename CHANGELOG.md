@@ -16,7 +16,6 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   Reels: the middle of the picture at 1080x1920, encoded on the GPU, with the
   audio tracks mixed into one, saved next to the clip.
 
-
 ## 0.8.6
 
 ### Added
