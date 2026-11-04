@@ -39,6 +39,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly WorkerSupervisor _worker;
     private readonly ClipSaver _saver;
     private readonly System.Windows.Forms.Timer _foregroundTimer = new() { Interval = 2000 };
+    private readonly System.Windows.Forms.Timer _diskTimer = new() { Interval = 60_000 };
+    private readonly LowDiskWatch _lowDisk = new();
     private string _foreground = ClipNaming.FallbackGame;
     private string _game = ClipNaming.FallbackGame;
     private uint _gamePid;
@@ -126,6 +128,8 @@ internal sealed class TrayApp : ApplicationContext
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
         _foregroundTimer.Tick += (_, _) => CheckForeground();
         _foregroundTimer.Start();
+        _diskTimer.Tick += (_, _) => CheckDiskSpace();
+        _diskTimer.Start();
 
         // First update check two minutes after start, then every six hours.
         _updateItem.Click += (_, _) => RestartToUpdate();
@@ -717,6 +721,32 @@ internal sealed class TrayApp : ApplicationContext
                 $"Aperte {key} para salvar os últimos {_config.ClipSeconds} s. Dê dois cliques neste ícone para ver os clipes e as configurações."), ToolTipIcon.None);
     }
 
+    // Saving says so when a clip doesn't fit, but by then the moment has happened: this says it before.
+    private void CheckDiskSpace()
+    {
+        var threshold = LowDiskWatch.Threshold(_config);
+        foreach (var folder in new[] { _paths.BufferDirFor(_config), _config.ResolvedClipsFolder })
+        {
+            try
+            {
+                var root = Path.GetPathRoot(Path.GetFullPath(folder));
+                if (string.IsNullOrEmpty(root)) continue;
+                var drive = new DriveInfo(root);
+                if (!drive.IsReady || !_lowDisk.ShouldWarn(root, drive.AvailableFreeSpace, threshold)) continue;
+                var gb = drive.AvailableFreeSpace / 1024.0 / 1024 / 1024;
+                _log.Warning("Drive {Drive} has {Gb:0.0} GB free", root, gb);
+                Notify(L($"Drive {root} is almost full", $"O disco {root} está quase cheio"),
+                    L($"{gb:0.0} GB free. When it fills up, Ghostclip can't record or save clips. A space limit in Settings can make room by itself.",
+                        $"{gb:0.0} GB livres. Quando encher, o Ghostclip não consegue gravar nem salvar clipes. Um limite de espaço em Configurações pode abrir espaço sozinho."), ToolTipIcon.Warning);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+                // A network folder has no drive to ask, and one unplugged says so elsewhere.
+                _log.Debug("Could not check the free space for {Folder}: {Error}", folder, ex.Message);
+            }
+        }
+    }
+
     private void OnWorkerError(string message, bool fatal)
     {
         if (fatal)
@@ -861,6 +891,7 @@ internal sealed class TrayApp : ApplicationContext
         _session.Dispose();
         _hotkey.Dispose();
         _foregroundTimer.Dispose();
+        _diskTimer.Dispose();
         _updateTimer.Dispose();
         foreach (var (request, wait) in _commands)
         {
