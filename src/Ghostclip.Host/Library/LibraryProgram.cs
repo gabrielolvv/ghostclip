@@ -41,7 +41,7 @@ internal static partial class LibraryProgram
             return Forward(clip) ? 0 : 1;
         }
 
-        var (paths, config, _, _) = Program.Start("library");
+        var (paths, config, _, _, _) = Program.Start("library");
         try
         {
             ApplicationConfiguration.Initialize();

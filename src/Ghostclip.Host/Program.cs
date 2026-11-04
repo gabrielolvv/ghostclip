@@ -85,7 +85,7 @@ internal static class Program
         using var single = new Mutex(initiallyOwned: true, HostMutexName, out var first);
         if (!first) return 0;
 
-        var (paths, config, problem, level) = Start("host");
+        var (paths, config, problem, level, firstRun) = Start("host");
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => Log.Error(e.Exception, "Unhandled UI exception");
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Fatal(e.ExceptionObject as Exception, "Unhandled exception");
@@ -95,7 +95,7 @@ internal static class Program
         {
             Log.Information("Ghostclip {Version} starting", typeof(Program).Assembly.GetName().Version);
             ApplicationConfiguration.Initialize();
-            Application.Run(new TrayApp(paths, config, problem, level));
+            Application.Run(new TrayApp(paths, config, problem, level, firstRun));
             return 0;
         }
         finally
@@ -108,7 +108,7 @@ internal static class Program
     // Command-line tools: no tray, no worker. Result and errors go to the log.
     private static int RunTool(string command, string[] args)
     {
-        var (paths, config, _, _) = Start("tools");
+        var (paths, config, _, _, _) = Start("tools");
         try
         {
             var tools = new ClipTools(paths, () => config, Log.ForContext<ClipTools>());
@@ -177,7 +177,7 @@ internal static class Program
         }
     }
 
-    internal static (GhostclipPaths, GhostclipConfig, string?, LoggingLevelSwitch) Start(string logName)
+    internal static (GhostclipPaths Paths, GhostclipConfig Config, string? Problem, LoggingLevelSwitch Level, bool FirstRun) Start(string logName)
     {
         var paths = GhostclipPaths.Default;
         string? migrationError = null;
@@ -192,6 +192,8 @@ internal static class Program
             migrationError = ex.Message;
         }
         paths.EnsureCreated();
+        // Loading writes the defaults, and an update keeps the file: only a new install has none here.
+        var firstRun = !File.Exists(paths.ConfigFile);
         var config = ConfigStore.Load(paths.ConfigFile, out var problem);
         UiText.Use(config.Language);
         var level = new LoggingLevelSwitch(ToSerilog(config.LogLevel));
@@ -207,7 +209,7 @@ internal static class Program
             .CreateLogger();
         if (problem is not null) Log.Warning("{Problem}", problem);
         if (migrationError is not null) Log.Warning("Could not move data from {Old}: {Error}", GhostclipPaths.OldDataDir, migrationError);
-        return (paths, config, problem, level);
+        return (paths, config, problem, level, firstRun);
     }
 
     public static LogEventLevel ToSerilog(GhostclipLogLevel level) => level switch
