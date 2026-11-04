@@ -315,12 +315,17 @@ const Settings = (() => {
         b.addEventListener('click', () => listen(b, field));
         // Listening ends when focus leaves the field, so a key pressed elsewhere never becomes the hotkey.
         b.addEventListener('blur', () => stopListening());
+        // The form was just rebuilt under the keyboard: its place stays on this field.
+        if (s.refocus === field.key) {
+          s.refocus = null;
+          queueMicrotask(() => b.focus());
+        }
         if (!field.optional || !value) return b;
         // An optional hotkey can go back to taking no key at all.
         const remove = el('button', 'act small', L('Remove', 'Remover'));
         remove.type = 'button';
         remove.setAttribute('aria-label', `${L('Remove', 'Remover')}: ${field.label}`);
-        remove.addEventListener('click', () => { s.draft[field.key] = ''; changed(); render(); });
+        remove.addEventListener('click', () => { s.draft[field.key] = ''; s.refocus = field.key; changed(); render(); });
         return [b, remove];
       }
     }
@@ -399,6 +404,7 @@ const Settings = (() => {
     s.recordedLabels = { ...s.recordedLabels, [s.listening.key]: label };
     // An optional hotkey that had no key gains its Remove button.
     const first = !s.draft[s.listening.key];
+    if (first) s.refocus = s.listening.key;
     s.draft[s.listening.key] = combo;
     stopListening(label);
     changed();

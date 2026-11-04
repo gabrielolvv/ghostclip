@@ -509,7 +509,7 @@ internal sealed class TrayApp : ApplicationContext
     }
 
     // Without a length, the one set for the game.
-    private void SaveClip(int? seconds = null)
+    private async void SaveClip(int? seconds = null)
     {
         CheckPrivateAppNow();
         if (Paused)
@@ -523,7 +523,9 @@ internal sealed class TrayApp : ApplicationContext
         ClipSnapshot snapshot;
         try
         {
-            snapshot = _saver.TakeSnapshot(game, recording: _status.State == WorkerState.Recording, seconds);
+            // Milliseconds with hard links. A drive without them copies, which mustn't hold up the tray and its other keys.
+            var recording = _status.State == WorkerState.Recording;
+            snapshot = await Task.Run(() => _saver.TakeSnapshot(game, recording, seconds)).ConfigureAwait(true);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {

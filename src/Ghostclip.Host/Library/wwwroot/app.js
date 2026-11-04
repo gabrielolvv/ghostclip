@@ -427,19 +427,34 @@ $('sel-bin').addEventListener('click', () => {
   if (performance.now() - binAskedAt < 600) return;
   post({ type: 'deleteMany', paths: [...selected] });
   clearSelection();
+  document.querySelector('#grid .card')?.focus({ preventScroll: true });
 });
 $('sel-cancel').addEventListener('click', () => {
   if (binAsking) {
     binAsking = false;
     showSelection();
+    $('sel-bin').focus();
   } else {
     clearSelection();
   }
 });
+// From the keyboard the bar is past every card: Delete goes straight to its question, Ctrl+A picks what's on screen.
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || selected.size === 0 || $('library').hidden || e.target === $('search')) return;
-  if (binAsking) $('sel-cancel').click();
-  else clearSelection();
+  if ($('library').hidden || e.target === $('search')) return;
+  if (e.key.toLowerCase() === 'a' && e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    // Not under the question: it asked about what was selected then.
+    if (!binAsking) $('sel-all').click();
+    return;
+  }
+  if (selected.size === 0) return;
+  if (e.key === 'Delete' && !binAsking) {
+    e.preventDefault();
+    $('sel-bin').click();
+  } else if (e.key === 'Escape') {
+    if (binAsking) $('sel-cancel').click();
+    else clearSelection();
+  }
 });
 
 function renderGrid() {
