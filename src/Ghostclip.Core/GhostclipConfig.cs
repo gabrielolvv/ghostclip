@@ -212,7 +212,7 @@ public sealed record GhostclipConfig
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),
         OutputHeight = OutputHeight <= 0 ? 0 : Math.Clamp(OutputHeight, 360, 4320),
         Monitor = Math.Max(0, Monitor),
-        BufferFolder = string.IsNullOrWhiteSpace(BufferFolder) ? null : BufferFolder.Trim(),
+        BufferFolder = string.IsNullOrWhiteSpace(BufferFolder) || !GhostclipPaths.CanHoldBuffer(BufferFolder) ? null : BufferFolder.Trim(),
         AudioOffsetMs = Math.Clamp(AudioOffsetMs, -1000, 1000),
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),

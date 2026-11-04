@@ -23,11 +23,42 @@ public sealed record GhostclipPaths(string DataDir)
 
     /// <summary>The buffer with this config: a folder of ours inside the chosen one, so nothing else there is ever touched.</summary>
     public string BufferDirFor(GhostclipConfig config) =>
-        string.IsNullOrWhiteSpace(config.BufferFolder) ? BufferDir : Path.Combine(config.BufferFolder, "GhostclipBuffer");
+        string.IsNullOrWhiteSpace(config.BufferFolder) ? BufferDir : BufferDirIn(config.BufferFolder);
 
     /// <summary>Beside the buffer, since a save hard-links segments here and a hard link stays on its drive.</summary>
     public string PendingDirFor(GhostclipConfig config) =>
-        string.IsNullOrWhiteSpace(config.BufferFolder) ? PendingDir : Path.Combine(config.BufferFolder, "GhostclipPending");
+        string.IsNullOrWhiteSpace(config.BufferFolder) ? PendingDir : PendingDirIn(config.BufferFolder);
+
+    public static string BufferDirIn(string folder) => Path.Combine(folder, "GhostclipBuffer");
+
+    public static string PendingDirIn(string folder) => Path.Combine(folder, "GhostclipPending");
+
+    /// <summary>
+    /// False for a path FFmpeg can't work in: the segment muxer takes % for a number to fill in, and a concat list's
+    /// relative names are resolved as a URL, where # starts a fragment.
+    /// </summary>
+    public static bool CanHoldBuffer(string folder) => !folder.Contains('%') && !folder.Contains('#');
+
+    /// <summary>Every buffer folder chosen so far: clips waiting there are still to be saved, and uninstalling removes them.</summary>
+    public string BufferFoldersFile => Path.Combine(DataDir, "buffer-folders.txt");
+
+    public IReadOnlyList<string> KnownBufferFolders()
+    {
+        try
+        {
+            return File.Exists(BufferFoldersFile) ? [.. File.ReadAllLines(BufferFoldersFile).Where(l => l.Length > 0)] : [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    public void RememberBufferFolder(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || KnownBufferFolders().Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
+        File.AppendAllLines(BufferFoldersFile, [folder]);
+    }
 
     public string LogsDir => Path.Combine(DataDir, "Logs");
 

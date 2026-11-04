@@ -122,15 +122,17 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;
         }
-        if (BufferFolderProblem(config) is { } folderError)
-        {
-            window.Post(new LibraryEvent("error", Op: r.Type, Message: folderError));
-            return;
-        }
         // What the tray is recording with is what the file says now, not what this window opened with.
         if (!ConfigStore.TryRead(paths.ConfigFile, out var before, out var error))
         {
             window.Post(new LibraryEvent("error", Op: r.Type, Message: Unreadable(error)));
+            return;
+        }
+        // As typed: normalizing would quietly go back to the default. Only when it changed, so an unplugged drive
+        // doesn't get in the way of every other setting.
+        if (!string.Equals(raw.BufferFolder, before!.BufferFolder, StringComparison.OrdinalIgnoreCase) && BufferFolderProblem(raw) is { } folderError)
+        {
+            window.Post(new LibraryEvent("error", Op: r.Type, Message: folderError));
             return;
         }
         // Anything saving loses is said first, all of it in one question.
@@ -186,8 +188,14 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
     // Said here rather than as a recorder that stops: it must be a whole path to a folder that takes files.
     private static string? BufferFolderProblem(GhostclipConfig config)
     {
-        if (config.BufferFolder is not { } folder) return null;
+        if (string.IsNullOrWhiteSpace(config.BufferFolder)) return null;
+        var folder = config.BufferFolder.Trim();
         var message = L($"The replay buffer can't be kept in {folder}. Choose another folder.", $"Não dá para guardar o buffer de replay em {folder}. Escolha outra pasta.");
+        if (!GhostclipPaths.CanHoldBuffer(folder))
+        {
+            return L($"The replay buffer can't be kept in {folder}: FFmpeg can't work in a path with % or #. Choose another folder.",
+                $"Não dá para guardar o buffer de replay em {folder}: o FFmpeg não funciona num caminho com % ou #. Escolha outra pasta.");
+        }
         if (!Path.IsPathFullyQualified(folder)) return message;
         try
         {

@@ -40,6 +40,46 @@ public class BufferFolderTests
         Assert.Null(new GhostclipConfig { BufferFolder = folder }.Normalize().BufferFolder);
     }
 
+    [Theory]
+    [InlineData(@"D:\100% replays")]
+    [InlineData(@"D:\Replays #2")]
+    public void A_path_ffmpeg_can_t_work_in_goes_back_to_the_default(string folder)
+    {
+        // Settings refuses it and says why; this is for a hand-edited file.
+        Assert.False(GhostclipPaths.CanHoldBuffer(folder));
+        Assert.Null(new GhostclipConfig { BufferFolder = folder }.Normalize().BufferFolder);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Replays 2")]
+    [InlineData(@"D:\Vídeos\it's mine (old)")]
+    [InlineData(@"\\nas\games")]
+    public void Spaces_quotes_and_accents_are_fine(string folder)
+    {
+        Assert.True(GhostclipPaths.CanHoldBuffer(folder));
+    }
+
+    [Fact]
+    public void Folders_used_before_are_remembered_once()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ghostclip-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var paths = new GhostclipPaths(dir);
+            Assert.Empty(paths.KnownBufferFolders());
+            paths.RememberBufferFolder(null);
+            paths.RememberBufferFolder(@"D:\A");
+            paths.RememberBufferFolder(@"d:\a");
+            paths.RememberBufferFolder(@"E:\B");
+            Assert.Equal([@"D:\A", @"E:\B"], paths.KnownBufferFolders());
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     [Fact]
     public void Changing_it_restarts_recording_but_the_same_folder_in_other_case_doesn_t()
     {

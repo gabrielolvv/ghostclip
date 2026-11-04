@@ -134,8 +134,8 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 if (!TryMakeBufferDir())
                 {
                     await FailAsync(UiText.L(
-                        $"The replay buffer folder can't be used: {BufferDir}. Plug its drive in and restart Ghostclip, or choose another folder in Settings.",
-                        $"Não dá para usar a pasta do buffer de replay: {BufferDir}. Conecte o disco e reinicie o Ghostclip, ou escolha outra pasta em Configurações."), ct).ConfigureAwait(false);
+                        $"The replay buffer folder can't be used: {BufferDir}. Plug its drive in, or choose another folder in Settings.",
+                        $"Não dá para usar a pasta do buffer de replay: {BufferDir}. Conecte o disco ou escolha outra pasta em Configurações."), ct, retry: true).ConfigureAwait(false);
                     continue;
                 }
 
@@ -423,7 +423,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            _log.Warning("Can't use the buffer folder {Dir}: {Error}", BufferDir, ex.Message);
+            _log.Debug("Can't use the buffer folder {Dir}: {Error}", BufferDir, ex.Message);
             return false;
         }
     }
@@ -446,17 +446,23 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         _log.Information("Desktop available again after {Seconds:0} s", waited.Elapsed.TotalSeconds);
     }
 
-    private async Task FailAsync(string message, CancellationToken ct)
+    /// <param name="retry">The problem can go away by itself, a drive that was late or came back: tries again every few seconds.</param>
+    private async Task FailAsync(string message, CancellationToken ct, bool retry = false)
     {
         _log.Error("{Message}", message);
         _state = WorkerState.Stopped;
         await SendAsync(new IpcMessage { Type = IpcType.Error, Message = message, Fatal = true }, ct).ConfigureAwait(false);
         // Nothing to do until the user changes something, or pauses: the buffer still has to go.
-        var pauseChanged = _pause.Changed;
-        if (_pause.MustStop) return;
-        var nextConfig = _configs.NextAsync(ct);
-        if (await Task.WhenAny(nextConfig, pauseChanged).ConfigureAwait(false) != nextConfig) return;
-        await TakeConfigAsync(ct).ConfigureAwait(false);
+        while (true)
+        {
+            var pauseChanged = _pause.Changed;
+            if (_pause.MustStop) return;
+            var nextConfig = _configs.NextAsync(ct);
+            var done = await Task.WhenAny(nextConfig, pauseChanged, Task.Delay(retry ? 5000 : Timeout.Infinite, ct)).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            if (done == nextConfig) await TakeConfigAsync(ct).ConfigureAwait(false);
+            if (done == nextConfig || done == pauseChanged || TryMakeBufferDir()) return;
+        }
     }
 
     private async Task StopRecorderAsync()

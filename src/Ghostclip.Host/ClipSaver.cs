@@ -160,7 +160,9 @@ internal sealed class ClipSaver(GhostclipPaths paths, Func<GhostclipConfig> conf
     public IReadOnlyList<ClipSnapshot> PendingFromEarlierRuns()
     {
         var result = new List<ClipSnapshot>();
-        var folders = new[] { paths.PendingDir, paths.PendingDirFor(config()) }.Distinct(StringComparer.OrdinalIgnoreCase).Where(Directory.Exists);
+        // In any folder the buffer has been in: a clip kept for the next start must not be lost by moving it.
+        var folders = paths.KnownBufferFolders().Select(GhostclipPaths.PendingDirIn).Append(paths.PendingDir).Append(paths.PendingDirFor(config()))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Where(Directory.Exists);
         foreach (var dir in folders.SelectMany(Directory.EnumerateDirectories))
         {
             var meta = Path.Combine(dir, MetaFile);
