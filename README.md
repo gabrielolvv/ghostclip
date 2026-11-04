@@ -33,6 +33,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Session recording** on Alt+F9: keeps everything from start to stop, and
   the clip hotkey adds bookmarks you can jump to. It keeps the replay buffer
   instead of running a second encoder, so the game pays nothing extra.
+- **Pause** from the tray or a key you choose: stops recording and deletes the
+  replay buffer, for a bank's page or a password.
 - **Per-game profiles** for clip length, audio source and microphone mute.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; favorites and renaming. It

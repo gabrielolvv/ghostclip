@@ -35,6 +35,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   de clipe adiciona marcadores para pular até o momento. Ela aproveita o
   buffer de replay em vez de rodar um segundo encoder, então o jogo não paga
   nada a mais.
+- **Pausa** pela bandeja ou por uma tecla que você escolhe: para a gravação e
+  apaga o buffer de replay, para a página do banco ou uma senha.
 - **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo.
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
   player e linha do tempo sobre a forma de onda do áudio; favoritos e

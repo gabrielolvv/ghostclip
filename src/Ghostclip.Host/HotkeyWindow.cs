@@ -3,7 +3,7 @@ using Ghostclip.Core;
 namespace Ghostclip.Host;
 
 /// <summary>What each hotkey does, in the order of <see cref="GhostclipConfig.Hotkeys"/>.</summary>
-internal enum HotkeyAction { SaveClip, Screenshot, Session, MicMute, ShortClip }
+internal enum HotkeyAction { SaveClip, Screenshot, Session, MicMute, ShortClip, Pause }
 
 /// <summary>
 /// Receives the hotkeys through RegisterHotKey. Windows only tells us when

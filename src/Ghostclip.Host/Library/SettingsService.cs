@@ -169,6 +169,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["sessionHotkey"] = KeyLabels.Describe(config.SessionHotkey),
         ["micMuteHotkey"] = KeyLabels.Describe(config.MicMuteHotkey),
         ["shortClipHotkey"] = KeyLabels.Describe(config.ShortClipHotkey),
+        ["pauseHotkey"] = KeyLabels.Describe(config.PauseHotkey),
     };
 
     // Each hotkey must be one Windows can register, and two actions can't share one: only the first would ever run.
@@ -181,8 +182,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         var keys = config.ChosenHotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
         if (keys.Distinct().Count() < keys.Count)
         {
-            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session and muting the microphone can't share a hotkey.",
-                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão e mutar o microfone não podem usar a mesma hotkey.");
+            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session, muting the microphone and pausing recording can't share a hotkey.",
+                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão, mutar o microfone e pausar a gravação não podem usar a mesma hotkey.");
         }
         return null;
     }

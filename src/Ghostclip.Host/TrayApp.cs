@@ -19,6 +19,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _screenshotItem;
     private readonly ToolStripMenuItem _sessionItem;
     private readonly ToolStripMenuItem _micItem;
+    private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _statusItem = new() { Enabled = false };
     private readonly ToolStripMenuItem _updateItem = new() { Visible = false };
     private readonly ToolStripMenuItem _libraryItem;
@@ -46,6 +47,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ConfirmationSound _unmutedSound = new(523.25, 784.0);
     // Muted by the hotkey. Never saved: Ghostclip always starts with the microphone on.
     private bool _micMuted;
+    private bool _paused;
     private readonly EventWaitHandle _saveRequest = new(false, EventResetMode.AutoReset, Program.SaveEventName);
     private readonly RegisteredWaitHandle _saveRequestWait;
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
@@ -83,6 +85,7 @@ internal sealed class TrayApp : ApplicationContext
         _screenshotItem = new ToolStripMenuItem("", null, (_, _) => TakeScreenshot());
         _sessionItem = new ToolStripMenuItem("", null, (_, _) => ToggleSession());
         _micItem = new ToolStripMenuItem("", null, (_, _) => ToggleMicrophone());
+        _pauseItem = new ToolStripMenuItem("", null, (_, _) => TogglePause());
         _libraryItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary());
         _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
@@ -99,6 +102,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_screenshotItem);
         menu.Items.Add(_sessionItem);
         menu.Items.Add(_micItem);
+        menu.Items.Add(_pauseItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_libraryItem);
         menu.Items.Add(_clipsFolderItem);
@@ -144,6 +148,7 @@ internal sealed class TrayApp : ApplicationContext
                 case HotkeyAction.Session: ToggleSession(); break;
                 case HotkeyAction.MicMute: ToggleMicrophone(); break;
                 case HotkeyAction.ShortClip: SaveClip(_config.ShortClipSeconds); break;
+                case HotkeyAction.Pause: TogglePause(); break;
             }
         };
         // An exit request set before this instance existed (by the installer's hook,
@@ -282,8 +287,9 @@ internal sealed class TrayApp : ApplicationContext
     {
         // Without a microphone track the mute key stays free for other programs.
         if (action == HotkeyAction.MicMute && !_config.Microphone) return;
-        // So does the short clip key, until one is chosen.
+        // So do the short clip and pause keys, until one is chosen.
         if (action == HotkeyAction.ShortClip && !_config.HasShortClipHotkey) return;
+        if (action == HotkeyAction.Pause && !_config.HasPauseHotkey) return;
         var gesture = _config.Hotkeys[(int)action];
         var old = previous?.Hotkeys[(int)action];
         if (_hotkey.TryRegister(action, gesture, out var error))
@@ -322,6 +328,9 @@ internal sealed class TrayApp : ApplicationContext
             ? WithHotkey(HotkeyAction.MicMute, L("Unmute microphone", "Desmutar microfone"))
             : WithHotkey(HotkeyAction.MicMute, L("Mute microphone", "Mutar microfone"));
         _micItem.Enabled = _config.Microphone;
+        _pauseItem.Text = _paused
+            ? WithHotkey(HotkeyAction.Pause, L("Resume recording", "Retomar gravação"))
+            : WithHotkey(HotkeyAction.Pause, L("Pause recording", "Pausar gravação"));
         _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}");
         _libraryItem.Text = L("Open library", "Abrir biblioteca");
         _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes");
@@ -406,6 +415,7 @@ internal sealed class TrayApp : ApplicationContext
             WorkerState.Stopped => L("Not recording", "Sem gravar"),
             WorkerState.Probing => L("Detecting encoder", "Detectando o encoder"),
             WorkerState.WaitingForDesktop => L("Paused (screen locked)", "Pausado (tela bloqueada)"),
+            WorkerState.Paused => L("Paused", "Pausado"),
             _ => L("Starting", "Iniciando"),
         };
         var audio = _status.AudioRoute is { } route ? L($" · audio: {route}", $" · áudio: {PortugueseRoute(route)}") : "";
@@ -441,6 +451,7 @@ internal sealed class TrayApp : ApplicationContext
             WorkerState.Stopped => L("Ghostclip: not recording", "Ghostclip: sem gravar"),
             WorkerState.Probing => L("Ghostclip: detecting the encoder", "Ghostclip: detectando o encoder"),
             WorkerState.WaitingForDesktop => L("Ghostclip: paused while the screen is locked", "Ghostclip: pausado enquanto a tela está bloqueada"),
+            WorkerState.Paused => L("Ghostclip: paused, not recording", "Ghostclip: pausado, sem gravar"),
             _ => L("Ghostclip: starting", "Ghostclip: iniciando"),
         };
         // NotifyIcon.Text is capped at 127 characters.
@@ -457,6 +468,11 @@ internal sealed class TrayApp : ApplicationContext
     // Without a length, the one set for the game.
     private void SaveClip(int? seconds = null)
     {
+        if (_paused)
+        {
+            Notify(L("Clip not saved", "Clipe não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
+            return;
+        }
         var game = CurrentGame();
         // During a session the moment is also marked in it; the clip is saved as well.
         if (_session.Running) _session.AddBookmark();
@@ -474,6 +490,29 @@ internal sealed class TrayApp : ApplicationContext
         // The clip is safe from here on: confirm right away, the MP4 follows.
         if (_config.ConfirmationSound) _sound.Play();
         _ = FinishAsync(snapshot);
+    }
+
+    // Nothing on screen reaches the disk until it is pressed again, for a bank's page or a password. The buffer goes,
+    // so there is nothing to save from before it either. Not kept across restarts: Ghostclip always starts recording.
+    private void TogglePause()
+    {
+        _paused = !_paused;
+        // A session is the buffer kept, and the buffer is about to go: saved as it is.
+        if (_paused && _session.Running) StopSession();
+        _worker.SetPaused(_paused);
+        _log.Information(_paused ? "Recording paused from the tray" : "Recording resumed from the tray");
+        // A balloon doesn't show over a fullscreen game: the tone says it there, even with the other sounds off.
+        (_paused ? _mutedSound : _unmutedSound).Play();
+        if (_paused)
+        {
+            Notify(L("Recording paused", "Gravação pausada"),
+                L("The replay buffer is deleted, and nothing is recorded until you resume.", "O buffer de replay é apagado, e nada é gravado até você retomar."), ToolTipIcon.None);
+        }
+        else
+        {
+            Notify(L("Recording resumed", "Gravação retomada"), L("Clips start from now.", "Os clipes começam a partir de agora."), ToolTipIcon.None);
+        }
+        ApplyTexts();
     }
 
     // The microphone track records silence until the key is pressed again. Recording goes on: nothing restarts.
@@ -510,6 +549,11 @@ internal sealed class TrayApp : ApplicationContext
 
     private async void TakeScreenshot()
     {
+        if (_paused)
+        {
+            Notify(L("Screenshot not saved", "Print não salvo"), L("Recording is paused.", "A gravação está pausada."), ToolTipIcon.Warning);
+            return;
+        }
         var game = CurrentGame();
         try
         {
@@ -534,7 +578,7 @@ internal sealed class TrayApp : ApplicationContext
             return;
         }
         // A session is the buffer kept: there must be a buffer being written.
-        if (_status.State != WorkerState.Recording)
+        if (_paused || _status.State != WorkerState.Recording)
         {
             Notify(L("Session not started", "Sessão não iniciada"),
                 L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora."), ToolTipIcon.Warning);

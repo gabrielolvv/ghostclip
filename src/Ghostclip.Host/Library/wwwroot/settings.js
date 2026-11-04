@@ -27,6 +27,9 @@ const Settings = (() => {
       { key: 'screenshotHotkey', label: L('Take a screenshot', 'Tirar print'), hint: L('Saved as a JPEG next to the clips.', 'Salvo em JPEG junto dos clipes.'), type: 'hotkey' },
       { key: 'sessionHotkey', label: L('Record a session', 'Gravar sessão'),
         hint: L('Press to start and again to stop. Keeps everything in between: about 9 GB an hour at 20 Mbps.', 'Aperte para começar e de novo para parar. Guarda tudo entre os dois: uns 9 GB por hora a 20 Mbps.'), type: 'hotkey' },
+      { key: 'pauseHotkey', label: L('Pause recording', 'Pausar a gravação'),
+        hint: L('Optional: stops recording and deletes the replay buffer until you press it again, for a bank’s page or a password. The tray menu does it too. Ghostclip records again when it restarts.',
+          'Opcional: para a gravação e apaga o buffer de replay até você apertar de novo, para a página do banco ou uma senha. O menu da bandeja também faz isso. O Ghostclip volta a gravar quando reinicia.'), type: 'hotkey', optional: true },
       { key: 'clipSeconds', label: L('Clip length', 'Duração do clipe'), hint: L('Seconds before the hotkey that go into the clip.', 'Segundos antes da hotkey que entram no clipe.'),
         type: 'number', unit: 'S', min: 10, max: 600 },
       { key: 'shortClipHotkey', label: L('Save a short clip', 'Salvar um clipe curto'),
@@ -510,6 +513,7 @@ const Settings = (() => {
           kind = 'rec';
           break;
         case 'WaitingForDesktop': text = L('PAUSED · SCREEN LOCKED', 'PAUSADO · TELA BLOQUEADA'); kind = 'wait'; break;
+        case 'Paused': text = L('PAUSED', 'PAUSADO'); kind = 'wait'; break;
         case 'Probing': text = L('DETECTING ENCODER', 'DETECTANDO ENCODER'); kind = 'wait'; break;
         case 'Stopped': text = L('NOT RECORDING', 'SEM GRAVAR'); break;
         default: text = L('STARTING', 'INICIANDO'); kind = 'wait'; break;

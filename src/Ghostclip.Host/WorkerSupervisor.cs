@@ -61,6 +61,18 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
         }
     }
 
+    private volatile IpcMessage _pause = new() { Type = IpcType.Pause };
+
+    /// <summary>Tells the worker to stop recording and delete the buffer, or to go on; a restarted worker hears it before anything else.</summary>
+    public void SetPaused(bool paused)
+    {
+        _pause = new IpcMessage { Type = IpcType.Pause, Paused = paused };
+        if (_channel is { } channel)
+        {
+            _ = SendQuietlyAsync(channel, _pause);
+        }
+    }
+
     public void UpdateConfig(GhostclipConfig config)
     {
         _config = ForWorker(config);
@@ -127,6 +139,9 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
             }
 
             await using var channel = new IpcChannel(server);
+            // Before the config, which is what starts it recording.
+            var pause = _pause;
+            await channel.SendAsync(pause, ct).ConfigureAwait(false);
             await channel.SendAsync(new IpcMessage { Type = IpcType.Config, Config = _config }, ct).ConfigureAwait(false);
             await channel.SendAsync(_foreground, ct).ConfigureAwait(false);
             var microphone = _microphone;
@@ -134,6 +149,7 @@ internal sealed class WorkerSupervisor(ILogger log) : IAsyncDisposable
             _channel = channel;
             // A press while this worker connected went nowhere: it must not stay unheard.
             if (!ReferenceEquals(microphone, _microphone)) await channel.SendAsync(_microphone, ct).ConfigureAwait(false);
+            if (!ReferenceEquals(pause, _pause)) await channel.SendAsync(_pause, ct).ConfigureAwait(false);
 
             var lastMessage = Stopwatch.StartNew();
             using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(ct);
