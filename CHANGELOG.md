@@ -34,6 +34,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the two count monitors in different orders. Both now record the same one.
   If you use Windows Graphics Capture with several monitors, check Settings >
   Video > Monitor after updating.
+- After the recorder restarted, for example when the screen was locked, the
+  next settings you saved never reached it: recording went on with the old
+  monitor, frame rate and clip length until you saved again or restarted
+  Ghostclip. Every save now applies.
 
 ## 0.8.5
 
