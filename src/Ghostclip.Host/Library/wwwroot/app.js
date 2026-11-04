@@ -902,7 +902,32 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     togglePlay();
   }
+  playerKey(e);
 });
+
+// Arrows seek (Shift for a finer step), comma and period go frame by frame, I and O mark the trim.
+function playerKey(e) {
+  const meta = currentMeta();
+  if (!meta || state.current.image || $('clip').hidden || e.ctrlKey || e.altKey || e.metaKey) return;
+  const seek = t => {
+    video.currentTime = Math.min(meta.duration, Math.max(0, t));
+    placePlayhead();
+  };
+  const key = e.key.toLowerCase();
+  if (key === 'arrowleft' || key === 'arrowright') {
+    // A trim handle with focus moves itself with the arrows.
+    if (e.target.classList && e.target.classList.contains('handle')) return;
+    e.preventDefault();
+    seek(video.currentTime + (key === 'arrowleft' ? -1 : 1) * (e.shiftKey ? 1 : 5));
+  } else if (key === ',' || key === '.') {
+    e.preventDefault();
+    video.pause();
+    seek(video.currentTime + (key === ',' ? -1 : 1) / (meta.fps || 60));
+  } else if (key === 'i' || key === 'o') {
+    e.preventDefault();
+    moveHandle(key === 'i' ? 'start' : 'end', video.currentTime);
+  }
+}
 
 // Toast
 
