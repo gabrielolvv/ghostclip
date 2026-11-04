@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- After a new install, a notification says that Ghostclip is recording, which
+  key saves a clip and where to find the library, once recording has started.
+
 ## 0.8.9
 
 ### Added

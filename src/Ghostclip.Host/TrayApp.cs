@@ -48,6 +48,7 @@ internal sealed class TrayApp : ApplicationContext
     // Muted by the hotkey. Never saved: Ghostclip always starts with the microphone on.
     private bool _micMuted;
     private bool _paused;
+    private bool _welcomePending;
     private readonly List<(EventWaitHandle Request, RegisteredWaitHandle Wait)> _commands = [];
     private readonly EventWaitHandle _exitRequest = new(false, EventResetMode.AutoReset, Program.ExitEventName);
     private readonly RegisteredWaitHandle _exitRequestWait;
@@ -70,8 +71,9 @@ internal sealed class TrayApp : ApplicationContext
     // Why the recorder stopped, for the library: the balloon that said so is gone after a few seconds.
     private string? _problem;
 
-    public TrayApp(GhostclipPaths paths, GhostclipConfig config, string? configProblem, LoggingLevelSwitch level)
+    public TrayApp(GhostclipPaths paths, GhostclipConfig config, string? configProblem, LoggingLevelSwitch level, bool firstRun)
     {
+        _welcomePending = firstRun;
         _paths = paths;
         _config = config;
         _level = level;
@@ -685,6 +687,7 @@ internal sealed class TrayApp : ApplicationContext
         {
             _ = FinishAsync(part, session: true);
         }
+        if (recording && _welcomePending) Welcome();
         if (_session.Running && recording && (newRun || !wasRecording))
         {
             _session.RecorderResumed(status.RunId is null ? null : status.RunStart);
@@ -701,6 +704,17 @@ internal sealed class TrayApp : ApplicationContext
         UpdateIconText();
         UpdateStatusItem();
         PublishStatus(status);
+    }
+
+    // After a new install all there is to see is an icon in the tray. Said once recording has really started: if it
+    // can't, the message about that is the one to read.
+    private void Welcome()
+    {
+        _welcomePending = false;
+        var key = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var label) ? label : L("the tray menu", "o menu da bandeja");
+        Notify(L("Ghostclip is recording", "O Ghostclip está gravando"),
+            L($"Press {key} to save the last {_config.ClipSeconds} s. Double-click this icon for your clips and settings.",
+                $"Aperte {key} para salvar os últimos {_config.ClipSeconds} s. Dê dois cliques neste ícone para ver os clipes e as configurações."), ToolTipIcon.None);
     }
 
     private void OnWorkerError(string message, bool fatal)
