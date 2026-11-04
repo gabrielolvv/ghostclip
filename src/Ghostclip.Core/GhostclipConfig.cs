@@ -92,6 +92,9 @@ public sealed record GhostclipConfig
     /// <summary>The length of that clip, in every game: profiles change only <see cref="ClipSeconds"/>.</summary>
     public int ShortClipSeconds { get; set; } = 15;
 
+    /// <summary>Stops recording and deletes the replay buffer until pressed again. Empty, the default: the tray menu still does it.</summary>
+    public string PauseHotkey { get; set; } = "";
+
     public int ClipSeconds { get; set; } = 60;
     public int Fps { get; set; } = 60;
     public int BitrateMbps { get; set; } = 20;
@@ -171,20 +174,21 @@ public sealed record GhostclipConfig
 
     // A clip hotkey picked before screenshots, sessions and muting existed can be one of their defaults (Alt+F9,
     // Alt+F11, Alt+F8). The clip hotkey keeps its key; each other one, in order, moves to the first spare
-    // nothing else uses. The short clip hotkey, the only optional one, goes back to none instead: a key
+    // nothing else uses. The short clip and pause hotkeys, the optional ones, go back to none instead: a key
     // nobody chose would take it from other programs.
     private GhostclipConfig WithDistinctHotkeys()
     {
         static bool Same(string a, string b) => HotkeyRules.Canonical(a) == HotkeyRules.Canonical(b);
-        // Eight spares and at most four taken: there is always one.
+        // Eight spares and at most five taken: there is always one.
         string Spare(params string[] taken) => SpareHotkeys.First(s => !taken.Any(t => Same(s, t)));
-        var screenshot = Same(ScreenshotHotkey, Hotkey) ? Spare(Hotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey) : ScreenshotHotkey;
-        var session = Same(SessionHotkey, Hotkey) || Same(SessionHotkey, screenshot) ? Spare(Hotkey, screenshot, MicMuteHotkey, ShortClipHotkey) : SessionHotkey;
+        var screenshot = Same(ScreenshotHotkey, Hotkey) ? Spare(Hotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey, PauseHotkey) : ScreenshotHotkey;
+        var session = Same(SessionHotkey, Hotkey) || Same(SessionHotkey, screenshot) ? Spare(Hotkey, screenshot, MicMuteHotkey, ShortClipHotkey, PauseHotkey) : SessionHotkey;
         var mute = Same(MicMuteHotkey, Hotkey) || Same(MicMuteHotkey, screenshot) || Same(MicMuteHotkey, session)
-            ? Spare(Hotkey, screenshot, session, ShortClipHotkey)
+            ? Spare(Hotkey, screenshot, session, ShortClipHotkey, PauseHotkey)
             : MicMuteHotkey;
         var shortClip = new[] { Hotkey, screenshot, session, mute }.Any(k => Same(k, ShortClipHotkey)) ? "" : ShortClipHotkey;
-        return this with { ScreenshotHotkey = screenshot, SessionHotkey = session, MicMuteHotkey = mute, ShortClipHotkey = shortClip };
+        var pause = new[] { Hotkey, screenshot, session, mute, shortClip }.Any(k => Same(k, PauseHotkey)) ? "" : PauseHotkey;
+        return this with { ScreenshotHotkey = screenshot, SessionHotkey = session, MicMuteHotkey = mute, ShortClipHotkey = shortClip, PauseHotkey = pause };
     }
 
     private GhostclipConfig Clamped() => this with
@@ -196,6 +200,7 @@ public sealed record GhostclipConfig
         MicMuteHotkey = string.IsNullOrWhiteSpace(MicMuteHotkey) || HotkeyRules.TakesCommonShortcut(MicMuteHotkey) ? "Alt+F8" : MicMuteHotkey.Trim(),
         ShortClipHotkey = string.IsNullOrWhiteSpace(ShortClipHotkey) || HotkeyRules.TakesCommonShortcut(ShortClipHotkey) ? "" : ShortClipHotkey.Trim(),
         ShortClipSeconds = Math.Clamp(ShortClipSeconds, 10, 600),
+        PauseHotkey = string.IsNullOrWhiteSpace(PauseHotkey) || HotkeyRules.TakesCommonShortcut(PauseHotkey) ? "" : PauseHotkey.Trim(),
         ClipSeconds = Math.Clamp(ClipSeconds, 10, 600),
         Fps = Math.Clamp(Fps, 24, 144),
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),
@@ -224,12 +229,15 @@ public sealed record GhostclipConfig
     /// <summary>The game's profile or the mute hotkey: either one mutes the microphone track.</summary>
     public bool MicrophoneMutedFor(string? game, bool byHotkey) => byHotkey || (ProfileFor(game)?.MuteMicrophone ?? false);
 
-    /// <summary>The save, screenshot, session, mute and short clip hotkeys, in that order. The last is empty until one is chosen.</summary>
+    /// <summary>The save, screenshot, session, mute, short clip and pause hotkeys, in that order. The last two are empty until chosen.</summary>
     [JsonIgnore]
-    public IReadOnlyList<string> Hotkeys => [Hotkey, ScreenshotHotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey];
+    public IReadOnlyList<string> Hotkeys => [Hotkey, ScreenshotHotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey, PauseHotkey];
 
     [JsonIgnore]
     public bool HasShortClipHotkey => !string.IsNullOrWhiteSpace(ShortClipHotkey);
+
+    [JsonIgnore]
+    public bool HasPauseHotkey => !string.IsNullOrWhiteSpace(PauseHotkey);
 
     /// <summary>The hotkeys that have a key, to check them; <see cref="Hotkeys"/> keeps each action's place.</summary>
     [JsonIgnore]

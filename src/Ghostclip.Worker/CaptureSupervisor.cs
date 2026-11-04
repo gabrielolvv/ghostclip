@@ -27,6 +27,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
     private readonly EncoderProber _prober;
     private readonly JobObject _job = new();
     private readonly ConfigInbox _configs = new();
+    private readonly PauseSwitch _pause = new();
     private AudioCapture? _audio;
     private AudioCapture? _mic;
     private AudioCapture? _discord;
@@ -59,6 +60,9 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         UiText.Use(config.Language);
         _configs.Post(config);
     }
+
+    /// <summary>The tray paused recording, or went on: see <see cref="WaitWhilePausedAsync"/>.</summary>
+    public void SetPaused(bool paused) => _pause.Set(paused);
 
     /// <summary>The host saw a different program in the foreground.</summary>
     public void SetForeground(string? game, uint processId)
@@ -117,6 +121,12 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         {
             while (!ct.IsCancellationRequested)
             {
+                if (_pause.Paused)
+                {
+                    await WaitWhilePausedAsync(ct).ConfigureAwait(false);
+                    continue;
+                }
+
                 var ffmpeg = FfmpegLocator.Find(_config.FfmpegPath, AppContext.BaseDirectory);
                 if (ffmpeg is null)
                 {
@@ -138,6 +148,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                     continue;
                 }
                 forceProbe = false;
+                if (_pause.Paused) continue;
                 if (choice is null)
                 {
                     // Never fall back to a CPU encoder: it would cost far more FPS than promised.
@@ -150,7 +161,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 var settings = CaptureSettings.From(_config, choice.Encoder, choice.Input, CaptureMonitor.HandleFor(_config, _log));
                 _encoder = settings.Describe();
                 var outcome = await RecordOnceAsync(ffmpeg, settings, ct).ConfigureAwait(false);
-                if (outcome == Outcome.Reconfigured || ct.IsCancellationRequested)
+                if (outcome is Outcome.Reconfigured or Outcome.Paused || ct.IsCancellationRequested)
                 {
                     backoff = TimeSpan.FromSeconds(1);
                     quickFailures = 0;
@@ -194,7 +205,7 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         }
     }
 
-    private enum Outcome { Exited, Reconfigured }
+    private enum Outcome { Exited, Reconfigured, Paused }
 
     private async Task<Outcome> RecordOnceAsync(string ffmpeg, CaptureSettings settings, CancellationToken ct)
     {
@@ -257,7 +268,14 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
         var syncMeasured = first is null;
         while (true)
         {
-            var done = await Task.WhenAny(_runner.Exited, nextConfig, Task.Delay(1000, ct)).ConfigureAwait(false);
+            var pauseChanged = _pause.Changed;
+            if (_pause.Paused)
+            {
+                await StopRecorderAsync().ConfigureAwait(false);
+                return Outcome.Paused;
+            }
+
+            var done = await Task.WhenAny(_runner.Exited, nextConfig, pauseChanged, Task.Delay(1000, ct)).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
 
             if (!syncMeasured && _runner.FirstSample is { } sample && first!.StreamStartTicks is var audioStart and > 0)
@@ -302,6 +320,39 @@ internal sealed class CaptureSupervisor : IAsyncDisposable
                 _runner.Kill();
             }
         }
+    }
+
+    // Nothing is captured and the buffer is deleted until the tray says to go on. Settings saved meanwhile apply
+    // right away: with no buffer there is nothing to restart. A segment a save is still reading is deleted next pass.
+    private async Task WaitWhilePausedAsync(CancellationToken ct)
+    {
+        _state = WorkerState.Paused;
+        _log.Information("Recording paused; deleting the replay buffer");
+        lock (_routing)
+        {
+            // Closed, not only unused: Windows stops showing the microphone as in use.
+            _audio?.Dispose();
+            _audio = null;
+            _mic?.Dispose();
+            _mic = null;
+            _discord?.Dispose();
+            _discord = null;
+            _discordPid = 0;
+        }
+        while (true)
+        {
+            var changed = _pause.Changed;
+            if (!_pause.Paused) break;
+            DeleteSegments(SegmentRing.Scan(_paths.BufferDir));
+            var nextConfig = _configs.NextAsync(ct);
+            if (await Task.WhenAny(changed, nextConfig, Task.Delay(2000, ct)).ConfigureAwait(false) == nextConfig)
+            {
+                _config = await _configs.TakeAsync(ct).ConfigureAwait(false);
+                SetLogLevel(_config.LogLevel);
+            }
+            ct.ThrowIfCancellationRequested();
+        }
+        _log.Information("Recording resumed");
     }
 
     // Quiet wait while Windows refuses the desktop: no FFmpeg runs, no restart

@@ -19,6 +19,9 @@ public static class IpcType
     /// <summary>Host → worker: the mute hotkey muted or unmuted the microphone track.</summary>
     public const string Microphone = "microphone";
 
+    /// <summary>Host → worker: stop recording and delete the buffer, or go on. Sent before the config, so a restarted worker records nothing first.</summary>
+    public const string Pause = "pause";
+
     /// <summary>Worker → host: heartbeat, every second. Silence means the worker hung.</summary>
     public const string Status = "status";
 
@@ -27,7 +30,7 @@ public static class IpcType
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<WorkerState>))]
-public enum WorkerState { Starting, Probing, Recording, Restarting, Stopped, WaitingForDesktop }
+public enum WorkerState { Starting, Probing, Recording, Restarting, Stopped, WaitingForDesktop, Paused }
 
 public sealed record WorkerStatus
 {
@@ -73,6 +76,9 @@ public sealed record IpcMessage
 
     /// <summary>On a microphone message: muted by the hotkey.</summary>
     public bool MicrophoneMuted { get; set; }
+
+    /// <summary>On a pause message: recording stays stopped until told otherwise.</summary>
+    public bool Paused { get; set; }
 
     /// <summary>On an error: the worker can't record until the config changes.</summary>
     public bool Fatal { get; set; }

@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Pause recording, for a bank's page or a password: the tray menu, or a key
+  you choose in Settings > Clips, stops recording and deletes the replay
+  buffer until you resume. A running session is saved first, and a tone says
+  which way it went, even over a fullscreen game. Ghostclip records again the
+  next time it starts.
+
 ## 0.8.6
 
 ### Added

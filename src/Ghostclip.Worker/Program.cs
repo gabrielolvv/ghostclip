@@ -53,6 +53,10 @@ try
             {
                 supervisor.ApplyConfig(config.Normalize());
             }
+            else if (message.Type == IpcType.Pause)
+            {
+                supervisor.SetPaused(message.Paused);
+            }
             else if (message.Type == IpcType.Microphone)
             {
                 supervisor.SetMicrophoneMuted(message.MicrophoneMuted);
