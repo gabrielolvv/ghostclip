@@ -11,7 +11,7 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the buttons above its actions leave the microphone or Discord out of Discord
   size and Vertical, or make the copy silent. The clip itself keeps every track.
 - Sort the library by newest, oldest, largest or longest, and show only videos
-  or only screenshots, to find what to delete when the disk fills up. The choice
+  or only screenshots, to find what to delete when the disk fills up. The sort
   is remembered.
 
 ## 0.8.8
