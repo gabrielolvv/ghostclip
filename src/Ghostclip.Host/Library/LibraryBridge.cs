@@ -228,6 +228,10 @@ internal sealed class LibraryBridge : IDisposable
                     var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
+                case "frame":
+                    var frame = await Job(_tools.FrameAsync(path, r.Start, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: frame));
+                    break;
                 case "gif":
                     var (gif, gifBytes) = await Job(_tools.GifAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: gif,
