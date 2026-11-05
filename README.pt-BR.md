@@ -49,7 +49,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
 - **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
-  de áudio entram.
+  de áudio entram e em que volume.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
   É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.

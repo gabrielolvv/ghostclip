@@ -158,7 +158,11 @@ main { min-width: 0; min-height: 0; display: flex; }
 
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tracks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
-#track-list { display: flex; gap: 4px; }
+#track-list { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.track { display: inline-flex; align-items: center; gap: 6px; }
+.track input[type="range"] { width: 84px; accent-color: var(--accent); }
+.track input[type="range"]:disabled { opacity: 0.35; }
+.track .mono { min-width: 34px; font-size: 11px; }
 .tracks .act { height: 24px; padding: 0 8px; font: 11px var(--mono); }
 .tracks .act[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
 .is-image .tracks { display: none; }

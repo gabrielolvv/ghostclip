@@ -601,6 +601,7 @@ function openClip(path) {
   }
   state.current = clip;
   tracksOff.clear();
+  trackVolumes.clear();
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
@@ -657,6 +658,7 @@ function currentMeta() {
 
 // Tracks left out of the copies for Discord and Shorts. Each clip starts with all of them on.
 const tracksOff = new Set();
+const trackVolumes = new Map(); // track -> percent; a track not here is at 100
 
 function showExportTracks(meta) {
   const names = trackNames(meta);
@@ -667,19 +669,42 @@ function showExportTracks(meta) {
     const b = el('button', 'act', name);
     b.type = 'button';
     b.setAttribute('aria-pressed', String(!tracksOff.has(i)));
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '200';
+    slider.step = '5';
+    slider.value = String(trackVolumes.get(i) ?? 100);
+    slider.disabled = tracksOff.has(i);
+    slider.setAttribute('aria-label', L(`Volume of ${name}`, `Volume de ${name}`, `Volumen de ${name}`));
+    const percent = el('span', 'mono muted', `${slider.value}%`);
+    slider.addEventListener('input', () => {
+      trackVolumes.set(i, Number(slider.value));
+      percent.textContent = `${slider.value}%`;
+    });
     b.addEventListener('click', () => {
       if (!tracksOff.delete(i)) tracksOff.add(i);
       b.setAttribute('aria-pressed', String(!tracksOff.has(i)));
+      slider.disabled = tracksOff.has(i);
     });
-    list.append(b);
+    const track = el('span', 'track');
+    track.append(b, slider, percent);
+    list.append(track);
   });
 }
 
-// Nothing when every track stays, and the app takes them all.
+// Nothing when every track stays as recorded, and the app takes them all. A track turned down to nothing is left out,
+// so a copy with no sound at all gets the room the sound would have taken.
 function exportTracks() {
   const meta = currentMeta();
-  if (!meta || tracksOff.size === 0) return {};
-  return { tracks: trackNames(meta).map((_, i) => i).filter(i => !tracksOff.has(i)) };
+  if (!meta) return {};
+  const all = trackNames(meta).map((_, i) => i);
+  const volume = i => trackVolumes.get(i) ?? 100;
+  const kept = all.filter(i => !tracksOff.has(i) && volume(i) > 0);
+  return {
+    ...(kept.length < all.length ? { tracks: kept } : {}),
+    ...(all.some(i => volume(i) !== 100) ? { volumes: all.map(i => volume(i) / 100) } : {}),
+  };
 }
 
 function setupTimeline() {

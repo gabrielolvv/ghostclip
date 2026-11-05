@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Volume for each track in the Discord size and vertical copies, from nothing to
+  double, so the game can go quieter under your voice. Turned down to nothing, a
+  track is left out.
+
 ## 0.8.12
 
 ### Added
