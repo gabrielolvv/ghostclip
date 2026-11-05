@@ -7,6 +7,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Send to Discord: paste a channel's webhook address in Settings, and a button in
+  the player posts the clip or picture there, after asking. A clip too big for the
+  limit, with several tracks or in HEVC goes as a Discord size copy. Nothing is sent
+  on its own, and the address stays out of logs and diagnostics.
 - Settings > Clips > Delete clips older than: past the days you choose, clips and
   screenshots go to the Recycle Bin, when no game is running. Off by default. As with
   the space limit, favorites, clips you renamed and anything Ghostclip didn't make

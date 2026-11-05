@@ -228,6 +228,10 @@ internal sealed class LibraryBridge : IDisposable
                     var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
+                case "sendToDiscord":
+                    var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: sentCopy));
+                    break;
                 case "frame":
                     var frame = await Job(_tools.FrameAsync(path, r.Start, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: frame));
@@ -325,11 +329,11 @@ internal sealed class LibraryBridge : IDisposable
                 var state = LibraryStore.Read(library);
                 return ClipLibrary.Scan(root).Select(c => ClipDto.From(c, state)).ToList();
             }).ConfigureAwait(true);
-            _window.Post(new LibraryEvent("clips", Clips: clips, Root: root, HotkeyLabels: SaveHotkeyLabel()));
+            _window.Post(new LibraryEvent("clips", Clips: clips, Root: root, HotkeyLabels: SaveHotkeyLabel(), CanSendToDiscord: DiscordWebhook.IsValid(_config.DiscordWebhook)));
         }
         else
         {
-            _window.Post(new LibraryEvent("clips", Clips: [], Root: Root, HotkeyLabels: SaveHotkeyLabel()));
+            _window.Post(new LibraryEvent("clips", Clips: [], Root: Root, HotkeyLabels: SaveHotkeyLabel(), CanSendToDiscord: DiscordWebhook.IsValid(_config.DiscordWebhook)));
             _window.Post(new LibraryEvent("error", Op: "list",
                 Message: L($"Your clips folder isn't available: {_rootError}", $"Sua pasta de clipes não está disponível: {_rootError}", $"Tu carpeta de clips no está disponible: {_rootError}")));
         }

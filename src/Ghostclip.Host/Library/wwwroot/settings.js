@@ -49,6 +49,11 @@ const Settings = (() => {
         hint: L('When a clip, screenshot or session is saved. Muting the microphone always sounds.', 'Ao salvar um clipe, print ou sessão. Mutar o microfone sempre toca.', 'Al guardar un clip, una captura o una sesión. Silenciar el micrófono siempre suena.'), type: 'switch' },
       { key: 'discordLimitMB', label: L('Discord size limit', 'Limite de tamanho do Discord', 'Límite de tamaño de Discord'), hint: L('10 MB on a free account.', '10 MB numa conta gratuita.', '10 MB en una cuenta gratuita.'),
         type: 'number', unit: 'MB', min: 1, max: 4096 },
+      { key: 'discordWebhook', label: L('Discord webhook', 'Webhook do Discord', 'Webhook de Discord'),
+        hint: L('To send clips to a channel from the player. In Discord: channel settings > Integrations > Webhooks. Anyone with this address can post there, so keep it private. A clip only leaves when you send it.',
+          'Para enviar clipes a um canal pelo player. No Discord: configurações do canal > Integrações > Webhooks. Quem tem este endereço pode postar lá, então não o compartilhe. Um clipe só sai quando você envia.',
+          'Para enviar clips a un canal desde el reproductor. En Discord: ajustes del canal > Integraciones > Webhooks. Quien tenga esta dirección puede publicar allí, así que no la compartas. Un clip solo sale cuando lo envías.'),
+        type: 'secret' },
       { key: 'storageLimitGB', label: L('Space for clips', 'Espaço para clipes', 'Espacio para clips'),
         hint: L('0 keeps everything. Past the limit the oldest are deleted for good; favorites and clips you renamed never are.',
           '0 guarda tudo. Passando do limite, os mais antigos são apagados de vez; favoritos e clipes renomeados nunca.', '0 guarda todo. Al pasar el límite, los más antiguos se eliminan definitivamente; los favoritos y los clips renombrados nunca.')
@@ -273,6 +278,19 @@ const Settings = (() => {
           changed();
         });
         return select;
+      }
+      case 'secret': {
+        const input = el('input', 'field');
+        input.type = 'password';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.value = value || '';
+        input.setAttribute('aria-label', field.label);
+        input.addEventListener('input', () => {
+          s.draft[field.key] = input.value.trim() || null;
+          changed();
+        });
+        return input;
       }
       case 'path': {
         const shown = el('span', 'path' + (value ? '' : ' placeholder'), value || field.empty() || '');

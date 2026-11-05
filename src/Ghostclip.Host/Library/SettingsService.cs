@@ -122,6 +122,12 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             window.Post(new LibraryEvent("error", Op: r.Type, Message: hotkeyError));
             return;
         }
+        // As typed: normalizing would quietly forget it.
+        if (!string.IsNullOrWhiteSpace(raw.DiscordWebhook) && config.DiscordWebhook is null)
+        {
+            window.Post(new LibraryEvent("error", Op: r.Type, Message: DiscordWebhook.NotAWebhook()));
+            return;
+        }
         // What the tray is recording with is what the file says now, not what this window opened with.
         if (!ConfigStore.TryRead(paths.ConfigFile, out var before, out var error))
         {
