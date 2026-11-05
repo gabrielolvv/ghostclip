@@ -51,9 +51,10 @@ QuickSync). There is no CPU encoder fallback.
   limit. It's the only way a clip leaves your PC, and only when you click.
 - **Vertical copy** for Shorts, TikTok and Reels: the part of the picture you choose, at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
-  audio tracks go in, and at what volume.
+  audio tracks go in, at what volume, and whether noise comes out of the microphone.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
   It's the one export on the CPU, at low priority, only while it's being made.
+- **Audio only:** the sound of the trim marks as an .m4a, for that line from the call.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
 - **Join clips** into one video, without re-encoding, for a compilation.
 - **Space limit** (optional): past it, the oldest clips and screenshots make

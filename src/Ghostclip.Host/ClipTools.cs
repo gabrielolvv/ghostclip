@@ -85,7 +85,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// encoder, always as H.264 (Discord doesn't embed HEVC). Retries once,
     /// lower, if the encoder overshoots.
     /// </summary>
-    public async Task<(string Path, long Bytes)> CompressAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, CancellationToken ct = default)
+    public async Task<(string Path, long Bytes)> CompressAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, CancellationToken ct = default)
     {
         var cfg = config();
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
@@ -101,7 +101,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
 
         var encoder = HardwareEncoder(cfg);
         var output = ClipNaming.DerivedPath(clip, "discord", File.Exists);
-        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, tracks, volumes, ct).ConfigureAwait(false);
+        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, tracks, volumes, denoise, ct).ConfigureAwait(false);
         var limitBytes = limit * 1024L * 1024;
         if (size > limitBytes)
         {
@@ -109,7 +109,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             if (retry is not null)
             {
                 log.Information("Compressed clip came out at {Size} bytes, over {Limit} MB; retrying at {Kbps} kbps", size, limit, retry.VideoKbps);
-                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, tracks, volumes, ct).ConfigureAwait(false);
+                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, tracks, volumes, denoise, ct).ConfigureAwait(false);
             }
         }
         PartFile.Commit(output);
@@ -118,7 +118,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     /// <summary>Re-encodes a part of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
-    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, CancellationToken ct = default)
+    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, CancellationToken ct = default)
     {
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var encoder = HardwareEncoder(config());
@@ -126,7 +126,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes, cropAt),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes, cropAt, denoise),
                 FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -176,7 +176,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// Posts a clip or picture to the Discord webhook, by way of a Discord size copy when it won't do as it is.
     /// Only when people ask, on each clip. Returns the copy made, or null.
     /// </summary>
-    public async Task<string?> SendToDiscordAsync(string clip, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, CancellationToken ct = default)
+    public async Task<string?> SendToDiscordAsync(string clip, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, CancellationToken ct = default)
     {
         var cfg = config();
         if (!DiscordWebhook.IsValid(cfg.DiscordWebhook)) throw new InvalidOperationException(DiscordWebhook.NotAWebhook());
@@ -193,14 +193,44 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         else
         {
             var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
-            if (DiscordWebhook.NeedsCopy(bytes, limit, info.AudioTracks, info.VideoCodec, tracks is not null || volumes is not null))
+            if (DiscordWebhook.NeedsCopy(bytes, limit, info.AudioTracks, info.VideoCodec, tracks is not null || volumes is not null || denoise is not null))
             {
-                (copy, _) = await CompressAsync(clip, tracks, volumes, ct).ConfigureAwait(false);
+                (copy, _) = await CompressAsync(clip, tracks, volumes, denoise, ct).ConfigureAwait(false);
             }
         }
         await DiscordWebhook.SendAsync(Discord, cfg.DiscordWebhook!, copy ?? clip, ct).ConfigureAwait(false);
         log.Information("Sent {Clip} to Discord", copy ?? clip);
         return copy;
+    }
+
+    /// <summary>Saves the sound of the trim marks as Game_..._audio.m4a, next to the clip. The library doesn't list it.</summary>
+    public async Task<string> AudioOnlyAsync(string clip, double start, double end, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        if (ClipMedia.TracksToKeep(info.AudioTracks, tracks).Count == 0)
+        {
+            throw new InvalidOperationException(L("There's no sound to save: this clip has none, or every track is off.", "Não há som para salvar: este clipe não tem, ou todas as faixas estão desligadas.", "No hay sonido que guardar: este clip no tiene, o todas las pistas están desactivadas."));
+        }
+        var output = ClipNaming.DerivedPath(clip, "audio", File.Exists, ".m4a");
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.AudioOnly(clip, PartFile.For(output), start, end, info.AudioTracks, tracks, volumes, denoise),
+                TimeSpan.FromMinutes(10), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not save the audio: {r.FirstError}", $"Não foi possível salvar o áudio: {r.FirstError}", $"No se pudo guardar el audio: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Audio of {Clip} from {Start:0.0} to {End:0.0} s: {Output}", clip, start, end, output);
+        return output;
     }
 
     /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
@@ -323,12 +353,12 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.
-    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, CancellationToken ct)
+    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, CancellationToken ct)
     {
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks, tracks, volumes),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks, tracks, volumes, denoise),
                 TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

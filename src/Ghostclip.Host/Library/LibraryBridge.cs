@@ -220,16 +220,16 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: trimmed));
                     break;
                 case "compress":
-                    var (compressed, bytes) = await Job(_tools.CompressAsync(path, r.Tracks, r.Volumes, _closing.Token)).ConfigureAwait(true);
+                    var (compressed, bytes) = await Job(_tools.CompressAsync(path, r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: compressed,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
                 case "vertical":
-                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, _closing.Token)).ConfigureAwait(true);
+                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, r.Denoise, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
                 case "sendToDiscord":
-                    var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, _closing.Token)).ConfigureAwait(true);
+                    var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: sentCopy));
                     break;
                 case "bookmarkClips":
@@ -241,6 +241,10 @@ internal sealed class LibraryBridge : IDisposable
                     var cuts = await Job(_tools.BookmarkClipsAsync(path, marked.BookmarksFor(path), sessionMeta, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cuts[0],
                         Message: cuts.Count.ToString(CultureInfo.InvariantCulture)));
+                    break;
+                case "audio":
+                    var audio = await Job(_tools.AudioOnlyAsync(path, r.Start, r.End, r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: audio));
                     break;
                 case "frame":
                     var frame = await Job(_tools.FrameAsync(path, r.Start, _closing.Token)).ConfigureAwait(true);

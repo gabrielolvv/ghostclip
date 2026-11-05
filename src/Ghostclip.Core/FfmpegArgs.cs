@@ -270,10 +270,10 @@ public static class FfmpegArgs
     /// </summary>
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
-    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null)
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep, volumes);
+        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise);
 
         var vf = new List<string>();
         if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
@@ -297,12 +297,12 @@ public static class FfmpegArgs
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
     /// <param name="cropAt">Where the part kept sits across the room it has: 0 at the left, 0.5 in the middle, 1 at the right.</param>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5)
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep, volumes);
+        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise);
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
@@ -327,20 +327,32 @@ public static class FfmpegArgs
     private static double TrackVolume(IReadOnlyList<double>? volumes, int track) =>
         volumes is not null && track < volumes.Count ? Math.Clamp(volumes[track], 0, 2) : 1;
 
-    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep, IReadOnlyList<double>? volumes)
+    // What a track goes through, in this order: noise comes out at the level it was recorded at. Empty for none.
+    private static string TrackFilter(int track, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise)
+    {
+        var volume = TrackVolume(volumes, track);
+        var noise = denoise is not null && denoise.Contains(track) ? "afftdn=nf=-30" : "";
+        var level = volume != 1 ? Inv($"volume={volume:0.##}") : "";
+        return noise.Length > 0 && level.Length > 0 ? noise + "," + level : noise + level;
+    }
+
+    // The tracks into one, labelled [a]: one or more, with something to do.
+    private static string MixGraph(IReadOnlyList<int> tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise)
+    {
+        if (tracks.Count == 1) return Inv($"[0:a:{tracks[0]}]{TrackFilter(tracks[0], volumes, denoise)}[a]");
+        // Only a track with something to go through gets a filter, under a label of its own.
+        var changed = tracks.Where(i => TrackFilter(i, volumes, denoise).Length > 0).ToList();
+        var filters = string.Concat(changed.Select(i => Inv($"[0:a:{i}]{TrackFilter(i, volumes, denoise)}[v{i}];")));
+        var inputs = string.Concat(tracks.Select(i => changed.Contains(i) ? Inv($"[v{i}]") : Inv($"[0:a:{i}]")));
+        return Inv($"{filters}{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]");
+    }
+
+    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise)
     {
         var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
-        if (tracks.Count > 1)
+        if (tracks.Count > 1 || (tracks.Count == 1 && TrackFilter(tracks[0], volumes, denoise).Length > 0))
         {
-            // Only a track whose volume changes goes through a filter, under a label of its own.
-            var changed = tracks.Where(i => TrackVolume(volumes, i) != 1).ToList();
-            var filters = string.Concat(changed.Select(i => Inv($"[0:a:{i}]volume={TrackVolume(volumes, i):0.##}[v{i}];")));
-            var inputs = string.Concat(tracks.Select(i => changed.Contains(i) ? Inv($"[v{i}]") : Inv($"[0:a:{i}]")));
-            args.AddRange(["-filter_complex", Inv($"{filters}{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
-        }
-        else if (tracks.Count == 1 && TrackVolume(volumes, tracks[0]) != 1)
-        {
-            args.AddRange(["-filter_complex", Inv($"[0:a:{tracks[0]}]volume={TrackVolume(volumes, tracks[0]):0.##}[a]"), "-map", "0:v:0", "-map", "[a]"]);
+            args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise), "-map", "0:v:0", "-map", "[a]"]);
         }
         else if (tracks.Count == 1)
         {
@@ -370,6 +382,31 @@ public static class FfmpegArgs
         "-ss", Inv($"{seek:0.000000}"), "-i", input,
         "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "2", "-f", "image2", "-update", "1", output,
     ];
+
+    /// <summary>
+    /// Only the sound of the trim marks, for an .m4a. A single track as it was recorded is copied, so it loses nothing;
+    /// anything else is mixed or filtered as in the copies, and encoded.
+    /// </summary>
+    public static IReadOnlyList<string> AudioOnly(string input, string output, double start, double end, int audioTracks,
+        IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null)
+    {
+        var args = new List<string>
+        {
+            "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+            "-ss", Inv($"{start:0.000000}"), "-to", Inv($"{end:0.000}"), "-i", input,
+        };
+        var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
+        if (tracks.Count == 1 && TrackFilter(tracks[0], volumes, denoise).Length == 0)
+        {
+            args.AddRange(["-map", Inv($"0:a:{tracks[0]}"), "-c:a", "copy"]);
+        }
+        else
+        {
+            args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise), "-map", "[a]", "-c:a", "aac", "-b:a", "192k"]);
+        }
+        args.AddRange(["-movflags", "+faststart", "-f", "mp4", output]);
+        return args;
+    }
 
     /// <summary>The longest GIF: past this it's a big file nobody can send.</summary>
     public const double GifMaxSeconds = 15;
