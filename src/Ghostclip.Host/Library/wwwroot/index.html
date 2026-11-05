@@ -95,7 +95,7 @@
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
       </div>
-      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte" data-es-title="Las flechas avanzan o retroceden, Shift+flechas con más precisión, coma y punto fotograma a fotograma, I y O marcan el recorte">
+      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim, &lt; and &gt; change the speed" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte, &lt; e &gt; mudam a velocidade" data-es-title="Las flechas avanzan o retroceden, Shift+flechas con más precisión, coma y punto fotograma a fotograma, I y O marcan el recorte, &lt; y &gt; cambian la velocidad">
         <canvas id="wave"></canvas>
         <div id="range"></div>
         <div id="h-start" class="handle" role="slider" aria-label="Trim start" data-pt-label="Início do corte" data-es-label="Inicio del recorte" tabindex="0"></div>
@@ -105,7 +105,10 @@
       <div class="times mono">
         <span>00:00</span>
         <span id="t-range" class="accent"></span>
-        <span id="t-end"></span>
+        <span class="times-end">
+          <button id="speed" class="act" type="button" aria-label="Playback speed" data-pt-label="Velocidade de reprodução" data-es-label="Velocidad de reproducción" title="Playback speed. The keys &lt; and &gt; change it too. The file stays as it is." data-pt-title="Velocidade de reprodução. As teclas &lt; e &gt; também mudam. O arquivo fica igual." data-es-title="Velocidad de reproducción. Las teclas &lt; y &gt; también la cambian. El archivo no cambia.">1x</button>
+          <span id="t-end"></span>
+        </span>
       </div>
       <div id="tracks-row" class="tracks" hidden>
         <span class="mono muted" data-pt="SOM NAS CÓPIAS" data-es="SONIDO EN LAS COPIAS">SOUND IN COPIES</span>
