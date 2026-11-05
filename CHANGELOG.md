@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- In the library, the clip under the pointer plays, muted, from its last 15
+  seconds, so you can find the one you want without opening them one by one.
+
 ## 0.8.11
 
 ### Added

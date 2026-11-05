@@ -41,8 +41,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo.
 - **Buffer de replay no disco que você escolher,** para poupar o SSD do sistema.
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
-  player e linha do tempo sobre a forma de onda do áudio; favoritos, renomear
-  e ações em vários de uma vez. Só roda enquanto a janela está aberta.
+  player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
+  aponta para ele; favoritos, renomear e ações em vários de uma vez. Só roda enquanto a janela está aberta.
 - **Corte** arrastando duas alças, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
