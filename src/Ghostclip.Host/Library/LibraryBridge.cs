@@ -228,6 +228,11 @@ internal sealed class LibraryBridge : IDisposable
                     var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
+                case "gif":
+                    var (gif, gifBytes) = await Job(_tools.GifAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: gif,
+                        Message: string.Create(CultureInfo.InvariantCulture, $"{gifBytes / 1024.0 / 1024:0.0} MB")));
+                    break;
                 case "copy":
                     Clipboard.SetFileDropList(new StringCollection { path });
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));
@@ -386,8 +391,8 @@ internal sealed class LibraryBridge : IDisposable
         try
         {
             _watcher = new FileSystemWatcher(Root) { IncludeSubdirectories = true };
-            // Clips and screenshots.
-            foreach (var filter in new[] { "*.mp4", "*.jpg", "*.png" }) _watcher.Filters.Add(filter);
+            // Clips and pictures.
+            foreach (var filter in new[] { "*.mp4", "*.jpg", "*.png", "*.gif" }) _watcher.Filters.Add(filter);
             _watcher.EnableRaisingEvents = true;
             _watcher.Created += OnFolderChanged;
             _watcher.Deleted += OnFolderChanged;

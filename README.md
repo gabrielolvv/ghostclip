@@ -48,6 +48,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Vertical copy** for Shorts, TikTok and Reels: the middle of the picture at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
   audio tracks go in.
+- **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
+  It's the one export on the CPU, at low priority, only while it's being made.
 - **Join clips** into one video, without re-encoding, for a compilation.
 - **Space limit** (optional): past it, the oldest clips and screenshots make
   room for new ones. Favorites, clips you renamed and anything Ghostclip
@@ -71,7 +73,7 @@ QuickSync. Everything else, including .NET and FFmpeg, comes with it.
 **0.8.** Recording on NVIDIA, AMD and Intel, saving, audio routing (with
 Discord on its own track), profiles, screenshots, session recording with
 bookmarks, the clip library with favorites, trimming and compression, the
-space limit, the settings page in English and Portuguese, and the installer
+space limit, the settings page in three languages, and the installer
 with updates work.
 Not done yet: game benchmark numbers,
 code signing (see [docs/releasing.md](docs/releasing.md)) and a GIF for this

@@ -7,6 +7,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- GIF in the player: a small looping GIF of the trim marks, 15 seconds at most,
+  for chats that won't play a video. GIF has no GPU encoder, so this one export
+  runs on the CPU, at low priority and only while it's being made.
 - In the library, the clip under the pointer plays, muted, from its last 15
   seconds, so you can find the one you want without opening them one by one.
 

@@ -23,15 +23,15 @@
 --enable-protocol=file,pipe,concat
 # pcm_f32le is the raw float demuxer that reads the audio pipes (format name "f32le").
 --enable-demuxer=concat,mpegts,mov,pcm_f32le,aac,h264,hevc
---enable-muxer=segment,mpegts,mp4,mov,null,image2
+--enable-muxer=segment,mpegts,mp4,mov,null,image2,gif
 --enable-parser=h264,hevc,aac
 --enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb,extract_extradata
 
 # Codecs: hardware video encoders only, AAC for audio, MJPEG for library thumbnails;
 # decoders for compress, probing and thumbnails
---enable-encoder=h264_nvenc,hevc_nvenc,h264_amf,hevc_amf,h264_qsv,hevc_qsv,aac,wrapped_avframe,pcm_s16le,mjpeg
+--enable-encoder=h264_nvenc,hevc_nvenc,h264_amf,hevc_amf,h264_qsv,hevc_qsv,aac,wrapped_avframe,pcm_s16le,mjpeg,gif
 --enable-decoder=h264,hevc,aac,pcm_f32le
 --enable-hwaccel=h264_d3d11va,hevc_d3d11va,h264_d3d11va2,hevc_d3d11va2,h264_dxva2,hevc_dxva2
 
 # Filters: capture and GPU conversion, compress and the vertical copy, and the measurement tools in spike/ and bench/
---enable-filter=ddagrab,gfxcapture,hwmap,hwupload,hwdownload,format,vpp_qsv,scale_d3d11,scale,crop,fps,null,anull,amix,aresample,aformat,pan,volumedetect,silencedetect,signalstats,astats,metadata,ametadata,asetnsamples,bandpass,showinfo
+--enable-filter=ddagrab,gfxcapture,hwmap,hwupload,hwdownload,format,vpp_qsv,scale_d3d11,scale,crop,fps,split,palettegen,paletteuse,null,anull,amix,aresample,aformat,pan,volumedetect,silencedetect,signalstats,astats,metadata,ametadata,asetnsamples,bandpass,showinfo

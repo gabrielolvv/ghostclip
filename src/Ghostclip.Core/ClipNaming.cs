@@ -49,14 +49,14 @@ public static class ClipNaming
     }
 
     /// <summary>A sibling of an existing clip: Game_..._trim.mp4, Game_..._discord.mp4, Game_..._vertical.mp4, deduplicated.</summary>
-    public static string DerivedPath(string clipPath, string suffix, Func<string, bool> exists)
+    public static string DerivedPath(string clipPath, string suffix, Func<string, bool> exists, string extension = ".mp4")
     {
         var dir = Path.GetDirectoryName(clipPath) ?? "";
         var stem = Path.GetFileNameWithoutExtension(clipPath) + "_" + suffix;
-        var path = Path.Combine(dir, stem + ".mp4");
+        var path = Path.Combine(dir, stem + extension);
         for (var n = 2; exists(path); n++)
         {
-            path = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{stem}_{n}.mp4"));
+            path = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{stem}_{n}{extension}"));
         }
         return path;
     }

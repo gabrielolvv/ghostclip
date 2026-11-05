@@ -50,6 +50,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
   de áudio entram.
+- **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
+  É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
@@ -73,7 +75,7 @@ o .NET e o FFmpeg, vem junto.
 **0.8.** Funcionam gravação em NVIDIA, AMD e Intel, save, roteamento de áudio
 (com o Discord em faixa própria), perfis, prints, gravação da sessão com
 marcadores, a biblioteca de clipes com favoritos, corte e compressão, o limite
-de espaço, a página de configurações em português e inglês e o instalador com
+de espaço, a página de configurações em três idiomas e o instalador com
 atualizações. Ainda
 falta: números de benchmark
 em jogo, assinatura de código (veja [docs/releasing.md](docs/releasing.md), em
