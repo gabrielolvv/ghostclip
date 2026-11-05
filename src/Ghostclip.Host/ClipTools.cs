@@ -144,6 +144,34 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return output;
     }
 
+    /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
+    public async Task<(string Output, long Bytes)> GifAsync(string clip, double start, double end, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var (from, length) = FfmpegArgs.GifRange(start, end, info.Duration);
+        var output = ClipNaming.DerivedPath(clip, "gif", File.Exists, ".gif");
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Gif(clip, PartFile.For(output), from, length),
+                TimeSpan.FromMinutes(10), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not make the GIF: {r.FirstError}", $"Não foi possível fazer o GIF: {r.FirstError}", $"No se pudo hacer el GIF: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        var bytes = new FileInfo(output).Length;
+        log.Information("GIF of {Clip}: {Output} ({Size} bytes, {Length:0.0} s)", clip, output, bytes, length);
+        return (output, bytes);
+    }
+
     /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
     {

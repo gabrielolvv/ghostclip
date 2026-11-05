@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- GIF in the player: a small looping GIF of the trim marks, 15 seconds at most,
+  for chats that won't play a video. GIF has no GPU encoder, so this one export
+  runs on the CPU, at low priority and only while it's being made.
+
 ## 0.8.11
 
 ### Added

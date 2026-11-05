@@ -259,6 +259,23 @@ function requestMeta(path) {
   post({ type: 'meta', path });
 }
 
+const gifObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    const card = entry.target;
+    gifObserver.unobserve(card);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = el('canvas', 'gif-frame');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext('2d').drawImage(image, 0, 0);
+      card.querySelector('.thumb').prepend(canvas);
+    };
+    image.src = card.dataset.gif;
+  }
+});
+
 function renderCard(clip) {
   const card = el('div', 'card');
   card.tabIndex = 0;
@@ -274,9 +291,16 @@ function renderCard(clip) {
   pick.addEventListener('click', e => { e.stopPropagation(); togglePick(clip.path, e.shiftKey); });
   thumb.append(pick);
   if (clip.image) {
-    // A screenshot is its own thumbnail.
-    thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT', 'CAPTURA')));
-    thumb.style.backgroundImage = `url("${clip.url}?v=${encodeURIComponent(clip.version)}")`;
+    // A picture is its own thumbnail. A GIF would play in every card at once, so its card shows the first frame.
+    const url = `${clip.url}?v=${encodeURIComponent(clip.version)}`;
+    if (/\.gif$/i.test(clip.path)) {
+      thumb.append(el('span', 'tag', 'GIF'));
+      card.dataset.gif = url;
+      gifObserver.observe(card);
+    } else {
+      thumb.append(el('span', 'tag', L('SCREENSHOT', 'PRINT', 'CAPTURA')));
+      thumb.style.backgroundImage = `url("${url}")`;
+    }
   } else if (clip.derived) {
     const name = fileName(clip.path);
     thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : /_joined(_\d+)?\.mp4$/i.test(name) ? L('JOINED', 'JUNTOS', 'UNIDOS') : L('TRIM', 'CORTE', 'RECORTE')));
@@ -818,6 +842,12 @@ $('a-vertical').addEventListener('click', () => {
   toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…', 'Haciendo la copia vertical en la GPU…'));
   post({ type: 'vertical', path: state.current.path, ...exportTracks() });
 });
+$('a-gif').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-gif').classList.contains('busy')) return;
+  busy($('a-gif'), true);
+  toast(L('Making the GIF…', 'Fazendo o GIF…', 'Haciendo el GIF…'));
+  post({ type: 'gif', path: state.current.path, start: state.start, end: state.end });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -977,6 +1007,10 @@ function onDone(message) {
       busy($('a-vertical'), false);
       toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
       break;
+    case 'gif':
+      busy($('a-gif'), false);
+      toast(L(`GIF saved: ${message.message}`, `GIF salvo: ${message.message}`, `GIF guardado: ${message.message}`), false, open);
+      break;
     case 'diagnostics':
       toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.', 'Diagnóstico copiado. Pégalo en el chat.'));
       break;
@@ -1070,6 +1104,7 @@ function onMessage(message) {
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
+      if (message.op === 'gif') busy($('a-gif'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.

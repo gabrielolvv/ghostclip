@@ -11,10 +11,10 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
 $required = [ordered]@{
-    encoders = 'h264_nvenc', 'hevc_nvenc', 'h264_amf', 'hevc_amf', 'h264_qsv', 'hevc_qsv', 'aac', 'mjpeg'
+    encoders = 'h264_nvenc', 'hevc_nvenc', 'h264_amf', 'hevc_amf', 'h264_qsv', 'hevc_qsv', 'aac', 'mjpeg', 'gif'
     decoders = 'h264', 'hevc', 'aac', 'pcm_f32le'
-    filters  = 'ddagrab', 'gfxcapture', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'crop', 'fps', 'amix', 'aresample', 'asetnsamples', 'astats', 'ametadata'
-    muxers   = 'segment', 'mpegts', 'mp4', 'null', 'image2'
+    filters  = 'ddagrab', 'gfxcapture', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'crop', 'fps', 'split', 'palettegen', 'paletteuse', 'amix', 'aresample', 'asetnsamples', 'astats', 'ametadata'
+    muxers   = 'segment', 'mpegts', 'mp4', 'null', 'image2', 'gif'
     demuxers = 'concat', 'mpegts', 'mov', 'f32le'
 }
 $listFlag = @{ encoders = '-encoders'; decoders = '-decoders'; filters = '-filters'; muxers = '-muxers'; demuxers = '-demuxers' }

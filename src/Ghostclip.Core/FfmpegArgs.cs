@@ -332,6 +332,35 @@ public static class FfmpegArgs
         }
     }
 
+    /// <summary>The longest GIF: past this it's a big file nobody can send.</summary>
+    public const double GifMaxSeconds = 15;
+
+    /// <summary>
+    /// What a GIF takes of a clip: the trim marks, cut down to their last <see cref="GifMaxSeconds"/>, since
+    /// a replay is saved right after the moment it's for. Marks that make no sense count as the whole clip.
+    /// </summary>
+    public static (double Start, double Length) GifRange(double start, double end, double duration)
+    {
+        start = Math.Max(0, start);
+        end = Math.Min(end, duration);
+        if (end <= start) (start, end) = (0, duration);
+        start = Math.Max(start, end - GifMaxSeconds);
+        return (start, end - start);
+    }
+
+    /// <summary>
+    /// A small looping GIF, with a palette made for this stretch. GIF has no GPU encoder, so this is the one
+    /// export on the CPU: it runs at below-normal priority and only for as long as it takes.
+    /// </summary>
+    public static IReadOnlyList<string> Gif(string input, string output, double start, double length) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+        "-ss", Inv($"{start}"), "-t", Inv($"{length}"), "-i", input,
+        "-map", "0:v:0", "-an",
+        "-vf", "fps=15,scale='min(480,iw)':-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
+        "-loop", "0", "-f", "gif", output,
+    ];
+
     /// <summary>Several clips into one by stream copy, every track included. See <see cref="ClipJoiner"/>.</summary>
     public static IReadOnlyList<string> Join(string concatListPath, string outputPath) =>
     [
