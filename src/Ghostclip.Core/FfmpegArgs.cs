@@ -269,10 +269,11 @@ public static class FfmpegArgs
     /// audio tracks are mixed into one, since Discord plays only the first.
     /// </summary>
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
-    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null)
+    /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep);
+        AddOneAudioTrack(args, audioTracks, keep, volumes);
 
         var vf = new List<string>();
         if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
@@ -294,12 +295,13 @@ public static class FfmpegArgs
     /// more than 60 fps and at a rate they keep. Several audio tracks are mixed into one, since they play only the first.
     /// </summary>
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null)
+    /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep);
+        AddOneAudioTrack(args, audioTracks, keep, volumes);
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
@@ -314,13 +316,23 @@ public static class FfmpegArgs
     /// <summary>Time for a vertical copy: a long session takes a while on the GPU at below-normal priority, with a game open.</summary>
     public static TimeSpan VerticalTimeout(double durationSeconds) => TimeSpan.FromSeconds(Math.Max(15 * 60, durationSeconds * 3));
 
-    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep)
+    private static double TrackVolume(IReadOnlyList<double>? volumes, int track) =>
+        volumes is not null && track < volumes.Count ? Math.Clamp(volumes[track], 0, 2) : 1;
+
+    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep, IReadOnlyList<double>? volumes)
     {
         var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
         if (tracks.Count > 1)
         {
-            var inputs = string.Concat(tracks.Select(i => Inv($"[0:a:{i}]")));
-            args.AddRange(["-filter_complex", Inv($"{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+            // Only a track whose volume changes goes through a filter, under a label of its own.
+            var changed = tracks.Where(i => TrackVolume(volumes, i) != 1).ToList();
+            var filters = string.Concat(changed.Select(i => Inv($"[0:a:{i}]volume={TrackVolume(volumes, i):0.##}[v{i}];")));
+            var inputs = string.Concat(tracks.Select(i => changed.Contains(i) ? Inv($"[v{i}]") : Inv($"[0:a:{i}]")));
+            args.AddRange(["-filter_complex", Inv($"{filters}{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]"), "-map", "0:v:0", "-map", "[a]"]);
+        }
+        else if (tracks.Count == 1 && TrackVolume(volumes, tracks[0]) != 1)
+        {
+            args.AddRange(["-filter_complex", Inv($"[0:a:{tracks[0]}]volume={TrackVolume(volumes, tracks[0]):0.##}[a]"), "-map", "0:v:0", "-map", "[a]"]);
         }
         else if (tracks.Count == 1)
         {

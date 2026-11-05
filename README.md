@@ -47,7 +47,7 @@ QuickSync). There is no CPU encoder fallback.
   (10 MB by default), mixing game and mic into one track.
 - **Vertical copy** for Shorts, TikTok and Reels: the middle of the picture at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
-  audio tracks go in.
+  audio tracks go in, and at what volume.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
   It's the one export on the CPU, at low priority, only while it's being made.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
