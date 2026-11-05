@@ -231,6 +231,31 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return (output, bytes);
     }
 
+    /// <summary>Cuts a clip around each of a session's bookmarks, by stream copy. Returns the clips made.</summary>
+    public async Task<IReadOnlyList<string>> BookmarkClipsAsync(string session, IReadOnlyList<double> bookmarks, ClipMeta meta, CancellationToken ct = default)
+    {
+        var game = Path.GetFileName(Path.GetDirectoryName(session));
+        var ranges = BookmarkClips.Ranges(bookmarks, meta.Duration, config().ClipSecondsFor(game), meta.Keyframes);
+        if (ranges.Count == 0)
+        {
+            throw new InvalidOperationException(L("This session has no bookmarks to cut around.", "Esta sessão não tem marcadores para cortar.", "Esta sesión no tiene marcadores para cortar."));
+        }
+        var made = new List<string>();
+        foreach (var (start, end) in ranges)
+        {
+            try
+            {
+                made.Add(await TrimAsync(session, start, end, ct).ConfigureAwait(false));
+            }
+            // Those already made are good, and stay: they're in the library, and the message says how far it got.
+            catch (InvalidOperationException ex) when (made.Count > 0)
+            {
+                throw new InvalidOperationException(L($"Saved {made.Count} of {ranges.Count}, then: {ex.Message}", $"Salvos {made.Count} de {ranges.Count}, e então: {ex.Message}", $"Guardados {made.Count} de {ranges.Count}, y luego: {ex.Message}"), ex);
+            }
+        }
+        return made;
+    }
+
     /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
     {
