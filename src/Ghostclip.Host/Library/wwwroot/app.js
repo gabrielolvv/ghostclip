@@ -349,6 +349,8 @@ function renderCard(clip) {
     }
   });
   if (!clip.image) {
+    card.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') previewSoon(card, clip); });
+    card.addEventListener('pointerleave', stopPreview);
     applyMeta(card, clip.path);
     if (!state.meta.has(clip.path)) observer.observe(card);
   }
@@ -365,6 +367,60 @@ function applyMeta(card, path) {
   }
   if (entry.meta && !thumb.querySelector('.chip')) thumb.append(el('span', 'chip', fmtTime(entry.meta.duration)));
 }
+
+// The card under the pointer plays its clip, muted. There is one video, moved from card to card, so only one clip is
+// ever being decoded. A replay is saved right after the moment it's for, so what plays is the end of the clip.
+const PREVIEW_DELAY_MS = 350;
+const PREVIEW_SECONDS = 15;
+const preview = document.createElement('video');
+preview.className = 'preview';
+preview.muted = true;
+preview.playsInline = true;
+preview.preload = 'metadata';
+preview.disablePictureInPicture = true;
+preview.setAttribute('aria-hidden', 'true');
+let previewTimer = 0;
+let previewFrom = 0;
+
+function previewSoon(card, clip) {
+  stopPreview();
+  // Never behind a game: the window has to be the active one, and passing over cards on the way somewhere starts nothing.
+  if (!document.hasFocus() || selected.size > 0) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  previewTimer = setTimeout(() => {
+    previewTimer = 0;
+    card.querySelector('.thumb').prepend(preview);
+    preview.src = `${clip.url}?v=${encodeURIComponent(clip.version)}`;
+  }, PREVIEW_DELAY_MS);
+}
+
+// The video holds the file open, and Windows can't rename or delete an open file: every way of reaching those stops this.
+function stopPreview() {
+  clearTimeout(previewTimer);
+  previewTimer = 0;
+  if (!preview.isConnected) return;
+  preview.classList.remove('on');
+  preview.pause();
+  preview.removeAttribute('src');
+  preview.load();
+  preview.remove();
+}
+
+preview.addEventListener('loadedmetadata', () => {
+  previewFrom = Number.isFinite(preview.duration) ? Math.max(0, preview.duration - PREVIEW_SECONDS) : 0;
+  preview.currentTime = previewFrom;
+  preview.play().catch(() => {});
+});
+preview.addEventListener('ended', () => {
+  preview.currentTime = previewFrom;
+  preview.play().catch(() => {});
+});
+// The thumbnail stays until there is a picture to replace it.
+preview.addEventListener('playing', () => preview.classList.add('on'));
+// A codec this window can't play: the thumbnail is still there, and the clip says why when opened.
+preview.addEventListener('error', stopPreview);
+window.addEventListener('blur', stopPreview);
+document.addEventListener('visibilitychange', stopPreview);
 
 // Selection: acting on several clips at once. Only what is on screen stays selected, so an action never
 // touches a clip hidden by the search or another game.
@@ -399,6 +455,7 @@ function selectedClips() { return state.clips.filter(c => selected.has(c.path));
 
 // The cards stay as they are: a redraw would lose the keyboard's place in the grid.
 function showSelection() {
+  if (selected.size > 0) stopPreview();
   document.body.classList.toggle('selecting', selected.size > 0);
   for (const card of document.querySelectorAll('#grid .card')) {
     const on = selected.has(card.dataset.path);
@@ -483,6 +540,7 @@ document.addEventListener('keydown', e => {
 });
 
 function renderGrid() {
+  stopPreview();
   const grid = $('grid');
   grid.replaceChildren();
   const clips = visibleClips();
@@ -522,6 +580,7 @@ let dragging = null;
 let frame = 0;
 
 function showView(name) {
+  stopPreview();
   $('library').hidden = name !== 'library';
   $('clip').hidden = name !== 'clip';
   $('settings').hidden = name !== 'settings';
