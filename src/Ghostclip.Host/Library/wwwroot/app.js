@@ -622,6 +622,7 @@ function openClip(path) {
   setSpeed(1);
   tracksOff.clear();
   trackVolumes.clear();
+  tracksDenoised.clear();
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
@@ -682,6 +683,7 @@ function currentMeta() {
 // Tracks left out of the copies for Discord and Shorts. Each clip starts with all of them on.
 const tracksOff = new Set();
 const trackVolumes = new Map(); // track -> percent; a track not here is at 100
+const tracksDenoised = new Set();
 
 function showExportTracks(meta) {
   const names = trackNames(meta);
@@ -712,6 +714,21 @@ function showExportTracks(meta) {
     });
     const track = el('span', 'track');
     track.append(b, slider, percent);
+    // Only for the microphone: on a game's sound, this filter would eat what it takes for noise.
+    if (meta.audioTitles && meta.audioTitles[i] === 'Microphone') {
+      const clean = el('button', 'act denoise', L('REDUCE NOISE', 'REDUZIR RUÍDO', 'REDUCIR RUIDO'));
+      clean.type = 'button';
+      clean.title = L('Takes hiss and fan noise out of this track, in the copies only. The clip stays as it is.',
+        'Tira chiado e ruído de ventilador desta faixa, só nas cópias. O clipe fica como está.', 'Quita el siseo y el ruido de ventilador de esta pista, solo en las copias. El clip no cambia.');
+      clean.setAttribute('aria-pressed', String(tracksDenoised.has(i)));
+      clean.disabled = tracksOff.has(i);
+      clean.addEventListener('click', () => {
+        if (!tracksDenoised.delete(i)) tracksDenoised.add(i);
+        clean.setAttribute('aria-pressed', String(tracksDenoised.has(i)));
+      });
+      b.addEventListener('click', () => { clean.disabled = tracksOff.has(i); });
+      track.append(clean);
+    }
     list.append(track);
   });
 }
@@ -727,6 +744,7 @@ function exportTracks() {
   return {
     ...(kept.length < all.length ? { tracks: kept } : {}),
     ...(all.some(i => volume(i) !== 100) ? { volumes: all.map(i => volume(i) / 100) } : {}),
+    ...(kept.some(i => tracksDenoised.has(i)) ? { denoise: kept.filter(i => tracksDenoised.has(i)) } : {}),
   };
 }
 
