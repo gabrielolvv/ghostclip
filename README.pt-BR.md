@@ -52,6 +52,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   de áudio entram.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
   É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
+- **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa

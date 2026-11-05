@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Save frame in the player: the frame on screen becomes a JPEG next to the clip,
+  at the same quality as a screenshot.
+
 ## 0.8.12
 
 ### Added

@@ -907,6 +907,13 @@ $('a-gif').addEventListener('click', () => {
   toast(L('Making the GIF…', 'Fazendo o GIF…', 'Haciendo el GIF…'));
   post({ type: 'gif', path: state.current.path, start: state.start, end: state.end });
 });
+$('a-frame').addEventListener('click', () => {
+  if (!state.current || $('a-frame').classList.contains('busy')) return;
+  // Stays on the frame being saved, which is the one the result will show.
+  video.pause();
+  busy($('a-frame'), true);
+  post({ type: 'frame', path: state.current.path, start: video.currentTime });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1066,6 +1073,10 @@ function onDone(message) {
       busy($('a-vertical'), false);
       toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
       break;
+    case 'frame':
+      busy($('a-frame'), false);
+      toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
+      break;
     case 'gif':
       busy($('a-gif'), false);
       toast(L(`GIF saved: ${message.message}`, `GIF salvo: ${message.message}`, `GIF guardado: ${message.message}`), false, open);
@@ -1164,6 +1175,7 @@ function onMessage(message) {
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
+      if (message.op === 'frame') busy($('a-frame'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
