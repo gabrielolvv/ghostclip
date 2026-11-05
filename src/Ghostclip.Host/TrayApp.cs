@@ -32,6 +32,7 @@ internal sealed class TrayApp : ApplicationContext
     private string? _updateVersion;
     private readonly ScreenshotTaker _screenshots;
     private readonly SessionRecorder _session;
+    private readonly AutoSession _autoSession = new();
     private readonly StorageKeeper _storage;
     private readonly UpdateService _updates = new(Log.ForContext<UpdateService>());
     private readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 2 * 60 * 1000 };
@@ -439,6 +440,19 @@ internal sealed class TrayApp : ApplicationContext
         {
             SetGame(ClipNaming.FallbackGame, 0);
         }
+
+        var canStart = !Paused && _status.State == WorkerState.Recording;
+        switch (_autoSession.Next(front.ProcessId, front.Game, _config.AutoSessionFor(front.Game), _session.Running, canStart, ForegroundGame.IsRunning))
+        {
+            case AutoSessionStep.Start:
+                _log.Information("Starting the session of {Game}, as its profile asks", front.Game);
+                StartSession(front.Game);
+                break;
+            case AutoSessionStep.Stop:
+                _log.Information("The game closed: stopping its session");
+                StopSession();
+                break;
+        }
     }
 
     private void SetGame(string game, uint pid)
@@ -667,7 +681,12 @@ internal sealed class TrayApp : ApplicationContext
                 L("Ghostclip isn't recording right now.", "O Ghostclip não está gravando agora.", "Ghostclip no está grabando ahora."), ToolTipIcon.Warning);
             return;
         }
-        _session.Start(CurrentGame());
+        StartSession(CurrentGame());
+    }
+
+    private void StartSession(string game)
+    {
+        _session.Start(game);
         if (_config.ConfirmationSound) _sound.Play();
         var stop = _hotkeyLabels.TryGetValue(HotkeyAction.Session, out var s) ? s : L("the tray menu", "o menu da bandeja", "el menú de la bandeja");
         var mark = _hotkeyLabels.TryGetValue(HotkeyAction.SaveClip, out var c) ? c : L("the clip hotkey", "a hotkey de clipe", "la tecla de clip");
@@ -792,6 +811,8 @@ internal sealed class TrayApp : ApplicationContext
                 if (!drive.IsReady || !_lowDisk.ShouldWarn(root, drive.AvailableFreeSpace, threshold)) continue;
                 var gb = drive.AvailableFreeSpace / 1024.0 / 1024 / 1024;
                 _log.Warning("Drive {Drive} has {Gb:0.0} GB free", root, gb);
+                // Nobody asked for this session just now, and a game left open overnight shouldn't fill the drive.
+                if (_autoSession.Started && _session.Running) StopSession();
                 Notify(L($"Drive {root} is almost full", $"O disco {root} está quase cheio", $"El disco {root} está casi lleno"),
                     L($"{gb:0.0} GB free. When it fills up, Ghostclip can't record or save clips. A space limit in Settings can make room by itself.",
                         $"{gb:0.0} GB livres. Quando encher, o Ghostclip não consegue gravar nem salvar clipes. Um limite de espaço em Configurações pode abrir espaço sozinho.", $"{gb:0.0} GB libres. Cuando se llene, Ghostclip no podrá grabar ni guardar clips. Un límite de espacio en Configuración puede liberar espacio solo."), ToolTipIcon.Warning);

@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A game's profile can record its session by itself, from when the game opens until
+  it closes. The session key still stops it, and then it stays stopped until the game
+  next opens. A session you started by hand is never stopped for you. It also saves
+  and stops if the drive runs low, so a game left open overnight can't fill it.
+
 ## 0.8.13
 
 ### Added

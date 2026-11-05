@@ -264,7 +264,7 @@ details.more summary::-webkit-details-marker { display: none; }
 details.more[open] summary { color: var(--text); }
 .profiles { display: flex; flex-direction: column; gap: 8px; padding: 10px 0 14px; }
 .profiles > .act { align-self: flex-start; }
-.profile { display: grid; grid-template-columns: minmax(0, 1fr) 96px 130px 120px 32px; gap: 8px; align-items: center; }
+.profile { display: grid; grid-template-columns: minmax(0, 1fr) 84px 118px 108px 108px 32px; gap: 8px; align-items: center; }
 .profile .field { width: 100%; }
 .profile-head { font: 10.5px var(--mono); letter-spacing: 0.1em; color: var(--muted); }
 .empty-row { font-size: 12px; color: var(--muted); padding: 4px 0; }

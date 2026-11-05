@@ -38,7 +38,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Pausa** pela bandeja ou por uma tecla que você escolhe: para a gravação e
   apaga o buffer de replay, para a página do banco ou uma senha. Também pausa
   sozinha enquanto um programa da sua lista estiver na frente.
-- **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo.
+- **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo, e
+  para gravar a sessão sozinho, de quando o jogo abre até ele fechar.
 - **Buffer de replay no disco que você escolher,** para poupar o SSD do sistema.
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você

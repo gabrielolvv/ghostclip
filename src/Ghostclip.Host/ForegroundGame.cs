@@ -16,6 +16,7 @@ internal readonly record struct Foreground(string Game, uint ProcessId, bool Ful
 internal static class ForegroundGame
 {
     private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int AccessDenied = 5;
 
     // Localized ("Sistema Operacional Microsoft Windows"...): read from the OS itself.
     private static readonly string? OsProductName = ReadOsProductName();
@@ -60,7 +61,8 @@ internal static class ForegroundGame
     public static bool IsRunning(uint pid)
     {
         var handle = Native.OpenProcess(Native.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (handle == 0) return false;
+        // Refused isn't gone: a game's anti-cheat can protect its process, and it's still there.
+        if (handle == 0) return System.Runtime.InteropServices.Marshal.GetLastPInvokeError() == AccessDenied;
         try
         {
             return Native.GetExitCodeProcess(handle, out var code) && code == Native.STILL_ACTIVE;
