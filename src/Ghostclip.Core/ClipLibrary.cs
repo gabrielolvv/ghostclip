@@ -80,7 +80,7 @@ public static partial class ClipLibrary
     /// then any _trim/_discord/_vertical/_joined/_gif/_frame copies of copies. Telegram's video_&lt;time&gt; in its own folder is not.
     /// </summary>
     public static bool IsGhostclipName(string folder, string stem) =>
-        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical|_joined|_gif|_frame)(_\d+)?)*$",
+        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical|_joined|_gif|_frame|_audio)(_\d+)?)*$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>The save time in Game_YYYY-MM-DD_HH-MM-SS[_n][_trim|_discord|_vertical|_joined|_gif|_frame[_n]]...., or null.</summary>
