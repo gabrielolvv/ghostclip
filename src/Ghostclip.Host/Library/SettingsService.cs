@@ -13,7 +13,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
 {
     private Mutex? _hotkeyCapture;
 
-    public static bool Handles(string type) => type is "settings" or "saveSettings" or "pickFolder" or "pickBufferFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
+    public static bool Handles(string type) => type is "settings" or "saveSettings" or "exportSettings" or "importSettings" or "pickFolder" or "pickBufferFolder" or "pickFfmpeg" or "hotkeyCaptureStart" or "hotkeyCaptureEnd";
 
     public async Task HandleAsync(LibraryRequest r)
     {
@@ -30,6 +30,33 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
                 break;
             case "hotkeyCaptureEnd":
                 CaptureHotkey(false);
+                break;
+            case "exportSettings":
+                using (var dialog = new SaveFileDialog
+                {
+                    Title = L("Save settings as", "Salvar configurações como", "Guardar configuración como"),
+                    FileName = "ghostclip-settings.json",
+                    Filter = "JSON|*.json",
+                })
+                {
+                    if (dialog.ShowDialog(window) != DialogResult.OK) break;
+                    File.WriteAllText(dialog.FileName, ConfigBackup.Export(current()));
+                    window.Post(new LibraryEvent("done", Op: r.Type));
+                }
+                break;
+            case "importSettings":
+                using (var dialog = new OpenFileDialog
+                {
+                    Title = L("Choose a settings backup", "Escolha um backup de configurações", "Elige una copia de la configuración"),
+                    Filter = "JSON|*.json",
+                    CheckFileExists = true,
+                })
+                {
+                    if (dialog.ShowDialog(window) != DialogResult.OK) break;
+                    // Far past any real one: the file is read whole, and it could be anything.
+                    if (new FileInfo(dialog.FileName).Length > 1024 * 1024) throw new InvalidOperationException(L("That isn't a Ghostclip settings backup.", "Esse não é um backup de configurações do Ghostclip.", "Eso no es una copia de la configuración de Ghostclip."));
+                    window.Post(new LibraryEvent("imported", Config: ConfigBackup.Import(File.ReadAllText(dialog.FileName), current(), Directory.Exists)));
+                }
                 break;
             case "pickFolder":
                 using (var dialog = new FolderBrowserDialog { Description = L("Where Ghostclip saves clips", "Onde o Ghostclip salva os clipes", "Dónde guarda Ghostclip los clips"), UseDescriptionForTitle = true, ShowNewFolderButton = true })

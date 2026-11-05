@@ -62,6 +62,7 @@ QuickSync). There is no CPU encoder fallback.
   didn't make are never touched.
 - **Delete by age** (optional): past the days you choose, clips go to the Recycle
   Bin, under the same care.
+- **Settings backup** to a file, for another PC or a reinstall, without your webhook.
 - **English, Portuguese or Spanish,** or whatever Windows uses, switched live.
 
 ## Install

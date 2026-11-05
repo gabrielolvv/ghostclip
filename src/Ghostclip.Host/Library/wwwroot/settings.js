@@ -124,6 +124,16 @@ const Settings = (() => {
         hint: L('Copies your GPU, Windows and recording details, to paste in a bug report or an FPS test.',
           'Copia sua placa de vídeo, o Windows e os detalhes da gravação, para colar num relato de problema ou teste de FPS.', 'Copia tu tarjeta gráfica, Windows y los detalles de la grabación, para pegarlos en un reporte de problema o una prueba de FPS.'),
         type: 'action', text: L('Copy diagnostics', 'Copiar diagnóstico', 'Copiar diagnóstico'), action: 'diagnostics' },
+      { label: L('Save a backup', 'Salvar um backup', 'Guardar una copia'),
+        hint: L('Your saved settings in a file, for another PC or a reinstall. The Discord webhook stays out, since it works like a password.',
+          'Suas configurações salvas num arquivo, para outro PC ou uma reinstalação. O webhook do Discord fica de fora, porque funciona como uma senha.',
+          'Tu configuración guardada en un archivo, para otro PC o una reinstalación. El webhook de Discord queda fuera, porque funciona como una contraseña.'),
+        type: 'action', text: L('Save backup', 'Salvar backup', 'Guardar copia'), action: 'exportSettings' },
+      { label: L('Load a backup', 'Carregar um backup', 'Cargar una copia'),
+        hint: L('Fills this page from the file. Nothing changes until you save. A folder this PC doesn’t have stays as it is.',
+          'Preenche esta página com o arquivo. Nada muda até você salvar. Uma pasta que este PC não tem fica como está.',
+          'Rellena esta página con el archivo. Nada cambia hasta que guardes. Una carpeta que este PC no tiene se queda como está.'),
+        type: 'action', text: L('Load backup', 'Carregar backup', 'Cargar copia'), action: 'importSettings' },
     ] },
   ];
 
@@ -676,6 +686,12 @@ const Settings = (() => {
         $('s-save').classList.remove('busy');
         s.confirming = true;
         updateBar(message.message);
+        return true;
+      case 'imported':
+        s.draft = clone(message.config);
+        changed();
+        render();
+        toast(L('Backup loaded. Check it and save.', 'Backup carregado. Confira e salve.', 'Copia cargada. Revísala y guarda.'));
         return true;
       case 'picked':
         s.draft[message.op] = message.path;
