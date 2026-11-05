@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- In a vertical copy you choose the part of the picture: drag the 9:16 frame over
+  the video, or move it with the arrows. It starts in the middle, as before.
+
 ## 0.8.13
 
 ### Added

@@ -291,12 +291,13 @@ public static class FfmpegArgs
     }
 
     /// <summary>
-    /// A 9:16 copy for Shorts, TikTok and Reels: the middle of the picture at 1080x1920, on the hardware encoder, at no
+    /// A 9:16 copy for Shorts, TikTok and Reels: a part of the picture at 1080x1920, on the hardware encoder, at no
     /// more than 60 fps and at a rate they keep. Several audio tracks are mixed into one, since they play only the first.
     /// </summary>
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null)
+    /// <param name="cropAt">Where the part kept sits across the room it has: 0 at the left, 0.5 in the middle, 1 at the right.</param>
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
@@ -305,12 +306,19 @@ public static class FfmpegArgs
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
-            "-vf", "crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
+            "-vf", VerticalCrop(cropAt) + ",scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
             "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"), "-g", Inv($"{fps * 2}"),
             "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
         return args;
+    }
+
+    private static string VerticalCrop(double cropAt)
+    {
+        const string Size = "crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2'";
+        var at = Math.Clamp(cropAt, 0, 1);
+        return at == 0.5 ? Size : Size + Inv($":'trunc((iw-ow)*{at:0.###}/2)*2':'(ih-oh)/2'");
     }
 
     /// <summary>Time for a vertical copy: a long session takes a while on the GPU at below-normal priority, with a game open.</summary>
