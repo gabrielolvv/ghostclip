@@ -440,12 +440,12 @@ const Settings = (() => {
     const box = el('div', 'profiles');
     const list = s.draft.profiles || (s.draft.profiles = []);
     if (list.length === 0) {
-      box.append(el('div', 'empty-row', L('No game profiles. A profile changes clip length, sound or the microphone for one game.',
-        'Nenhum perfil de jogo. Um perfil muda a duração do clipe, o som ou o microfone de um jogo.', 'Sin perfiles de juego. Un perfil cambia la duración del clip, el sonido o el micrófono para un juego.')));
+      box.append(el('div', 'empty-row', L('No game profiles. A profile changes clip length, sound or the microphone for one game, or records its session by itself.',
+        'Nenhum perfil de jogo. Um perfil muda a duração do clipe, o som ou o microfone de um jogo, ou grava a sessão sozinho.', 'Sin perfiles de juego. Un perfil cambia la duración del clip, el sonido o el micrófono para un juego, o graba su sesión por sí solo.')));
     } else {
       const head = el('div', 'profile profile-head');
       head.append(el('span', '', L('GAME', 'JOGO', 'JUEGO')), el('span', '', L('LENGTH (S)', 'DURAÇÃO (S)', 'DURACIÓN (S)')), el('span', '', L('SOUND', 'SOM', 'SONIDO')),
-        el('span', '', L('MICROPHONE', 'MICROFONE', 'MICRÓFONO')), el('span'));
+        el('span', '', L('MICROPHONE', 'MICROFONE', 'MICRÓFONO')), el('span', '', L('SESSION', 'SESSÃO', 'SESIÓN')), el('span'));
       box.append(head);
     }
     const options = (select, pairs, value) => {
@@ -498,13 +498,23 @@ const Settings = (() => {
         changed();
       });
 
+      const session = el('select', 'field');
+      session.setAttribute('aria-label', L('Session recording', 'Gravação da sessão', 'Grabación de la sesión'));
+      session.title = L('Automatic records from when the game opens until it closes. The session key still stops it.',
+        'Automática grava de quando o jogo abre até ele fechar. A tecla da sessão continua parando.', 'Automática graba desde que se abre el juego hasta que se cierra. La tecla de sesión sigue deteniéndola.');
+      options(session, [['', L('By key', 'Pela tecla', 'Con la tecla')], ['true', L('Automatic', 'Automática', 'Automática')]], p.autoSession ? 'true' : '');
+      session.addEventListener('change', () => {
+        if (session.value === '') delete p.autoSession; else p.autoSession = true;
+        changed();
+      });
+
       const remove = el('button', 'icon');
       remove.type = 'button';
       remove.setAttribute('aria-label', L(`Remove ${p.game || 'profile'}`, `Remover ${p.game || 'perfil'}`, `Quitar ${p.game || 'perfil'}`));
       remove.append(icon('<path d="M6 6l12 12M18 6L6 18"/>'));
       remove.addEventListener('click', () => { list.splice(i, 1); changed(); render(); });
 
-      line.append(game, length, sound, mic, remove);
+      line.append(game, length, sound, mic, session, remove);
       box.append(line);
     });
     const add = el('button', 'act small', L('Add a game', 'Adicionar um jogo', 'Añadir un juego'));

@@ -7,6 +7,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- A game's profile can record its session by itself, from when the game opens until
+  it closes. The session key still stops it, and then it stays stopped until the game
+  next opens. A session you started by hand is never stopped for you. It also saves
+  and stops if the drive runs low, so a game left open overnight can't fill it.
 - Send to Discord: paste a channel's webhook address in Settings, and a button in
   the player posts the clip or picture there, after asking. A clip too big for the
   limit, with several tracks or in HEVC goes as a Discord size copy. Nothing is sent

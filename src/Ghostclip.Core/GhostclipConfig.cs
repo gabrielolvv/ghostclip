@@ -53,6 +53,9 @@ public sealed record GameProfile
     public int? ClipSeconds { get; set; }
     public AudioSourceMode? AudioSource { get; set; }
     public bool? MuteMicrophone { get; set; }
+
+    /// <summary>Records the session from when the game opens until it closes. See <see cref="Core.AutoSession"/>.</summary>
+    public bool? AutoSession { get; set; }
 }
 
 /// <summary>A list with value equality, so configs compare by content.</summary>
@@ -284,6 +287,8 @@ public sealed record GhostclipConfig
 
     public GameProfile? ProfileFor(string? game) =>
         game is null ? null : Profiles.FirstOrDefault(p => string.Equals(p.Game, game, StringComparison.OrdinalIgnoreCase));
+
+    public bool AutoSessionFor(string? game) => ProfileFor(game)?.AutoSession == true;
 
     public int ClipSecondsFor(string? game) => ProfileFor(game)?.ClipSeconds ?? ClipSeconds;
 
