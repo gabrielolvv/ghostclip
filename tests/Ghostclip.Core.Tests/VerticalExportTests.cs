@@ -83,3 +83,59 @@ public class VerticalExportTests
         Assert.Equal(Path.Combine("G", "G_2026-10-30_21-14-02_vertical_2.mp4"), ClipNaming.DerivedPath(clip, "vertical", p => p == first));
     }
 }
+
+// The part of the picture a vertical copy keeps: the middle unless the person drags the frame elsewhere.
+public class VerticalAreaTests
+{
+    private static string VideoFilter(IReadOnlyList<string> args) => args[args.ToList().IndexOf("-vf") + 1];
+
+    private static string Filter(double cropAt) =>
+        VideoFilter(FfmpegArgs.Vertical("in.mp4", "out.mp4", "h264_nvenc", 1, 60, cropAt: cropAt));
+
+    [Fact]
+    public void The_middle_is_the_filter_as_it_was()
+    {
+        Assert.StartsWith("crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',scale=1080:1920", Filter(0.5));
+    }
+
+    [Theory]
+    [InlineData(0, "0")]
+    [InlineData(0.25, "0.25")]
+    [InlineData(1, "1")]
+    public void The_frame_slides_across_the_room_left_on_an_even_pixel(double cropAt, string text)
+    {
+        Assert.StartsWith($"crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2':'trunc((iw-ow)*{text}/2)*2':'(ih-oh)/2',scale=1080:1920", Filter(cropAt));
+    }
+
+    [Theory]
+    [InlineData(-3, "0")]
+    [InlineData(7, "1")]
+    public void The_frame_stays_inside_the_picture(double cropAt, string text)
+    {
+        Assert.Contains($"'trunc((iw-ow)*{text}/2)*2'", Filter(cropAt));
+    }
+
+    [Fact]
+    public void The_position_uses_a_point_whatever_the_language_of_Windows()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("pt-BR");
+        try
+        {
+            Assert.Contains("*0.75/2", Filter(0.75));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [Fact]
+    public void Request_carries_the_position_and_defaults_to_the_middle()
+    {
+        var chosen = System.Text.Json.JsonSerializer.Deserialize("""{"type":"vertical","path":"a.mp4","cropAt":0.2}""", LibraryJson.Default.LibraryRequest);
+        var unchosen = System.Text.Json.JsonSerializer.Deserialize("""{"type":"vertical","path":"a.mp4"}""", LibraryJson.Default.LibraryRequest);
+        Assert.Equal(0.2, chosen!.CropAt);
+        Assert.Equal(0.5, unchosen!.CropAt);
+    }
+}

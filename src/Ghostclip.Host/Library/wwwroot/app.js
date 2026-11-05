@@ -625,6 +625,8 @@ function openClip(path) {
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
+  $('send-row').hidden = true;
+  closeFrame();
   $('clip-game').textContent = `${clip.game} · ${stem(clip.path)}`;
   $('no-video').hidden = true;
   // The list leaves image out for videos: undefined would make toggle flip the class instead of removing it.
@@ -940,12 +942,87 @@ $('a-discord').addEventListener('click', () => {
   toast(L('Compressing on the GPU…', 'Comprimindo na GPU…', 'Comprimiendo en la GPU…'));
   post({ type: 'compress', path: state.current.path, ...exportTracks() });
 });
-$('a-vertical').addEventListener('click', () => {
-  if (!state.current || $('a-vertical').classList.contains('busy')) return;
+// The part of the picture a vertical copy keeps. cropAt is where the frame sits across the room it has, as the app wants it.
+let cropAt = 0.5;
+
+// Where the picture is inside the stage, and how wide the 9:16 frame is on it.
+function pictureBox() {
+  const stage = document.querySelector('.stage');
+  const scale = Math.min(stage.clientWidth / video.videoWidth, stage.clientHeight / video.videoHeight);
+  const width = video.videoWidth * scale, height = video.videoHeight * scale;
+  const origin = stage.getBoundingClientRect().left + stage.clientLeft;
+  return { origin, width, height, left: (stage.clientWidth - width) / 2, top: (stage.clientHeight - height) / 2, frame: height * 9 / 16 };
+}
+
+function placeFrame() {
+  const box = pictureBox();
+  const frame = $('vframe');
+  frame.style.top = `${box.top}px`;
+  frame.style.height = `${box.height}px`;
+  frame.style.width = `${box.frame}px`;
+  frame.style.left = `${box.left + (box.width - box.frame) * cropAt}px`;
+  frame.setAttribute('aria-valuenow', String(Math.round(cropAt * 100)));
+}
+
+function closeFrame() {
+  $('vframe').hidden = true;
+  $('vertical-row').hidden = true;
+}
+
+function makeVertical() {
+  closeFrame();
   busy($('a-vertical'), true);
   toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…', 'Haciendo la copia vertical en la GPU…'));
-  post({ type: 'vertical', path: state.current.path, ...exportTracks() });
+  post({ type: 'vertical', path: state.current.path, cropAt, ...exportTracks() });
+}
+
+$('a-vertical').addEventListener('click', () => {
+  if (!state.current || $('a-vertical').classList.contains('busy')) return;
+  if (!$('vframe').hidden) { closeFrame(); return; }
+  cropAt = 0.5;
+  // A clip that can't be played here, or one already narrower than 9:16, leaves nothing to choose.
+  if (!video.videoWidth || video.videoWidth / video.videoHeight <= 9 / 16) { makeVertical(); return; }
+  $('rename').hidden = true;
+  $('confirm').hidden = true;
+  $('send-row').hidden = true;
+  $('vframe').hidden = false;
+  $('vertical-row').hidden = false;
+  placeFrame();
+  $('vframe').focus();
 });
+$('v-yes').addEventListener('click', () => { if (state.current) makeVertical(); });
+$('v-no').addEventListener('click', closeFrame);
+// The window, or a row appearing below the picture, can change its size while the frame is up.
+new ResizeObserver(() => { if (!$('vframe').hidden) placeFrame(); }).observe(document.querySelector('.stage'));
+
+{
+  const frame = $('vframe');
+  let grab = null;
+  frame.addEventListener('pointerdown', e => {
+    frame.setPointerCapture(e.pointerId);
+    grab = e.clientX - frame.getBoundingClientRect().left;
+  });
+  frame.addEventListener('pointermove', e => {
+    if (grab === null) return;
+    const box = pictureBox();
+    const room = box.width - box.frame;
+    if (room <= 0) return;
+    cropAt = Math.min(1, Math.max(0, (e.clientX - grab - box.origin - box.left) / room));
+    placeFrame();
+  });
+  const release = () => { grab = null; };
+  frame.addEventListener('pointerup', release);
+  frame.addEventListener('pointercancel', release);
+  // Over the stage a click plays and pauses, and the arrows seek. Here they move the frame.
+  frame.addEventListener('click', e => e.stopPropagation());
+  frame.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    e.stopPropagation();
+    cropAt = Math.min(1, Math.max(0, cropAt + (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 0.01 : 0.05)));
+    placeFrame();
+  });
+}
 $('a-gif').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-gif').classList.contains('busy')) return;
   busy($('a-gif'), true);
@@ -958,6 +1035,22 @@ $('a-frame').addEventListener('click', () => {
   video.pause();
   busy($('a-frame'), true);
   post({ type: 'frame', path: state.current.path, start: video.currentTime });
+});
+// Nothing leaves without saying so first.
+$('a-send').addEventListener('click', () => {
+  if (!state.current || $('a-send').classList.contains('busy')) return;
+  closeFrame();
+  $('rename').hidden = true;
+  $('confirm').hidden = true;
+  $('send-row').hidden = false;
+});
+$('s-no').addEventListener('click', () => { $('send-row').hidden = true; });
+$('s-yes').addEventListener('click', () => {
+  $('send-row').hidden = true;
+  if (!state.current) return;
+  busy($('a-send'), true);
+  toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
+  post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
@@ -990,7 +1083,7 @@ $('rename').addEventListener('submit', e => {
   releaseVideo();
   post({ type: 'rename', path: state.current.path, name });
 });
-$('a-delete').addEventListener('click', () => { $('rename').hidden = true; $('confirm').hidden = false; });
+$('a-delete').addEventListener('click', () => { closeFrame(); $('rename').hidden = true; $('confirm').hidden = false; });
 $('c-no').addEventListener('click', () => { $('confirm').hidden = true; });
 $('c-yes').addEventListener('click', () => {
   if (!state.current) return;
@@ -1121,6 +1214,10 @@ function onDone(message) {
       busy($('a-vertical'), false);
       toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
       break;
+    case 'sendToDiscord':
+      busy($('a-send'), false);
+      toast(L('Sent to Discord', 'Enviado ao Discord', 'Enviado a Discord'), false, open);
+      break;
     case 'frame':
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
@@ -1170,10 +1267,18 @@ function openWhenListed(path) {
   }
 }
 
+function showSend(can) {
+  $('a-send').hidden = !can;
+  if (!can) $('send-row').hidden = true;
+}
+
 function onMessage(message) {
+  // Saved settings say whether a webhook is there now; the list says it to begin with.
+  if (message.type === 'done' && message.config) showSend(!!message.config.discordWebhook);
   if (Settings.onMessage(message)) return;
   switch (message.type) {
     case 'clips': {
+      showSend(!!message.canSendToDiscord);
       state.clips = message.clips || [];
       state.listed = true;
       if (message.hotkeyLabels && message.hotkeyLabels.hotkey) state.saveKey = message.hotkeyLabels.hotkey;
@@ -1224,6 +1329,7 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
+      if (message.op === 'sendToDiscord') busy($('a-send'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.

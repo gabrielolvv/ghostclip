@@ -90,6 +90,7 @@
       <div class="stage">
         <video id="video" preload="metadata" disablepictureinpicture></video>
         <img id="image" alt="" hidden>
+        <div id="vframe" role="slider" tabindex="0" aria-label="Part of the picture to keep" data-pt-label="Parte da imagem que fica" data-es-label="Parte de la imagen que se conserva" aria-valuemin="0" aria-valuemax="100" hidden></div>
         <div id="no-video" class="no-video" hidden data-pt="Este PC não consegue mostrar a imagem deste vídeo aqui (o HEVC precisa das Extensões de Vídeo HEVC da Microsoft Store). Você ainda pode cortar, comprimir e copiar o clipe." data-es="Este PC no puede mostrar la imagen de este video aquí (HEVC necesita las Extensiones de video HEVC de Microsoft Store). Aun así puedes recortar, comprimir y copiar el clip.">This PC can't show this video's picture here (HEVC needs the HEVC Video Extensions from the Microsoft Store). You can still trim, compress and copy the clip.</div>
         <div id="play-hint" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -122,7 +123,7 @@
         <button id="a-discord" class="act" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg><span data-pt="Tamanho p/ Discord" data-es="Tamaño p/ Discord">Discord size</span>
         </button>
-        <button id="a-vertical" class="act" type="button" title="A 9:16 copy of the middle of the picture, for Shorts, TikTok and Reels" data-pt-title="Uma cópia 9:16 do meio da imagem, para Shorts, TikTok e Reels" data-es-title="Una copia 9:16 del centro de la imagen, para Shorts, TikTok y Reels">
+        <button id="a-vertical" class="act" type="button" title="A 9:16 copy of the part of the picture you choose, for Shorts, TikTok and Reels" data-pt-title="Uma cópia 9:16 da parte da imagem que você escolher, para Shorts, TikTok e Reels" data-es-title="Una copia 9:16 de la parte de la imagen que elijas, para Shorts, TikTok y Reels">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/></svg><span>Vertical</span>
         </button>
         <button id="a-gif" class="act" type="button" title="A short GIF of the trim marks: their last 15 seconds at most" data-pt-title="Um GIF curto do trecho marcado: no máximo os últimos 15 segundos" data-es-title="Un GIF corto del tramo marcado: como máximo los últimos 15 segundos">
@@ -130,6 +131,9 @@
         </button>
         <button id="a-frame" class="act" type="button" title="Saves the frame on screen as a picture, next to the clip" data-pt-title="Salva o quadro que está na tela como imagem, ao lado do clipe" data-es-title="Guarda el fotograma en pantalla como imagen, junto al clip">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg><span data-pt="Salvar quadro" data-es="Guardar fotograma">Save frame</span>
+        </button>
+        <button id="a-send" class="act" type="button" hidden title="Posts this to the channel of your Discord webhook" data-pt-title="Publica isto no canal do seu webhook do Discord" data-es-title="Publica esto en el canal de tu webhook de Discord">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg><span data-pt="Enviar ao Discord" data-es="Enviar a Discord">Send to Discord</span>
         </button>
         <button id="a-copy" class="act" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-pt="Copiar" data-es="Copiar">Copy</span>
@@ -147,6 +151,16 @@
         <button id="a-delete" class="act danger" type="button" aria-label="Delete clip" data-pt-label="Apagar clipe" data-es-label="Eliminar clip">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
         </button>
+      </div>
+      <div id="send-row" class="confirm" hidden>
+        <span data-pt="Publicar no canal do Discord? Todos nesse canal vão poder ver." data-es="¿Publicar en el canal de Discord? Todos en ese canal podrán verlo.">Post it to the Discord channel? Everyone in that channel can see it.</span>
+        <button id="s-yes" class="act primary" type="button" data-pt="Enviar" data-es="Enviar">Send</button>
+        <button id="s-no" class="act" type="button" data-pt="Cancelar" data-es="Cancelar">Cancel</button>
+      </div>
+      <div id="vertical-row" class="confirm" hidden>
+        <span data-pt="Arraste o quadro até a parte da imagem que você quer." data-es="Arrastra el marco hasta la parte de la imagen que quieras.">Drag the frame to the part of the picture you want.</span>
+        <button id="v-yes" class="act primary" type="button" data-pt="Fazer a cópia" data-es="Hacer la copia">Make the copy</button>
+        <button id="v-no" class="act" type="button" data-pt="Cancelar" data-es="Cancelar">Cancel</button>
       </div>
       <form id="rename" class="confirm rename" hidden>
         <input id="rename-name" class="field" type="text" spellcheck="false" autocomplete="off" aria-label="New name" data-pt-label="Novo nome" data-es-label="Nuevo nombre">

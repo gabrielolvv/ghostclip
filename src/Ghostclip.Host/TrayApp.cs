@@ -125,7 +125,7 @@ internal sealed class TrayApp : ApplicationContext
         _saver = new ClipSaver(paths, () => _config, Log.ForContext<ClipSaver>());
         _screenshots = new ScreenshotTaker(() => _config, Log.ForContext<ScreenshotTaker>());
         _session = new SessionRecorder(paths, () => _config, _saver, Log.ForContext<SessionRecorder>());
-        _storage = new StorageKeeper(paths, () => _config, Log.ForContext<StorageKeeper>());
+        _storage = new StorageKeeper(paths, () => _config, () => _gamePid != 0, Log.ForContext<StorageKeeper>());
         // The menu shows how long the session has been running.
         _session.Ticked += ApplyTexts;
         // Two GetForegroundWindow calls a second, nothing more: the version info is cached per process.
@@ -439,6 +439,8 @@ internal sealed class TrayApp : ApplicationContext
         else if (_gamePid != 0 && !isGame && !ForegroundGame.IsRunning(_gamePid))
         {
             SetGame(ClipNaming.FallbackGame, 0);
+            // What waited for the game to close.
+            _storage.Enforce();
         }
 
         var canStart = !Paused && _status.State == WorkerState.Recording;
@@ -869,7 +871,7 @@ internal sealed class TrayApp : ApplicationContext
         ApplyAutostart();
         _worker.UpdateConfig(config);
         // A new or lower limit, or a different clips folder: applied now, not at the next save.
-        if (config.StorageLimitGB != previous.StorageLimitGB || config.ResolvedClipsFolder != previous.ResolvedClipsFolder) _storage.Enforce();
+        if (config.StorageLimitGB != previous.StorageLimitGB || config.MaxClipAgeDays != previous.MaxClipAgeDays || config.ResolvedClipsFolder != previous.ResolvedClipsFolder) _storage.Enforce();
         _log.Information("Settings applied");
     }
 
