@@ -170,6 +170,39 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return output;
     }
 
+    private static readonly HttpClient Discord = new() { Timeout = TimeSpan.FromMinutes(10) };
+
+    /// <summary>
+    /// Posts a clip or picture to the Discord webhook, by way of a Discord size copy when it won't do as it is.
+    /// Only when people ask, on each clip. Returns the copy made, or null.
+    /// </summary>
+    public async Task<string?> SendToDiscordAsync(string clip, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, CancellationToken ct = default)
+    {
+        var cfg = config();
+        if (!DiscordWebhook.IsValid(cfg.DiscordWebhook)) throw new InvalidOperationException(DiscordWebhook.NotAWebhook());
+        var limit = cfg.DiscordLimitMB * 1024L * 1024;
+        var bytes = new FileInfo(clip).Length;
+        string? copy = null;
+        if (ClipLibrary.IsImage(clip))
+        {
+            if (bytes > limit)
+            {
+                throw new InvalidOperationException(L($"This is over the {cfg.DiscordLimitMB} MB limit for Discord.", $"Isto passa do limite de {cfg.DiscordLimitMB} MB do Discord.", $"Esto supera el límite de {cfg.DiscordLimitMB} MB de Discord."));
+            }
+        }
+        else
+        {
+            var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+            if (DiscordWebhook.NeedsCopy(bytes, limit, info.AudioTracks, info.VideoCodec, tracks is not null || volumes is not null))
+            {
+                (copy, _) = await CompressAsync(clip, tracks, volumes, ct).ConfigureAwait(false);
+            }
+        }
+        await DiscordWebhook.SendAsync(Discord, cfg.DiscordWebhook!, copy ?? clip, ct).ConfigureAwait(false);
+        log.Information("Sent {Clip} to Discord", copy ?? clip);
+        return copy;
+    }
+
     /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
     public async Task<(string Output, long Bytes)> GifAsync(string clip, double start, double end, CancellationToken ct = default)
     {

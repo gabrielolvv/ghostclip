@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Send to Discord: paste a channel's webhook address in Settings, and a button in
+  the player posts the clip or picture there, after asking. A clip too big for the
+  limit, with several tracks or in HEVC goes as a Discord size copy. Nothing is sent
+  on its own, and the address stays out of logs and diagnostics.
+
 ## 0.8.13
 
 ### Added

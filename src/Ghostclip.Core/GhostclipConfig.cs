@@ -147,6 +147,12 @@ public sealed record GhostclipConfig
     /// </summary>
     public int StorageLimitGB { get; set; }
 
+    /// <summary>
+    /// A Discord webhook to send clips to, when people ask to. Anyone with this address can post in that channel,
+    /// so it stays out of logs and diagnostics. See <see cref="Core.DiscordWebhook"/>.
+    /// </summary>
+    public string? DiscordWebhook { get; set; }
+
     /// <summary>Programs that pause recording while they are in front, by process name. Applies live.</summary>
     public AppNameList PrivateApps { get; set; } = [];
 
@@ -234,6 +240,7 @@ public sealed record GhostclipConfig
         AudioOffsetMs = Math.Clamp(AudioOffsetMs, -1000, 1000),
         QsvAsyncDepth = Math.Clamp(QsvAsyncDepth, 1, 8),
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
+        DiscordWebhook = Core.DiscordWebhook.IsValid(DiscordWebhook?.Trim()) ? DiscordWebhook!.Trim() : null,
         StorageLimitGB = Math.Clamp(StorageLimitGB, 0, 100_000),
         PrivateApps = new AppNameList((PrivateApps ?? []).Select(AppName).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)),
         Profiles = new GameProfileList((Profiles ?? [])

@@ -625,6 +625,7 @@ function openClip(path) {
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
+  $('send-row').hidden = true;
   $('clip-game').textContent = `${clip.game} · ${stem(clip.path)}`;
   $('no-video').hidden = true;
   // The list leaves image out for videos: undefined would make toggle flip the class instead of removing it.
@@ -959,6 +960,21 @@ $('a-frame').addEventListener('click', () => {
   busy($('a-frame'), true);
   post({ type: 'frame', path: state.current.path, start: video.currentTime });
 });
+// Nothing leaves without saying so first.
+$('a-send').addEventListener('click', () => {
+  if (!state.current || $('a-send').classList.contains('busy')) return;
+  $('rename').hidden = true;
+  $('confirm').hidden = true;
+  $('send-row').hidden = false;
+});
+$('s-no').addEventListener('click', () => { $('send-row').hidden = true; });
+$('s-yes').addEventListener('click', () => {
+  $('send-row').hidden = true;
+  if (!state.current) return;
+  busy($('a-send'), true);
+  toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
+  post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1121,6 +1137,10 @@ function onDone(message) {
       busy($('a-vertical'), false);
       toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
       break;
+    case 'sendToDiscord':
+      busy($('a-send'), false);
+      toast(L('Sent to Discord', 'Enviado ao Discord', 'Enviado a Discord'), false, open);
+      break;
     case 'frame':
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
@@ -1170,10 +1190,18 @@ function openWhenListed(path) {
   }
 }
 
+function showSend(can) {
+  $('a-send').hidden = !can;
+  if (!can) $('send-row').hidden = true;
+}
+
 function onMessage(message) {
+  // Saved settings say whether a webhook is there now; the list says it to begin with.
+  if (message.type === 'done' && message.config) showSend(!!message.config.discordWebhook);
   if (Settings.onMessage(message)) return;
   switch (message.type) {
     case 'clips': {
+      showSend(!!message.canSendToDiscord);
       state.clips = message.clips || [];
       state.listed = true;
       if (message.hotkeyLabels && message.hotkeyLabels.hotkey) state.saveKey = message.hotkeyLabels.hotkey;
@@ -1224,6 +1252,7 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
+      if (message.op === 'sendToDiscord') busy($('a-send'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
