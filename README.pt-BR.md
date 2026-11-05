@@ -53,7 +53,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   único jeito de um clipe sair do seu PC, e só quando você clica.
 - **Cópia vertical** para Shorts, TikTok e Reels: a parte da imagem que você escolher, em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
-  de áudio entram e em que volume.
+  de áudio entram, em que volume e se o ruído sai do microfone.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
   É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
 - **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.

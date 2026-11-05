@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Reduce noise for the microphone in the Discord size and vertical copies: hiss and
+  fan noise come out of its track. The clip itself stays as it is.
+
 ## 0.8.15
 
 ### Added
