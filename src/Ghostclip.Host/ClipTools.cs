@@ -203,6 +203,36 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return copy;
     }
 
+    /// <summary>Saves the sound of the trim marks as Game_..._audio.m4a, next to the clip. The library doesn't list it.</summary>
+    public async Task<string> AudioOnlyAsync(string clip, double start, double end, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        if (ClipMedia.TracksToKeep(info.AudioTracks, tracks).Count == 0)
+        {
+            throw new InvalidOperationException(L("There's no sound to save: this clip has none, or every track is off.", "Não há som para salvar: este clipe não tem, ou todas as faixas estão desligadas.", "No hay sonido que guardar: este clip no tiene, o todas las pistas están desactivadas."));
+        }
+        var output = ClipNaming.DerivedPath(clip, "audio", File.Exists, ".m4a");
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.AudioOnly(clip, PartFile.For(output), start, end, info.AudioTracks, tracks, volumes, denoise),
+                TimeSpan.FromMinutes(10), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not save the audio: {r.FirstError}", $"Não foi possível salvar o áudio: {r.FirstError}", $"No se pudo guardar el audio: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Audio of {Clip} from {Start:0.0} to {End:0.0} s: {Output}", clip, start, end, output);
+        return output;
+    }
+
     /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
     public async Task<(string Output, long Bytes)> GifAsync(string clip, double start, double end, CancellationToken ct = default)
     {

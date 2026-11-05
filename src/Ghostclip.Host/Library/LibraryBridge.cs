@@ -242,6 +242,10 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cuts[0],
                         Message: cuts.Count.ToString(CultureInfo.InvariantCulture)));
                     break;
+                case "audio":
+                    var audio = await Job(_tools.AudioOnlyAsync(path, r.Start, r.End, r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: audio));
+                    break;
                 case "frame":
                     var frame = await Job(_tools.FrameAsync(path, r.Start, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: frame));

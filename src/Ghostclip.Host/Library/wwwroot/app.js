@@ -623,6 +623,7 @@ function openClip(path) {
   tracksOff.clear();
   trackVolumes.clear();
   tracksDenoised.clear();
+  $('a-audio').hidden = false;
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
@@ -687,6 +688,7 @@ const tracksDenoised = new Set();
 
 function showExportTracks(meta) {
   const names = trackNames(meta);
+  $('a-audio').hidden = names.length === 0;
   $('tracks-row').hidden = names.length < 2;
   const list = $('track-list');
   list.replaceChildren();
@@ -1054,6 +1056,11 @@ $('a-marks').addEventListener('click', () => {
   toast(L('Cutting around the bookmarks…', 'Cortando em volta dos marcadores…', 'Cortando alrededor de los marcadores…'));
   post({ type: 'bookmarkClips', path: state.current.path });
 });
+$('a-audio').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-audio').classList.contains('busy')) return;
+  busy($('a-audio'), true);
+  post({ type: 'audio', path: state.current.path, start: state.start, end: state.end, ...exportTracks() });
+});
 $('a-frame').addEventListener('click', () => {
   if (!state.current || $('a-frame').classList.contains('busy')) return;
   // Stays on the frame being saved, which is the one the result will show.
@@ -1249,6 +1256,11 @@ function onDone(message) {
         ? L('1 clip saved', '1 clipe salvo', '1 clip guardado')
         : L(`${message.message} clips saved`, `${message.message} clipes salvos`, `${message.message} clips guardados`), false, open);
       break;
+    case 'audio':
+      busy($('a-audio'), false);
+      // Not a clip the library lists: "Show" goes to it in its folder.
+      toast(L('Audio saved', 'Áudio salvo', 'Audio guardado'), false, () => post({ type: 'reveal', path: message.output }));
+      break;
     case 'frame':
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
@@ -1360,6 +1372,7 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
+      if (message.op === 'audio') busy($('a-audio'), false);
       if (message.op === 'bookmarkClips') busy($('a-marks'), false);
       if (message.op === 'sendToDiscord') busy($('a-send'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
