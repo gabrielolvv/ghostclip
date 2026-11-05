@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Settings > Advanced can save your settings to a file and load them back, for another
+  PC or a reinstall. Loading fills the page, and nothing changes until you save. The
+  Discord webhook and FFmpeg's path stay out of the file, and a folder this PC doesn't
+  have stays as it is.
+
 ## 0.8.15
 
 ### Added

@@ -1239,6 +1239,9 @@ function onDone(message) {
       busy($('a-gif'), false);
       toast(L(`GIF saved: ${message.message}`, `GIF salvo: ${message.message}`, `GIF guardado: ${message.message}`), false, open);
       break;
+    case 'exportSettings':
+      toast(L('Backup saved', 'Backup salvo', 'Copia guardada'));
+      break;
     case 'diagnostics':
       toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.', 'Diagnóstico copiado. Pégalo en el chat.'));
       break;

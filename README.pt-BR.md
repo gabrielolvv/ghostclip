@@ -63,6 +63,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   que o Ghostclip não criou nunca são tocados.
 - **Apagar por idade** (opcional): passados os dias que você escolher, os clipes
   vão para a Lixeira, com o mesmo cuidado.
+- **Backup das configurações** num arquivo, para outro PC ou reinstalação, sem o seu webhook.
 - **Inglês, português ou espanhol,** ou o idioma do Windows, trocado na hora.
 
 ## Instalar
