@@ -55,6 +55,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Space limit** (optional): past it, the oldest clips and screenshots make
   room for new ones. Favorites, clips you renamed and anything Ghostclip
   didn't make are never touched.
+- **Delete by age** (optional): past the days you choose, clips go to the Recycle
+  Bin, under the same care.
 - **English, Portuguese or Spanish,** or whatever Windows uses, switched live.
 
 ## Install

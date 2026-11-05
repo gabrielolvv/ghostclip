@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Settings > Clips > Delete clips older than: past the days you choose, clips and
+  screenshots go to the Recycle Bin, when no game is running. Off by default. As with
+  the space limit, favorites, clips you renamed and anything Ghostclip didn't make
+  stay. On a USB stick or a network share it doesn't run, and if Windows would have
+  to delete one for good, such as a clip too big for the bin, it asks first.
+
 ## 0.8.13
 
 ### Added

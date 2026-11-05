@@ -30,6 +30,25 @@ public static class StorageLimit
         clips.Where(c => Counts(root, c)).Sum(c => c.Bytes);
 
     /// <summary>
+    /// The clips older than <paramref name="days"/>, oldest first; none when that's 0. The same rules as the limit:
+    /// only what Ghostclip named, never a favorite, and the newest stays, so a long break doesn't empty the folder.
+    /// </summary>
+    public static IReadOnlyList<ClipEntry> SelectOlderThan(string root, IReadOnlyList<ClipEntry> clips, LibraryState state, int days,
+        DateTime? nowUtc = null)
+    {
+        if (days <= 0) return [];
+        var now = nowUtc ?? DateTime.UtcNow;
+        var cutoff = now.AddDays(-days);
+        return
+        [
+            .. clips.Where(c => Counts(root, c))
+                .OrderBy(c => c.LastWriteUtc > now ? now : c.LastWriteUtc).ThenBy(c => c.Path, StringComparer.OrdinalIgnoreCase)
+                .SkipLast(1)
+                .Where(c => c.LastWriteUtc < cutoff && !state.IsFavorite(c.Path)),
+        ];
+    }
+
+    /// <summary>
     /// The clips to delete, oldest first, to get under <paramref name="limitBytes"/>;
     /// none when there is no limit (0) or the folder is under it.
     /// </summary>
