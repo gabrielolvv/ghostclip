@@ -344,6 +344,25 @@ public static class FfmpegArgs
         }
     }
 
+    /// <summary>
+    /// Where to seek for the frame the player is showing at <paramref name="at"/>. FFmpeg drops everything
+    /// before the time it's given and the player shows the frame it has reached, so this lands a little
+    /// before that frame, which rounding can't push past it.
+    /// </summary>
+    public static double FrameSeek(double at, double fps)
+    {
+        if (fps <= 0) return at;
+        return Math.Max(0, (Math.Floor(at * fps + 1e-6) - 0.25) / fps);
+    }
+
+    /// <summary>One frame of a clip as a JPEG at the screenshot hotkey's quality.</summary>
+    public static IReadOnlyList<string> Frame(string input, string output, double seek) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+        "-ss", Inv($"{seek:0.000000}"), "-i", input,
+        "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "2", "-f", "image2", "-update", "1", output,
+    ];
+
     /// <summary>The longest GIF: past this it's a big file nobody can send.</summary>
     public const double GifMaxSeconds = 15;
 

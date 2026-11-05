@@ -144,6 +144,32 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return output;
     }
 
+    /// <summary>Saves the frame the player is showing as Game_..._frame.jpg, next to the clip.</summary>
+    public async Task<string> FrameAsync(string clip, double at, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var output = ClipNaming.DerivedPath(clip, "frame", File.Exists, ".jpg");
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Frame(clip, PartFile.For(output), FfmpegArgs.FrameSeek(at, info.Fps)),
+                TimeSpan.FromMinutes(2), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded || !File.Exists(PartFile.For(output)))
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not save the frame: {r.FirstError}", $"Não foi possível salvar o quadro: {r.FirstError}", $"No se pudo guardar el fotograma: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Frame of {Clip} at {At:0.000} s: {Output}", clip, at, output);
+        return output;
+    }
+
     /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
     public async Task<(string Output, long Bytes)> GifAsync(string clip, double start, double end, CancellationToken ct = default)
     {

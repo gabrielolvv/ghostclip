@@ -52,6 +52,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   de áudio entram e em que volume.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
   É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
+- **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
@@ -134,7 +135,8 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as
-  setas navegam, vírgula e ponto andam quadro a quadro, e I e O marcam o corte.
+  setas navegam, vírgula e ponto andam quadro a quadro, I e O marcam o corte, e < e > mudam a
+  velocidade, de 0,25x a 2x.
 - As configurações são uma página da biblioteca (a engrenagem na barra
   lateral, ou Configurações no menu da bandeja). Elas ficam em
   `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão, a bandeja aplica

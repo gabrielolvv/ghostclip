@@ -593,6 +593,25 @@ function showView(name) {
   $('nav-settings').classList.toggle('on', name === 'settings');
 }
 
+// How fast the player goes. It changes what you see, never the file, so every clip starts at normal speed.
+const SPEEDS = [0.25, 0.5, 1, 2];
+
+function setSpeed(speed) {
+  // The default too: a video that loads again, after a delete that failed, keeps this speed.
+  video.defaultPlaybackRate = speed;
+  video.playbackRate = speed;
+  $('speed').textContent = `${speed}x`;
+  $('speed').classList.toggle('changed', speed !== 1);
+}
+
+function stepSpeed(by, wrap) {
+  const at = SPEEDS.indexOf(video.playbackRate) + by;
+  const next = wrap ? (at + SPEEDS.length) % SPEEDS.length : Math.min(SPEEDS.length - 1, Math.max(0, at));
+  setSpeed(SPEEDS[next]);
+}
+
+$('speed').addEventListener('click', () => stepSpeed(1, true));
+
 function openClip(path) {
   const clip = state.clips.find(c => c.path.toLowerCase() === path.toLowerCase());
   if (!clip) {
@@ -600,6 +619,7 @@ function openClip(path) {
     return;
   }
   state.current = clip;
+  setSpeed(1);
   tracksOff.clear();
   trackVolumes.clear();
   $('tracks-row').hidden = true;
@@ -932,6 +952,13 @@ $('a-gif').addEventListener('click', () => {
   toast(L('Making the GIF…', 'Fazendo o GIF…', 'Haciendo el GIF…'));
   post({ type: 'gif', path: state.current.path, start: state.start, end: state.end });
 });
+$('a-frame').addEventListener('click', () => {
+  if (!state.current || $('a-frame').classList.contains('busy')) return;
+  // Stays on the frame being saved, which is the one the result will show.
+  video.pause();
+  busy($('a-frame'), true);
+  post({ type: 'frame', path: state.current.path, start: video.currentTime });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1056,6 +1083,9 @@ function playerKey(e) {
   } else if (key === 'i' || key === 'o') {
     e.preventDefault();
     moveHandle(key === 'i' ? 'start' : 'end', video.currentTime);
+  } else if (key === '<' || key === '>') {
+    e.preventDefault();
+    stepSpeed(key === '<' ? -1 : 1, false);
   }
 }
 
@@ -1090,6 +1120,10 @@ function onDone(message) {
     case 'vertical':
       busy($('a-vertical'), false);
       toast(L('Vertical copy saved', 'Cópia vertical salva', 'Copia vertical guardada'), false, open);
+      break;
+    case 'frame':
+      busy($('a-frame'), false);
+      toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
       break;
     case 'gif':
       busy($('a-gif'), false);
@@ -1189,6 +1223,7 @@ function onMessage(message) {
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
+      if (message.op === 'frame') busy($('a-frame'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
