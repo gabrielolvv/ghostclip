@@ -47,7 +47,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
-- **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
+- **Cópia vertical** para Shorts, TikTok e Reels: a parte da imagem que você escolher, em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
   de áudio entram e em que volume.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.

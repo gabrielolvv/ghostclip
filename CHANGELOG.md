@@ -12,6 +12,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the space limit, favorites, clips you renamed and anything Ghostclip didn't make
   stay. On a USB stick or a network share it doesn't run, and if Windows would have
   to delete one for good, such as a clip too big for the bin, it asks first.
+- In a vertical copy you choose the part of the picture: drag the 9:16 frame over
+  the video, or move it with the arrows. It starts in the middle, as before.
 
 ## 0.8.13
 

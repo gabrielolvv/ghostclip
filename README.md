@@ -45,7 +45,7 @@ QuickSync). There is no CPU encoder fallback.
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
   (10 MB by default), mixing game and mic into one track.
-- **Vertical copy** for Shorts, TikTok and Reels: the middle of the picture at
+- **Vertical copy** for Shorts, TikTok and Reels: the part of the picture you choose, at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
   audio tracks go in, and at what volume.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.

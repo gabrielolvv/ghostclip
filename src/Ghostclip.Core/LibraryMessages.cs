@@ -13,7 +13,7 @@ namespace Ghostclip.Core;
 /// pickFolder and pickFfmpeg for the settings page.
 /// </summary>
 public sealed record LibraryRequest(string Type, string? Path = null, double Start = 0, double End = 0,
-    GhostclipConfig? Config = null, bool Confirmed = false, string? Name = null, bool Favorite = false, IReadOnlyList<string>? Paths = null, IReadOnlyList<int>? Tracks = null, IReadOnlyList<double>? Volumes = null);
+    GhostclipConfig? Config = null, bool Confirmed = false, string? Name = null, bool Favorite = false, IReadOnlyList<string>? Paths = null, IReadOnlyList<int>? Tracks = null, IReadOnlyList<double>? Volumes = null, double CropAt = 0.5);
 
 /// <summary>
 /// A clip or screenshot as the page sees it. Url plays or shows it through the
