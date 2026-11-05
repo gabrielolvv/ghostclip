@@ -9,6 +9,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 - Save frame in the player: the frame on screen becomes a JPEG next to the clip,
   at the same quality as a screenshot.
+- The player goes at 0.25x, 0.5x, 1x or 2x, from a button or the < and > keys, to
+  see a play in slow motion or get through a long session. The file stays as it is.
 
 ## 0.8.12
 
