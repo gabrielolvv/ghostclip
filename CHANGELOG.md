@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Clips from bookmarks: in a session, a button cuts a clip around each bookmark,
+  without re-encoding, from the game's clip length before it to 15 seconds after, so
+  you also get what happened next. Bookmarks close together make one clip.
+
 ## 0.8.14
 
 ### Added

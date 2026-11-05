@@ -656,6 +656,7 @@ function openClip(path) {
 }
 
 function showFavorite() {
+  $('a-marks').hidden = !(state.current && state.current.bookmarks && state.current.bookmarks.length);
   const on = !!(state.current && state.current.favorite);
   $('a-favorite').setAttribute('aria-pressed', String(on));
 }
@@ -1029,6 +1030,12 @@ $('a-gif').addEventListener('click', () => {
   toast(L('Making the GIF…', 'Fazendo o GIF…', 'Haciendo el GIF…'));
   post({ type: 'gif', path: state.current.path, start: state.start, end: state.end });
 });
+$('a-marks').addEventListener('click', () => {
+  if (!state.current || $('a-marks').classList.contains('busy')) return;
+  busy($('a-marks'), true);
+  toast(L('Cutting around the bookmarks…', 'Cortando em volta dos marcadores…', 'Cortando alrededor de los marcadores…'));
+  post({ type: 'bookmarkClips', path: state.current.path });
+});
 $('a-frame').addEventListener('click', () => {
   if (!state.current || $('a-frame').classList.contains('busy')) return;
   // Stays on the frame being saved, which is the one the result will show.
@@ -1218,6 +1225,12 @@ function onDone(message) {
       busy($('a-send'), false);
       toast(L('Sent to Discord', 'Enviado ao Discord', 'Enviado a Discord'), false, open);
       break;
+    case 'bookmarkClips':
+      busy($('a-marks'), false);
+      toast(message.message === '1'
+        ? L('1 clip saved', '1 clipe salvo', '1 clip guardado')
+        : L(`${message.message} clips saved`, `${message.message} clipes salvos`, `${message.message} clips guardados`), false, open);
+      break;
     case 'frame':
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
@@ -1329,6 +1342,7 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
+      if (message.op === 'bookmarkClips') busy($('a-marks'), false);
       if (message.op === 'sendToDiscord') busy($('a-send'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
       if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });

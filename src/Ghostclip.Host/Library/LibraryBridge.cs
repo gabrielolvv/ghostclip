@@ -232,6 +232,16 @@ internal sealed class LibraryBridge : IDisposable
                     var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: sentCopy));
                     break;
+                case "bookmarkClips":
+                    if (!LibraryStore.TryRead(_paths.LibraryFile, out var marked))
+                    {
+                        throw new InvalidOperationException(L("The file that keeps the bookmarks can't be read.", "O arquivo dos marcadores não pode ser lido.", "No se puede leer el archivo de los marcadores."));
+                    }
+                    var (sessionMeta, _) = await Track(_meta.GetAsync(path, _closing.Token)).ConfigureAwait(true);
+                    var cuts = await Job(_tools.BookmarkClipsAsync(path, marked.BookmarksFor(path), sessionMeta, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cuts[0],
+                        Message: cuts.Count.ToString(CultureInfo.InvariantCulture)));
+                    break;
                 case "frame":
                     var frame = await Job(_tools.FrameAsync(path, r.Start, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: frame));
