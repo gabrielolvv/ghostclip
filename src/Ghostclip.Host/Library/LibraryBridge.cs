@@ -225,7 +225,7 @@ internal sealed class LibraryBridge : IDisposable
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
                 case "vertical":
-                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, _closing.Token)).ConfigureAwait(true);
+                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
                 case "sendToDiscord":

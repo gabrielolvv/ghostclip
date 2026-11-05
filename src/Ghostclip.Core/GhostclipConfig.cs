@@ -153,6 +153,12 @@ public sealed record GhostclipConfig
     /// </summary>
     public string? DiscordWebhook { get; set; }
 
+    /// <summary>
+    /// Clips and screenshots older than this many days go to the Recycle Bin, under the same care as
+    /// <see cref="StorageLimitGB"/>. 0, the default, keeps them.
+    /// </summary>
+    public int MaxClipAgeDays { get; set; }
+
     /// <summary>Programs that pause recording while they are in front, by process name. Applies live.</summary>
     public AppNameList PrivateApps { get; set; } = [];
 
@@ -242,6 +248,7 @@ public sealed record GhostclipConfig
         DiscordLimitMB = Math.Clamp(DiscordLimitMB, 1, 4096),
         DiscordWebhook = Core.DiscordWebhook.IsValid(DiscordWebhook?.Trim()) ? DiscordWebhook!.Trim() : null,
         StorageLimitGB = Math.Clamp(StorageLimitGB, 0, 100_000),
+        MaxClipAgeDays = Math.Clamp(MaxClipAgeDays, 0, 36_500),
         PrivateApps = new AppNameList((PrivateApps ?? []).Select(AppName).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)),
         Profiles = new GameProfileList((Profiles ?? [])
             .Where(p => !string.IsNullOrWhiteSpace(p.Game))

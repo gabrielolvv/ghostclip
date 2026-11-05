@@ -149,7 +149,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             warnings.Add(L($"Saving restarts recording and clears the last {before!.MaxClipSeconds} s of replay.",
                 $"Salvar reinicia a gravação e apaga os últimos {before!.MaxClipSeconds} s de replay.", $"Guardar reinicia la grabación y borra los últimos {before!.MaxClipSeconds} s de repetición."));
         }
-        if (!r.Confirmed && config.StorageLimitGB > 0)
+        if (!r.Confirmed && (config.StorageLimitGB > 0 || config.MaxClipAgeDays > 0))
         {
             var root = config.ResolvedClipsFolder;
             // Same rule as the tray's StorageKeeper: with favorites unknown, nothing is deleted, and saying so
@@ -158,6 +158,19 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
             var deleting = readable
                 ? StorageLimit.SelectForDeletion(root, ClipLibrary.Scan(root), state, config.StorageLimitGB * StorageLimit.BytesPerGB)
                 : [];
+            var old = readable ? StorageLimit.SelectOlderThan(root, ClipLibrary.Scan(root), state, config.MaxClipAgeDays) : [];
+            if (old.Count > 0 && !RecycleBin.HasOne(root))
+            {
+                warnings.Add(L($"Deleting by age won't run: {root} has no Recycle Bin to send clips to.",
+                    $"Apagar por idade não vai funcionar: {root} não tem Lixeira para onde mandar os clipes.",
+                    $"Eliminar por antigüedad no funcionará: {root} no tiene Papelera a la que enviar los clips."));
+            }
+            else if (old.Count > 0)
+            {
+                warnings.Add(L($"{old.Count} clips older than {config.MaxClipAgeDays} days go to the Recycle Bin. Favorites stay.",
+                    $"{old.Count} clipes com mais de {config.MaxClipAgeDays} dias vão para a Lixeira. Os favoritos ficam.",
+                    $"{old.Count} clips de más de {config.MaxClipAgeDays} días van a la Papelera. Los favoritos se quedan."));
+            }
             if (!readable)
             {
                 warnings.Add(L("The space limit is paused: the file that keeps your favorites can't be read, so nothing is deleted.",

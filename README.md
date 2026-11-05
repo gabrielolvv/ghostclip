@@ -47,7 +47,7 @@ QuickSync). There is no CPU encoder fallback.
   (10 MB by default), mixing game and mic into one track.
 - **Send to Discord** from the player, through a webhook of yours, fitted to the
   limit. It's the only way a clip leaves your PC, and only when you click.
-- **Vertical copy** for Shorts, TikTok and Reels: the middle of the picture at
+- **Vertical copy** for Shorts, TikTok and Reels: the part of the picture you choose, at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
   audio tracks go in, and at what volume.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
@@ -57,6 +57,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Space limit** (optional): past it, the oldest clips and screenshots make
   room for new ones. Favorites, clips you renamed and anything Ghostclip
   didn't make are never touched.
+- **Delete by age** (optional): past the days you choose, clips go to the Recycle
+  Bin, under the same care.
 - **English, Portuguese or Spanish,** or whatever Windows uses, switched live.
 
 ## Install

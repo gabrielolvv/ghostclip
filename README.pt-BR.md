@@ -49,7 +49,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   (10 MB por padrão), juntando jogo e microfone numa faixa só.
 - **Enviar ao Discord** pelo player, por um webhook seu, ajustado ao limite. É o
   único jeito de um clipe sair do seu PC, e só quando você clica.
-- **Cópia vertical** para Shorts, TikTok e Reels: o meio da imagem em 1080x1920,
+- **Cópia vertical** para Shorts, TikTok e Reels: a parte da imagem que você escolher, em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
   de áudio entram e em que volume.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
@@ -59,6 +59,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
   que o Ghostclip não criou nunca são tocados.
+- **Apagar por idade** (opcional): passados os dias que você escolher, os clipes
+  vão para a Lixeira, com o mesmo cuidado.
 - **Inglês, português ou espanhol,** ou o idioma do Windows, trocado na hora.
 
 ## Instalar

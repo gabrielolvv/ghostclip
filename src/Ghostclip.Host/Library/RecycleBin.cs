@@ -26,6 +26,54 @@ internal static partial class RecycleBin
     }
 
     /// <summary>
+    /// For what runs on its own, on its own STA thread as the shell wants. Normally silent. But Windows can't always
+    /// recycle (a clip bigger than the bin, or a drive set not to use it), and it would then destroy the file: so it
+    /// keeps its warning, which is a window. Not for use during a game. Returns the ones still there, and whether the
+    /// person said to keep them.
+    /// </summary>
+    public static (IReadOnlyList<string> Kept, bool Declined) SendFromBackground(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0) return ([], false);
+        var declined = false;
+        var thread = new Thread(() =>
+        {
+            var (result, aborted) = Run(paths, 0);
+            declined = aborted;
+            if (result == 0 || aborted) return;
+            // One in use can stop the rest, which get a try of their own.
+            foreach (var path in paths.Where(File.Exists))
+            {
+                if (Run([path], 0).Aborted)
+                {
+                    declined = true;
+                    return;
+                }
+            }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        return ([.. paths.Where(File.Exists)], declined);
+    }
+
+    /// <summary>
+    /// Whether to try at all: a network share or a USB stick has no Recycle Bin, or may not, and asking about every
+    /// clip there would be no use. A fixed drive usually has one, but see <see cref="SendFromBackground"/>.
+    /// </summary>
+    public static bool HasOne(string folder)
+    {
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(folder));
+            return !string.IsNullOrEmpty(root) && !root.StartsWith(@"\", StringComparison.Ordinal) && new DriveInfo(root).DriveType == DriveType.Fixed;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Several in one go, so a drive with no Recycle Bin asks once and not per file. Returns the ones still there:
     /// kept, or in use. One in use can stop the rest, which get a try of their own, unless the user said to keep them.
     /// </summary>

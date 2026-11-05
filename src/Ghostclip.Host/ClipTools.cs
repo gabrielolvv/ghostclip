@@ -117,8 +117,8 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return (output, size);
     }
 
-    /// <summary>Re-encodes the middle of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
-    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, CancellationToken ct = default)
+    /// <summary>Re-encodes a part of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
+    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, CancellationToken ct = default)
     {
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var encoder = HardwareEncoder(config());
@@ -126,7 +126,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes, cropAt),
                 FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

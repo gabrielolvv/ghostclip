@@ -59,6 +59,11 @@ const Settings = (() => {
           '0 guarda tudo. Passando do limite, os mais antigos são apagados de vez; favoritos e clipes renomeados nunca.', '0 guarda todo. Al pasar el límite, los más antiguos se eliminan definitivamente; los favoritos y los clips renombrados nunca.')
           + (s.storageBytes != null ? L(` Using ${fmtSize(s.storageBytes)} now.`, ` Usando ${fmtSize(s.storageBytes)} agora.`, ` Usando ${fmtSize(s.storageBytes)} ahora.`) : ''),
         type: 'number', unit: 'GB', min: 0, max: 100000 },
+      { key: 'maxClipAgeDays', label: L('Delete clips older than', 'Apagar clipes com mais de', 'Eliminar clips de más de'),
+        hint: L('0 keeps them. Past this age they go to the Recycle Bin when no game is running; favorites and clips you renamed never do. To keep one you bring back from the bin, star it.',
+          '0 guarda. Passando dessa idade, vão para a Lixeira quando nenhum jogo está aberto; favoritos e clipes renomeados nunca. Para manter um que você recuperar da Lixeira, marque como favorito.',
+          '0 los guarda. Pasada esta antigüedad van a la Papelera cuando no hay ningún juego abierto; los favoritos y los clips renombrados nunca. Para conservar uno que recuperes de la Papelera, márcalo como favorito.'),
+        type: 'number', unit: L('DAYS', 'DIAS', 'DÍAS'), min: 0, max: 36500 },
     ] },
     { title: L('VIDEO', 'VÍDEO', 'VIDEO'), note: L('Changing these restarts recording and clears the replay buffer.', 'Mudar estas opções reinicia a gravação e limpa o buffer de replay.', 'Cambiar estas opciones reinicia la grabación y limpia el búfer de repetición.'), fields: [
       { key: 'fps', label: L('Frame rate', 'Taxa de quadros', 'Fotogramas por segundo'), hint: L('Capturing below the monitor’s refresh rate costs less.', 'Capturar abaixo da taxa de atualização do monitor custa menos.', 'Capturar por debajo de la frecuencia de actualización del monitor cuesta menos.'),
