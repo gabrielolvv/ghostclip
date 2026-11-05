@@ -87,6 +87,11 @@ main { min-width: 0; min-height: 0; display: flex; }
 .card:hover, .card:focus-visible { border-color: rgba(92, 225, 230, 0.55); outline: none; }
 .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--raised) center / cover no-repeat; }
 .thumb.loaded { animation: fade var(--fast) ease-out; }
+.preview {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity var(--fast) ease-out; pointer-events: none;
+}
+.preview.on { opacity: 1; }
 .chip {
   position: absolute; right: 6px; bottom: 6px; padding: 1px 6px; border-radius: 4px;
   background: rgba(11, 13, 16, 0.78); font: 11px var(--mono);
