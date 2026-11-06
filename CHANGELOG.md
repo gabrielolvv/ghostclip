@@ -7,6 +7,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Copy trim in the player: cuts the trim marks without re-encoding and puts the result
+  on the clipboard, to paste in Discord in one step. The cut stays in the library.
 - A date filter in the library: today, the last 7 days or the last 30 days, together
   with the game, the search and the sort.
 - Play all in the library: the videos in the list on screen, one after another. Going

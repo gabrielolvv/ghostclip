@@ -265,6 +265,12 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: gif,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{gifBytes / 1024.0 / 1024:0.0} MB")));
                     break;
+                case "copyTrim":
+                    // The clipboard takes files, so the cut is saved like any trim. Back on this thread for the clipboard.
+                    var cut = await Job(_tools.TrimAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
+                    Clipboard.SetFileDropList(new StringCollection { cut });
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cut));
+                    break;
                 case "copy":
                     Clipboard.SetFileDropList(new StringCollection { path });
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));

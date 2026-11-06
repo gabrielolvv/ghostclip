@@ -46,6 +46,7 @@ QuickSync). There is no CPU encoder fallback.
   several at once. It runs only while its window is open.
 - **Play all** the videos in a list, one after another, to go back over a game or
   your favorites.
+- **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
