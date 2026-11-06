@@ -367,7 +367,9 @@ function applyMeta(card, path) {
   const entry = state.meta.get(path);
   if (!entry) return;
   const thumb = card.querySelector('.thumb');
-  if (entry.thumb && !thumb.style.backgroundImage) {
+  // A cover picked later arrives as another address, and takes the place of the one shown.
+  if (entry.thumb && thumb.dataset.shown !== entry.thumb) {
+    thumb.dataset.shown = entry.thumb;
     thumb.style.backgroundImage = `url("${entry.thumb}")`;
     thumb.classList.add('loaded');
   }
@@ -1092,6 +1094,11 @@ $('s-yes').addEventListener('click', () => {
   toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
   post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
 });
+$('a-cover').addEventListener('click', () => {
+  if (!state.current || $('a-cover').classList.contains('busy')) return;
+  busy($('a-cover'), true);
+  post({ type: 'cover', path: state.current.path, start: video.currentTime });
+});
 // When the field is left or Enter is pressed. Leaving the clip leaves the field first.
 $('tags').addEventListener('change', () => {
   if (state.current) post({ type: 'tags', path: state.current.path, tags: $('tags').value.split(',') });
@@ -1247,6 +1254,15 @@ function toast(text, error = false, show = null) {
 function onDone(message) {
   const open = message.output ? () => openWhenListed(message.output) : null;
   switch (message.op) {
+    case 'cover': {
+      busy($('a-cover'), false);
+      const entry = state.meta.get(message.path);
+      if (entry) entry.thumb = message.thumb;
+      const card = [...document.querySelectorAll('.card')].find(c => c.dataset.path === message.path);
+      if (card) applyMeta(card, message.path);
+      toast(L('Cover changed', 'Capa alterada', 'Portada cambiada'));
+      break;
+    }
     case 'trim':
       busy($('a-trim'), false);
       toast(L('Trim saved', 'Corte salvo', 'Recorte guardado'), false, open);
@@ -1384,6 +1400,7 @@ function onMessage(message) {
       break;
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
+      if (message.op === 'cover') busy($('a-cover'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);

@@ -33,6 +33,9 @@ public sealed record LibraryState
     /// <summary>Seconds from the start of the clip, ascending.</summary>
     public Dictionary<string, List<double>> Bookmarks { get; set; } = [];
 
+    /// <summary>The second of a clip people picked for its card.</summary>
+    public Dictionary<string, double> Covers { get; set; } = [];
+
     /// <summary>Words people wrote on a clip to find it again.</summary>
     public Dictionary<string, List<string>> Tags { get; set; } = [];
 
@@ -49,6 +52,33 @@ public sealed record LibraryState
     public IReadOnlyList<double> BookmarksFor(string path) =>
         (Bookmarks.FirstOrDefault(b => string.Equals(b.Key, path, StringComparison.OrdinalIgnoreCase)).Value
             ?? Bookmarks.FirstOrDefault(b => SameClip(b.Key, path)).Value) ?? [];
+
+    public double? CoverFor(string path)
+    {
+        foreach (var cover in Covers)
+        {
+            if (SamePath(cover.Key, path)) return cover.Value;
+        }
+        foreach (var cover in Covers)
+        {
+            if (SameClip(cover.Key, path)) return cover.Value;
+        }
+        return null;
+    }
+
+    public void SetCover(string path, double seconds)
+    {
+        RemoveCover(path);
+        if (seconds >= 0) Covers[path] = seconds;
+    }
+
+    private void RemoveCover(string path)
+    {
+        foreach (var key in Covers.Keys.Where(k => SamePath(k, path)).ToList())
+        {
+            Covers.Remove(key);
+        }
+    }
 
     public IReadOnlyList<string> TagsFor(string path) =>
         (Tags.FirstOrDefault(t => SamePath(t.Key, path)).Value
@@ -102,10 +132,12 @@ public sealed record LibraryState
     {
         var favorite = IsFavorite(from);
         var bookmarks = BookmarksFor(from).ToList();
+        var cover = CoverFor(from);
         var tags = TagsFor(from).ToList();
         Forget(from);
         if (favorite) SetFavorite(to, true);
         SetBookmarks(to, bookmarks);
+        if (cover is { } seconds) SetCover(to, seconds);
         SetTags(to, tags);
     }
 
@@ -115,6 +147,7 @@ public sealed record LibraryState
         Favorites.RemoveAll(p => SamePath(p, path));
         _favoriteTails = null;
         RemoveBookmarks(path);
+        RemoveCover(path);
         RemoveTags(path);
     }
 

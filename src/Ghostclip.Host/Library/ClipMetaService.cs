@@ -16,12 +16,13 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
 
     public string ThumbsDir { get; } = Path.Combine(paths.DataDir, "Thumbs");
 
-    public async Task<(ClipMeta Meta, string? ThumbFile)> GetAsync(string clip, CancellationToken ct)
+    /// <param name="coverAt">The second people picked for its card; null for the automatic one.</param>
+    public async Task<(ClipMeta Meta, string? ThumbFile)> GetAsync(string clip, CancellationToken ct, double? coverAt = null)
     {
         var info = new FileInfo(clip);
         var key = ClipMedia.CacheKey(clip, info.Length, info.LastWriteTimeUtc);
         var metaFile = Path.Combine(ThumbsDir, key + ".json");
-        var thumb = Path.Combine(ThumbsDir, key + ".jpg");
+        var thumb = Path.Combine(ThumbsDir, ClipMedia.ThumbName(key, coverAt));
         var meta = ReadCached(metaFile);
         if (meta is not null && File.Exists(thumb))
         {
@@ -58,7 +59,7 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
             ProcessResult shot;
             try
             {
-                shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, part, meta.Duration / 3),
+                shot = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.Thumbnail(clip, part, coverAt is { } at ? FfmpegArgs.FrameSeek(at, meta.Fps) : meta.Duration / 3),
                     TimeSpan.FromSeconds(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
