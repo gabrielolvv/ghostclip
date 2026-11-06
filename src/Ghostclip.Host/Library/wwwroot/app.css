@@ -231,6 +231,12 @@ main { min-width: 0; min-height: 0; display: flex; }
 .menu-wrap:has(#a-fade[aria-pressed=true]) #a-export::after { content: "· fade"; margin-left: 2px; font: 11px var(--mono); color: var(--accent); }
 .is-image .menu-wrap { display: none; }
 
+/* The menu of a card, where the pointer is. */
+#card-menu { position: fixed; left: 0; top: 0; bottom: auto; z-index: 20; min-width: 200px; }
+#card-menu .act { width: 100%; justify-content: flex-start; border-color: transparent; background: none; }
+#card-menu .act:hover, #card-menu .act:focus-visible { background: rgba(255, 255, 255, 0.06); outline: none; }
+#card-menu .act.danger { color: var(--red); }
+
 /* Favorites, screenshots and bookmarks */
 .act[aria-pressed=true] { color: #E5B34B; border-color: rgba(229, 179, 75, 0.5); }
 .act[aria-pressed=true] svg { fill: currentColor; }

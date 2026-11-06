@@ -364,7 +364,25 @@ function renderCard(clip) {
     } else if (e.key === 'Enter') {
       if (selected.size > 0) togglePick(clip.path, e.shiftKey);
       else openClip(clip.path);
+    } else if (e.key === 'F2') {
+      e.preventDefault();
+      renameClip(clip);
+    } else if (e.key === 'Delete' && selected.size === 0) {
+      e.preventDefault();
+      // Stopped here: what the Delete key does with a selection is to ask, and this just asked.
+      e.stopPropagation();
+      askToDelete(clip);
+    } else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      favoriteClip(clip);
     }
+  });
+  card.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    // From the keyboard there's no pointer: at the card.
+    const box = card.getBoundingClientRect();
+    if (e.button === 0 && e.clientX === 0 && e.clientY === 0) openCardMenu(clip, box.left + 16, box.top + 16);
+    else openCardMenu(clip, e.clientX, e.clientY);
   });
   if (!clip.image) {
     card.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') previewSoon(card, clip); });
@@ -441,6 +459,76 @@ preview.addEventListener('playing', () => preview.classList.add('on'));
 preview.addEventListener('error', stopPreview);
 window.addEventListener('blur', stopPreview);
 document.addEventListener('visibilitychange', stopPreview);
+
+// What a card can do without opening it, from its menu and from the keys.
+function renameClip(clip) {
+  openClip(clip.path);
+  $('a-rename').click();
+}
+
+function favoriteClip(clip) {
+  post({ type: 'favorite', path: clip.path, favorite: !clip.favorite });
+}
+
+// To the Recycle Bin question, about the selection when this card is in it and about this card otherwise.
+function askToDelete(clip) {
+  if (!selected.has(clip.path)) {
+    clearSelection();
+    togglePick(clip.path, false);
+  }
+  $('sel-bin').click();
+}
+
+function closeCardMenu() {
+  $('card-menu').hidden = true;
+}
+
+function openCardMenu(clip, x, y) {
+  const menu = $('card-menu');
+  const item = (label, action, className) => {
+    const b = el('button', 'act' + (className ? ' ' + className : ''), label);
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.addEventListener('click', () => { closeCardMenu(); action(); });
+    return b;
+  };
+  menu.replaceChildren(
+    item(L('Open', 'Abrir', 'Abrir'), () => openClip(clip.path)),
+    item(L('Copy file', 'Copiar arquivo', 'Copiar archivo'), () => post({ type: 'copy', path: clip.path })),
+    item(clip.favorite ? L('Remove from favorites', 'Tirar dos favoritos', 'Quitar de favoritos') : L('Add to favorites', 'Adicionar aos favoritos', 'Añadir a favoritos'), () => favoriteClip(clip)),
+    item(L('Rename', 'Renomear', 'Renombrar'), () => renameClip(clip)),
+    item(L('Show in folder', 'Mostrar na pasta', 'Mostrar en la carpeta'), () => post({ type: 'reveal', path: clip.path })),
+    item(selected.has(clip.path) ? L('Unselect', 'Tirar da seleção', 'Quitar de la selección') : L('Select', 'Selecionar', 'Seleccionar'), () => togglePick(clip.path, false)),
+    item(L('Delete', 'Apagar', 'Eliminar'), () => askToDelete(clip), 'danger'),
+  );
+  menu.hidden = false;
+  // Inside the window, whichever corner the card is in.
+  const box = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(4, Math.min(x, innerWidth - box.width - 4))}px`;
+  menu.style.top = `${Math.max(4, Math.min(y, innerHeight - box.height - 4))}px`;
+  menu.querySelector('button').focus();
+}
+
+document.addEventListener('pointerdown', e => {
+  if (!$('card-menu').hidden && !e.target.closest('#card-menu')) closeCardMenu();
+});
+window.addEventListener('blur', closeCardMenu);
+document.addEventListener('scroll', closeCardMenu, true);
+// First, so Esc and the arrows are the menu's while it's open.
+document.addEventListener('keydown', e => {
+  if ($('card-menu').hidden) return;
+  if (e.key === 'Escape' || e.key === 'Tab') {
+    e.preventDefault();
+    e.stopPropagation();
+    closeCardMenu();
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    e.stopPropagation();
+    const items = [...$('card-menu').querySelectorAll('button')];
+    const at = items.indexOf(document.activeElement);
+    items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+  }
+}, true);
 
 // Selection: acting on several clips at once. Only what is on screen stays selected, so an action never
 // touches a clip hidden by the search or another game.
