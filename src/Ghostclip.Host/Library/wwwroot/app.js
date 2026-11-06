@@ -613,6 +613,50 @@ function showView(name) {
   $('nav-settings').classList.toggle('on', name === 'settings');
 }
 
+// How loud the player goes. It changes what you hear, never the file, and stays from clip to clip and between visits.
+const VOLUMES = ['100', ...Array.from({ length: 20 }, (_, i) => String(i * 5))];
+
+function setVolume(percent, keep = true) {
+  video.volume = percent / 100;
+  $('volume').value = percent;
+  if (keep) keepChoice('playerVolume', String(percent));
+}
+
+function setMuted(muted, keep = true) {
+  video.muted = muted;
+  $('mute').setAttribute('aria-pressed', String(muted));
+  $('mute').setAttribute('aria-label', muted ? L('Unmute', 'Ativar o som', 'Activar el sonido') : L('Mute', 'Silenciar', 'Silenciar'));
+  if (keep) keepChoice('playerMuted', String(muted));
+}
+
+setVolume(Number(readChoice('playerVolume', VOLUMES)), false);
+setMuted(readChoice('playerMuted', ['false', 'true']) === 'true', false);
+
+$('volume').addEventListener('input', () => {
+  setVolume(Number($('volume').value));
+  if (video.muted && video.volume > 0) setMuted(false);
+});
+// Let go of with the mouse, it gives the keys back to the player. By keyboard, it keeps its place.
+$('volume').addEventListener('pointerup', () => $('volume').blur());
+$('mute').addEventListener('click', () => setMuted(!video.muted));
+
+// Full screen is the picture alone, and the window follows it (see LibraryWindow).
+let leftFullScreenAt = 0;
+
+function toggleFullScreen() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else document.querySelector('.stage').requestFullscreen().catch(() => {});
+}
+
+$('full').addEventListener('click', toggleFullScreen);
+document.querySelector('.stage').addEventListener('dblclick', e => {
+  // The frame of a vertical copy is being dragged, not the picture asked for.
+  if (e.target !== $('vframe')) toggleFullScreen();
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) leftFullScreenAt = performance.now();
+});
+
 // How fast the player goes. It changes what you see, never the file, so every clip starts at normal speed.
 const SPEEDS = [0.25, 0.5, 1, 2];
 
@@ -754,6 +798,7 @@ function showFavorite() {
 }
 
 function closeClip() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   sequence = null;
   releaseVideo();
   state.current = null;
@@ -1307,6 +1352,24 @@ function resortSoon() {
 
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
+  // Esc leaves full screen first: it mustn't also close the clip, whichever of the two hears it first.
+  if (e.key === 'Escape' && (document.fullscreenElement || performance.now() - leftFullScreenAt < 300)) {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    return;
+  }
+  if (state.current && !$('clip').hidden && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+    const letter = e.key.toLowerCase();
+    if (letter === 'f') {
+      e.preventDefault();
+      toggleFullScreen();
+      return;
+    }
+    if (letter === 'm' && !state.current.image) {
+      e.preventDefault();
+      setMuted(!video.muted);
+      return;
+    }
+  }
   if (e.key === 'Escape' && state.current) closeClip();
   else if (e.key === 'Escape' && Settings.isOpen()) showView('library');
   if (state.current && !$('clip').hidden && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && (e.key === 'n' || e.key === 'N' || e.key === 'p' || e.key === 'P')) {
@@ -1342,6 +1405,15 @@ function playerKey(e) {
   } else if (key === 'i' || key === 'o') {
     e.preventDefault();
     moveHandle(key === 'i' ? 'start' : 'end', video.currentTime);
+  } else if (key === 'b' && state.current.bookmarks) {
+    // Shift goes back. A little room, so going back from a mark just reached doesn't land on it again.
+    const marks = state.current.bookmarks.filter(at => at <= meta.duration).sort((a, b) => a - b);
+    const at = video.currentTime;
+    const target = e.shiftKey ? marks.filter(m => m < at - 0.5).pop() : marks.find(m => m > at + 0.05);
+    if (target !== undefined) {
+      e.preventDefault();
+      seek(target);
+    }
   } else if (key === '<' || key === '>') {
     e.preventDefault();
     stepSpeed(key === '<' ? -1 : 1, false);

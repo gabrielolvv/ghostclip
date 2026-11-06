@@ -112,7 +112,7 @@
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
       </div>
-      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim, &lt; and &gt; change the speed" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte, &lt; e &gt; mudam a velocidade" data-es-title="Las flechas avanzan o retroceden, Shift+flechas con más precisión, coma y punto fotograma a fotograma, I y O marcan el recorte, &lt; y &gt; cambian la velocidad">
+      <div id="timeline" title="Arrows seek, Shift+arrows finer, comma and period by frame, I and O mark the trim, &lt; and &gt; change the speed, B and Shift+B jump between bookmarks" data-pt-title="Setas navegam, Shift+setas com mais precisão, vírgula e ponto quadro a quadro, I e O marcam o corte, &lt; e &gt; mudam a velocidade, B e Shift+B pulam entre marcadores" data-es-title="Las flechas avanzan o retroceden, Shift+flechas con más precisión, coma y punto fotograma a fotograma, I y O marcan el recorte, &lt; y &gt; cambian la velocidad, B y Shift+B saltan entre marcadores">
         <canvas id="wave"></canvas>
         <div id="range"></div>
         <div id="h-start" class="handle" role="slider" aria-label="Trim start" data-pt-label="Início do corte" data-es-label="Inicio del recorte" tabindex="0"></div>
@@ -123,6 +123,15 @@
         <span>00:00</span>
         <span id="t-range" class="accent"></span>
         <span class="times-end">
+          <span class="player-volume">
+            <button id="mute" class="icon" type="button" aria-pressed="false" aria-label="Mute" data-pt-label="Silenciar" data-es-label="Silenciar" title="Mute (M)" data-pt-title="Silenciar (M)" data-es-title="Silenciar (M)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path class="waves" d="M16 9a4 4 0 0 1 0 6"/><path class="cross" d="M16 9l5 6M21 9l-5 6"/></svg>
+            </button>
+            <input id="volume" type="range" min="0" max="100" step="5" value="100" aria-label="Volume" data-pt-label="Volume" data-es-label="Volumen">
+          </span>
+          <button id="full" class="icon" type="button" aria-label="Full screen" data-pt-label="Tela cheia" data-es-label="Pantalla completa" title="Full screen (F)" data-pt-title="Tela cheia (F)" data-es-title="Pantalla completa (F)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          </button>
           <button id="speed" class="act" type="button" aria-label="Playback speed" data-pt-label="Velocidade de reprodução" data-es-label="Velocidad de reproducción" title="Playback speed. The keys &lt; and &gt; change it too. The file stays as it is." data-pt-title="Velocidade de reprodução. As teclas &lt; e &gt; também mudam. O arquivo fica igual." data-es-title="Velocidad de reproducción. Las teclas &lt; y &gt; también la cambian. El archivo no cambia.">1x</button>
           <span id="t-end"></span>
         </span>
