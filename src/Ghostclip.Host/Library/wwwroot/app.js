@@ -1110,6 +1110,18 @@ $('tags').addEventListener('change', () => {
   if (state.current) post({ type: 'tags', path: state.current.path, tags: $('tags').value.split(',') });
 });
 $('tags').addEventListener('keydown', e => { if (e.key === 'Enter') $('tags').blur(); });
+$('a-copy-trim').addEventListener('click', () => {
+  const meta = currentMeta();
+  if (!state.current || !meta || $('a-copy-trim').classList.contains('busy')) return;
+  // The marks still around the whole clip: nothing to cut, and no copy of it to leave behind.
+  if (state.start <= 0 && state.end >= meta.duration) {
+    post({ type: 'copy', path: state.current.path });
+    return;
+  }
+  busy($('a-copy-trim'), true);
+  toast(L('Saving trim…', 'Salvando corte…', 'Guardando recorte…'));
+  post({ type: 'copyTrim', path: state.current.path, start: state.start, end: state.end });
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1310,6 +1322,10 @@ function onDone(message) {
     case 'diagnostics':
       toast(L('Diagnostics copied. Paste them in the chat.', 'Diagnóstico copiado. Cole na conversa.', 'Diagnóstico copiado. Pégalo en el chat.'));
       break;
+    case 'copyTrim':
+      busy($('a-copy-trim'), false);
+      toast(L('Trim copied. Paste it in Discord.', 'Corte copiado. Cole no Discord.', 'Recorte copiado. Pégalo en Discord.'), false, open);
+      break;
     case 'copy':
       toast(L('Copied. Paste it in Discord.', 'Copiado. Cole no Discord.', 'Copiado. Pégalo en Discord.'));
       break;
@@ -1406,6 +1422,7 @@ function onMessage(message) {
       break;
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
+      if (message.op === 'copyTrim') busy($('a-copy-trim'), false);
       if (message.op === 'cover') busy($('a-cover'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);

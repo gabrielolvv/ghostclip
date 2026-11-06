@@ -46,6 +46,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
   aponta para ele; favoritos, etiquetas que a busca encontra, renomear e ações em
   vários de uma vez. Só roda enquanto a janela está aberta.
+- **Copiar corte:** o trecho marcado na área de transferência, pronto para colar, num passo só.
 - **Corte** arrastando duas alças, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload

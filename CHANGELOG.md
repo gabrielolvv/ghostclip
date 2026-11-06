@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Copy trim in the player: cuts the trim marks without re-encoding and puts the result
+  on the clipboard, to paste in Discord in one step. The cut stays in the library.
+
 ## 0.8.17
 
 ### Added
