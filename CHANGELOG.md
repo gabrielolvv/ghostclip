@@ -7,6 +7,7 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- A list of the library's and the player's keys, from ? or the sidebar.
 - A menu on the library's cards, from the right button: open, copy, favorite, rename,
   show in folder, select and delete, without opening the clip.
 - Keys on a card in focus: F2 renames, Delete asks about the Recycle Bin, F favorites.

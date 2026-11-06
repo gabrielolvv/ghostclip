@@ -237,6 +237,16 @@ main { min-width: 0; min-height: 0; display: flex; }
 #card-menu .act:hover, #card-menu .act:focus-visible { background: rgba(255, 255, 255, 0.06); outline: none; }
 #card-menu .act.danger { color: var(--red); }
 
+/* The list of keys. */
+#keys-panel { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
+#keys-panel[hidden] { display: none; }
+.keys-box { width: min(640px, 100%); max-height: 100%; overflow: auto; padding: 16px 20px 20px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--raised); }
+.keys-box header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.keys-box h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.keys-box h3 { margin: 14px 0 6px; font: 11px var(--mono); letter-spacing: 0.14em; color: var(--muted); font-weight: 400; }
+.keys-row { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.keys-row kbd { flex: none; font: 12px var(--mono); color: var(--accent); }
+
 /* Favorites, screenshots and bookmarks */
 .act[aria-pressed=true] { color: #E5B34B; border-color: rgba(229, 179, 75, 0.5); }
 .act[aria-pressed=true] svg { fill: currentColor; }

@@ -530,6 +530,78 @@ document.addEventListener('keydown', e => {
   }
 }, true);
 
+// The list of keys. Built when opened, so it's in the language of the moment.
+function keysOpen() { return !$('keys-panel').hidden; }
+
+function showKeys() {
+  $('keys-title').textContent = L('Keys', 'Teclas', 'Teclas');
+  const groups = [
+    [L('PLAYER', 'PLAYER', 'REPRODUCTOR'), [
+      [L('Space', 'Espaço', 'Espacio'), L('Play or pause', 'Tocar ou pausar', 'Reproducir o pausar')],
+      ['← →', L('Go back or ahead 5 seconds', 'Voltar ou avançar 5 segundos', 'Retroceder o avanzar 5 segundos')],
+      ['Shift + ← →', L('Go back or ahead 1 second', 'Voltar ou avançar 1 segundo', 'Retroceder o avanzar 1 segundo')],
+      [', .', L('One frame back or ahead', 'Um quadro para trás ou para a frente', 'Un fotograma atrás o adelante')],
+      ['I O', L('Mark the start and end of the trim', 'Marcar o início e o fim do corte', 'Marcar el inicio y el fin del recorte')],
+      ['< >', L('Slower or faster', 'Mais devagar ou mais rápido', 'Más lento o más rápido')],
+      ['N P', L('Next or previous clip', 'Próximo clipe ou anterior', 'Clip siguiente o anterior')],
+      ['B', L('Next bookmark, with Shift the previous', 'Próximo marcador, com Shift o anterior', 'Marcador siguiente, con Shift el anterior')],
+      ['M', L('Mute', 'Silenciar', 'Silenciar')],
+      ['F', L('Full screen', 'Tela cheia', 'Pantalla completa')],
+      ['Esc', L('Back to the library', 'Voltar para a biblioteca', 'Volver a la biblioteca')],
+    ]],
+    [L('LIBRARY', 'BIBLIOTECA', 'BIBLIOTECA'), [
+      ['Enter', L('Open the clip in focus', 'Abrir o clipe em foco', 'Abrir el clip en foco')],
+      [L('Space', 'Espaço', 'Espacio'), L('Select it', 'Selecionar', 'Seleccionarlo')],
+      ['F2', L('Rename it', 'Renomear', 'Renombrarlo')],
+      ['F', L('Add it to favorites, or remove it', 'Adicionar aos favoritos ou tirar', 'Añadirlo a favoritos o quitarlo')],
+      ['Delete', L('Ask about sending it to the Recycle Bin', 'Perguntar se manda para a Lixeira', 'Preguntar si se envía a la Papelera')],
+      ['Ctrl + A', L('Select everything on screen', 'Selecionar tudo o que está na tela', 'Seleccionar todo lo que está en pantalla')],
+      ['Shift + F10', L('The menu of the clip in focus', 'O menu do clipe em foco', 'El menú del clip en foco')],
+      ['Esc', L('Clear the selection', 'Limpar a seleção', 'Borrar la selección')],
+    ]],
+  ];
+  const list = $('keys-list');
+  list.replaceChildren();
+  for (const [title, rows] of groups) {
+    list.append(el('h3', '', title));
+    for (const [keys, text] of rows) {
+      const row = el('div', 'keys-row');
+      row.append(el('span', '', text), el('kbd', '', keys));
+      list.append(row);
+    }
+  }
+  const games = el('h3', '', L('IN A GAME', 'NO JOGO', 'EN UN JUEGO'));
+  list.append(games, el('div', 'keys-row', L('Saving a clip and the others are in Settings, where you can change them.',
+    'Salvar clipe e as outras ficam em Configurações, onde dá para mudar.', 'Guardar un clip y las demás están en Configuración, donde se pueden cambiar.')));
+  $('keys-panel').hidden = false;
+  $('keys-close').focus();
+}
+
+function hideKeys() {
+  $('keys-panel').hidden = true;
+}
+
+$('nav-keys').addEventListener('click', showKeys);
+$('keys-close').addEventListener('click', hideKeys);
+$('keys-panel').addEventListener('click', e => { if (e.target === $('keys-panel')) hideKeys(); });
+// First, so nothing behind it takes the keys while it's up.
+document.addEventListener('keydown', e => {
+  const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+  if (keysOpen()) {
+    if (e.key === 'Escape' || e.key === '?') hideKeys();
+    if (e.key !== 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    return;
+  }
+  if (e.key === '?' && !typing && !Settings.isOpen() && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    showKeys();
+  }
+}, true);
+
 // Selection: acting on several clips at once. Only what is on screen stays selected, so an action never
 // touches a clip hidden by the search or another game.
 
