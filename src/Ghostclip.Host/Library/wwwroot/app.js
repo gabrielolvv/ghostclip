@@ -678,7 +678,74 @@ function openClip(path) {
   setupTimeline();
 }
 
+// The clip beside this one in the list as it is on screen: its game, search and sort.
+function neighbor(by) {
+  if (!state.current) return null;
+  // While a list plays through, it stays inside what's playing.
+  const clips = sequence ? sequence.map(p => state.clips.find(c => c.path === p)).filter(Boolean) : visibleClips();
+  const at = clips.findIndex(c => c.path === state.current.path);
+  return at < 0 ? null : clips[at + by] || null;
+}
+
+// Playing a list through: what it was when it started, videos only. Going back to the library ends it.
+let sequence = null;
+
+function playSequenceClip() {
+  video.play().catch(err => {
+    if (err && err.name === 'AbortError') return;
+    // One that can't be played here doesn't stop the rest.
+    advanceSequence();
+  });
+}
+
+function showSequence() {
+  const at = sequence && state.current ? sequence.indexOf(state.current.path) : -1;
+  $('seq-info').hidden = at < 0;
+  if (at >= 0) $('seq-info').textContent = `${at + 1} / ${sequence.length}`;
+}
+
+function advanceSequence() {
+  if (!sequence || !state.current) return;
+  const listed = new Set(state.clips.map(c => c.path));
+  const next = sequence.slice(sequence.indexOf(state.current.path) + 1).find(p => listed.has(p));
+  if (!next) {
+    sequence = null;
+    video.pause();
+    showSequence();
+    toast(L('That was the last one', 'Esse foi o último', 'Ese fue el último'));
+    return;
+  }
+  openClip(next);
+  playSequenceClip();
+}
+
+$('play-all').addEventListener('click', () => {
+  const videos = visibleClips().filter(c => !c.image).map(c => c.path);
+  if (videos.length === 0) {
+    toast(L('No videos in this list', 'Nenhum vídeo nesta lista', 'No hay videos en esta lista'));
+    return;
+  }
+  sequence = videos;
+  openClip(videos[0]);
+  playSequenceClip();
+});
+
+function stepClip(by) {
+  const clip = neighbor(by);
+  if (!clip) return;
+  // Going through a batch of clips: one that's playing leads to the next playing.
+  const playing = !video.paused;
+  openClip(clip.path);
+  if (playing && !clip.image) video.play().catch(() => {});
+}
+
+$('c-prev').addEventListener('click', () => stepClip(-1));
+$('c-next').addEventListener('click', () => stepClip(1));
+
 function showFavorite() {
+  showSequence();
+  $('c-prev').disabled = !neighbor(-1);
+  $('c-next').disabled = !neighbor(1);
   // The list can come back while a tag is being typed: what's in the field is newer.
   if (document.activeElement !== $('tags')) $('tags').value = state.current && state.current.tags ? state.current.tags.join(', ') : '';
   $('a-marks').hidden = !(state.current && state.current.bookmarks && state.current.bookmarks.length);
@@ -687,6 +754,7 @@ function showFavorite() {
 }
 
 function closeClip() {
+  sequence = null;
   releaseVideo();
   state.current = null;
   showView('library');
@@ -873,6 +941,11 @@ function placePlayhead() {
 // Only runs while the video plays: an idle window draws nothing.
 function tick() {
   if (state.current && video.currentTime >= state.end && state.end > 0) {
+    if (sequence) {
+      advanceSequence();
+      frame = requestAnimationFrame(tick);
+      return;
+    }
     video.currentTime = state.start;
   }
   placePlayhead();
@@ -898,6 +971,10 @@ video.addEventListener('play', () => {
   frame = requestAnimationFrame(tick);
 });
 video.addEventListener('ended', () => {
+  if (sequence) {
+    advanceSequence();
+    return;
+  }
   if (!state.current || state.end <= 0) return;
   video.currentTime = state.start;
   video.play().catch(() => {});
@@ -1220,6 +1297,11 @@ document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
   if (e.key === 'Escape' && state.current) closeClip();
   else if (e.key === 'Escape' && Settings.isOpen()) showView('library');
+  if (state.current && !$('clip').hidden && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && (e.key === 'n' || e.key === 'N' || e.key === 'p' || e.key === 'P')) {
+    e.preventDefault();
+    stepClip(e.key.toLowerCase() === 'n' ? 1 : -1);
+    return;
+  }
   if (e.key === ' ' && state.current && !(e.target instanceof HTMLButtonElement)) {
     e.preventDefault();
     togglePlay();

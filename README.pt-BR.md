@@ -46,6 +46,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
   aponta para ele; favoritos, etiquetas que a busca encontra, filtro por data,
   renomear e ações em vários de uma vez. Só roda enquanto a janela está aberta.
+- **Tocar todos** os vídeos de uma lista, um depois do outro, para rever um jogo ou
+  os favoritos.
 - **Corte** arrastando duas alças, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
@@ -145,8 +147,8 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as
-  setas navegam, vírgula e ponto andam quadro a quadro, I e O marcam o corte, e < e > mudam a
-  velocidade, de 0,25x a 2x.
+  setas navegam, vírgula e ponto andam quadro a quadro, I e O marcam o corte, < e > mudam a
+  velocidade, de 0,25x a 2x, e N e P vão para o próximo clipe e o anterior.
 - As configurações são uma página da biblioteca (a engrenagem na barra
   lateral, ou Configurações no menu da bandeja). Elas ficam em
   `%LOCALAPPDATA%\GhostclipData\config.json`; editado à mão, a bandeja aplica
