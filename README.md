@@ -42,7 +42,10 @@ QuickSync). There is no CPU encoder fallback.
 - **Replay buffer on the drive you choose,** to spare the system's SSD.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; a clip plays as you point at
-  it; favorites, tags the search finds, renaming and acting on several at once. It runs only while its window is open.
+  it; favorites, tags the search finds, a date filter, renaming and acting on
+  several at once. It runs only while its window is open.
+- **Play all** the videos in a list, one after another, to go back over a game or
+  your favorites.
 - **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
@@ -145,7 +148,8 @@ installer and the minimal FFmpeg is described in
 - In the library: copy a clip and paste it straight into Discord, compress
   it to Discord's size limit, show it in its folder or send it to the
   Recycle Bin. In the player, the arrows seek, comma and period go frame by
-  frame, I and O mark the trim, and < and > change the speed, from 0.25x to 2x.
+  frame, I and O mark the trim, < and > change the speed, from 0.25x to 2x, and N and
+  P go to the next and previous clip.
 - Settings are a page in the library (the gear in its sidebar, or Settings in
   the tray menu). They live in `%LOCALAPPDATA%\GhostclipData\config.json`;
   edit that by hand and the tray applies it right away. Saving from the page

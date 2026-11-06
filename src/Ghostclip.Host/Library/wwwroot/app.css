@@ -75,6 +75,10 @@ main { min-width: 0; min-height: 0; display: flex; }
 }
 #search:focus { border-color: var(--accent); }
 .bar select.field { flex: none; }
+/* The library's bar has more than fits a narrow window: what doesn't fit goes to a second line, whole. */
+#library .bar { flex-wrap: wrap; row-gap: 8px; }
+#library .bar #search { flex: 1 1 200px; }
+#play-all, #count { flex: none; white-space: nowrap; }
 #search::placeholder { color: var(--muted); }
 
 .day { margin: 6px 0 10px; font: 11px var(--mono); letter-spacing: 0.14em; color: var(--muted); }
@@ -145,6 +149,7 @@ main { min-width: 0; min-height: 0; display: flex; }
   background: #000; border: 1px solid var(--line); cursor: pointer;
 }
 #video { width: 100%; height: 100%; object-fit: contain; display: block; }
+#c-prev:disabled, #c-next:disabled { opacity: 0.3; cursor: default; }
 #vframe {
   position: absolute; box-sizing: border-box; border: 2px solid var(--accent); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
   cursor: grab; touch-action: none; outline: none;

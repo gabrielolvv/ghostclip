@@ -33,10 +33,19 @@
     <section id="library" class="view">
       <header class="bar">
         <input id="search" type="search" placeholder="Search clips" data-pt-placeholder="Buscar clipes" data-es-placeholder="Buscar clips" spellcheck="false" autocomplete="off">
+        <button id="play-all" class="act" type="button" title="Plays the videos in this list one after another" data-pt-title="Toca os vídeos desta lista um depois do outro" data-es-title="Reproduce los videos de esta lista uno tras otro">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg><span data-pt="Tocar todos" data-es="Reproducir todos">Play all</span>
+        </button>
         <select id="kind" class="field" aria-label="Show" data-pt-label="Mostrar" data-es-label="Mostrar">
           <option value="all" data-pt="Tudo" data-es="Todo">Everything</option>
           <option value="videos" data-pt="Só vídeos" data-es="Solo videos">Videos only</option>
           <option value="images" data-pt="Só imagens" data-es="Solo imágenes">Images only</option>
+        </select>
+        <select id="since" class="field" aria-label="From when" data-pt-label="De quando" data-es-label="De cuándo">
+          <option value="all" data-pt="Qualquer data" data-es="Cualquier fecha">Any date</option>
+          <option value="today" data-pt="Hoje" data-es="Hoy">Today</option>
+          <option value="7" data-pt="Últimos 7 dias" data-es="Últimos 7 días">Last 7 days</option>
+          <option value="30" data-pt="Últimos 30 dias" data-es="Últimos 30 días">Last 30 days</option>
         </select>
         <select id="sort" class="field" aria-label="Sort by" data-pt-label="Ordenar por" data-es-label="Ordenar por">
           <option value="newest" data-pt="Mais novos" data-es="Más recientes">Newest</option>
@@ -84,7 +93,14 @@
         <button id="back" class="icon" type="button" aria-label="Back to the library" data-pt-label="Voltar para a biblioteca" data-es-label="Volver a la biblioteca">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
         </button>
+        <button id="c-prev" class="icon" type="button" aria-label="Previous clip" data-pt-label="Clipe anterior" data-es-label="Clip anterior" title="Previous clip (P)" data-pt-title="Clipe anterior (P)" data-es-title="Clip anterior (P)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="c-next" class="icon" type="button" aria-label="Next clip" data-pt-label="Próximo clipe" data-es-label="Clip siguiente" title="Next clip (N)" data-pt-title="Próximo clipe (N)" data-es-title="Clip siguiente (N)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
         <span id="clip-game"></span>
+        <span id="seq-info" class="mono accent" hidden></span>
         <span id="clip-info" class="mono muted"></span>
       </header>
       <div class="stage">
