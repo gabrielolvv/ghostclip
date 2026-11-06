@@ -144,7 +144,8 @@ installer and the minimal FFmpeg is described in
 - In the library: copy a clip and paste it straight into Discord, compress
   it to Discord's size limit, show it in its folder or send it to the
   Recycle Bin. In the player, the arrows seek, comma and period go frame by
-  frame, I and O mark the trim, and < and > change the speed, from 0.25x to 2x.
+  frame, I and O mark the trim, < and > change the speed, from 0.25x to 2x, and N and
+  P go to the next and previous clip.
 - Settings are a page in the library (the gear in its sidebar, or Settings in
   the tray menu). They live in `%LOCALAPPDATA%\GhostclipData\config.json`;
   edit that by hand and the tray applies it right away. Saving from the page

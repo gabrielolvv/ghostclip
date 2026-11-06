@@ -666,7 +666,29 @@ function openClip(path) {
   setupTimeline();
 }
 
+// The clip beside this one in the list as it is on screen: its game, search and sort.
+function neighbor(by) {
+  if (!state.current) return null;
+  const clips = visibleClips();
+  const at = clips.findIndex(c => c.path === state.current.path);
+  return at < 0 ? null : clips[at + by] || null;
+}
+
+function stepClip(by) {
+  const clip = neighbor(by);
+  if (!clip) return;
+  // Going through a batch of clips: one that's playing leads to the next playing.
+  const playing = !video.paused;
+  openClip(clip.path);
+  if (playing && !clip.image) video.play().catch(() => {});
+}
+
+$('c-prev').addEventListener('click', () => stepClip(-1));
+$('c-next').addEventListener('click', () => stepClip(1));
+
 function showFavorite() {
+  $('c-prev').disabled = !neighbor(-1);
+  $('c-next').disabled = !neighbor(1);
   // The list can come back while a tag is being typed: what's in the field is newer.
   if (document.activeElement !== $('tags')) $('tags').value = state.current && state.current.tags ? state.current.tags.join(', ') : '';
   $('a-marks').hidden = !(state.current && state.current.bookmarks && state.current.bookmarks.length);
@@ -1206,6 +1228,11 @@ document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
   if (e.key === 'Escape' && state.current) closeClip();
   else if (e.key === 'Escape' && Settings.isOpen()) showView('library');
+  if (state.current && !$('clip').hidden && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && (e.key === 'n' || e.key === 'N' || e.key === 'p' || e.key === 'P')) {
+    e.preventDefault();
+    stepClip(e.key.toLowerCase() === 'n' ? 1 : -1);
+    return;
+  }
   if (e.key === ' ' && state.current && !(e.target instanceof HTMLButtonElement)) {
     e.preventDefault();
     togglePlay();
