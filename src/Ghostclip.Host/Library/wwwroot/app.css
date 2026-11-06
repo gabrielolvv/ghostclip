@@ -82,7 +82,10 @@ main { min-width: 0; min-height: 0; display: flex; }
 #search::placeholder { color: var(--muted); }
 
 .day { margin: 6px 0 10px; font: 11px var(--mono); letter-spacing: 0.14em; color: var(--muted); }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 22px; }
+#grid { --card-min: 220px; }
+#grid[data-size="small"] { --card-min: 170px; }
+#grid[data-size="large"] { --card-min: 340px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 14px; margin-bottom: 22px; }
 
 .card {
   position: relative; text-align: left; border-radius: var(--radius); overflow: hidden;

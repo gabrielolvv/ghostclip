@@ -1303,6 +1303,16 @@ state.sort = readChoice('sort', ['newest', 'oldest', 'largest', 'longest']);
 $('sort').value = state.sort;
 $('kind').value = state.kind;
 $('since').value = state.since;
+// Kept in this window's storage, like the sort: how much to see at once depends on the screen.
+function setCardSize(size) {
+  $('card-size').value = size;
+  $('grid').dataset.size = size;
+}
+setCardSize(readChoice('cardSize', ['medium', 'small', 'large']));
+$('card-size').addEventListener('change', e => {
+  setCardSize(e.target.value);
+  keepChoice('cardSize', e.target.value);
+});
 $('sort').addEventListener('change', e => { state.sort = e.target.value; keepChoice('sort', state.sort); renderGrid(); });
 // Not remembered, unlike the sort: opening the library to a clip just saved that a filter hides would look like losing it.
 $('kind').addEventListener('change', e => { state.kind = e.target.value; renderGrid(); });

@@ -42,8 +42,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Replay buffer on the drive you choose,** to spare the system's SSD.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; a clip plays as you point at
-  it; favorites, tags the search finds, a date filter, renaming and acting on
-  several at once. It runs only while its window is open.
+  it; favorites, tags the search finds, a date filter, card sizes, renaming and
+  acting on several at once. It runs only while its window is open.
 - **Play all** the videos in a list, one after another, to go back over a game or
   your favorites.
 - **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
