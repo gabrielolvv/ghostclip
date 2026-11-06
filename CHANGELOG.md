@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- The player has fewer buttons and more room for the picture: the Discord size and
+  vertical copies, GIF, audio, frame, clips from bookmarks, cover and fade are now in
+  an Export menu.
+
 ## 0.8.19
 
 ### Added
