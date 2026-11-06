@@ -7,6 +7,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Fade in the player: the Discord size and vertical copies fade in and out, picture and
+  sound, over half a second, so they don't start and end dry. The clip stays as it is.
 - Use as cover in the player: the frame on screen becomes the clip's picture on its card
   in the library. The file stays as it is, and the cover follows the clip when renamed.
 - Tags: write words on a clip or picture in the player, and the library's search finds

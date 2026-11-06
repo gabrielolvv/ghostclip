@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $required = [ordered]@{
     encoders = 'h264_nvenc', 'hevc_nvenc', 'h264_amf', 'hevc_amf', 'h264_qsv', 'hevc_qsv', 'aac', 'mjpeg', 'gif'
     decoders = 'h264', 'hevc', 'aac', 'pcm_f32le'
-    filters  = 'ddagrab', 'gfxcapture', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'crop', 'fps', 'split', 'palettegen', 'paletteuse', 'amix', 'afftdn', 'volume', 'aresample', 'asetnsamples', 'astats', 'ametadata'
+    filters  = 'ddagrab', 'gfxcapture', 'hwmap', 'format', 'vpp_qsv', 'scale_d3d11', 'scale', 'crop', 'fps', 'split', 'palettegen', 'paletteuse', 'amix', 'fade', 'afade', 'afftdn', 'volume', 'aresample', 'asetnsamples', 'astats', 'ametadata'
     muxers   = 'segment', 'mpegts', 'mp4', 'null', 'image2', 'gif'
     demuxers = 'concat', 'mpegts', 'mov', 'f32le'
 }
