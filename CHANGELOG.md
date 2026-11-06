@@ -7,8 +7,14 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Tags: write words on a clip or picture in the player, and the library's search finds
+  them. They show on its card, follow it when renamed, and don't change the file.
 - An optional key, and `Ghostclip.exe --bookmark`, marks the moment in a session
   without saving a clip, for cutting clips from the session later.
+
+### Fixed
+
+- A GIF's name in the library no longer shows its extension.
 
 ## 0.8.16
 

@@ -124,7 +124,7 @@ function clockLabel(date) { return `${pad(date.getHours())}:${pad(date.getMinute
 
 function fileName(path) { return path.slice(path.lastIndexOf('\\') + 1); }
 
-function stem(path) { return fileName(path).replace(/\.(mp4|jpg|png)$/i, ''); }
+function stem(path) { return fileName(path).replace(/\.(mp4|jpg|png|gif)$/i, ''); }
 
 function extension(path) { const m = /\.[^.\\]+$/.exec(path); return m ? m[0] : ''; }
 
@@ -183,7 +183,8 @@ function visibleClips() {
   const clips = state.clips.filter(c =>
     (state.game === null || c.game === state.game) && (!state.favorites || c.favorite) &&
     (state.kind === 'all' || (state.kind === 'images') === !!c.image) &&
-    (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)));
+    (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)
+      || (c.tags || []).some(t => t.toLowerCase().includes(q))));
   return sortClips(clips);
 }
 
@@ -331,6 +332,11 @@ function renderCard(clip) {
   const date = savedDate(clip);
   text.append(el('div', 'card-title', state.game === null ? clip.game : stem(clip.path)),
     el('div', 'card-sub', `${state.sort === 'largest' || state.sort === 'longest' ? `${dayLabel(date)} · ` : ''}${clockLabel(date)} · ${fmtSize(clip.bytes)}`));
+  if (clip.tags && clip.tags.length) {
+    const tags = el('div', 'card-tags', clip.tags.join(' · '));
+    tags.title = tags.textContent;
+    text.append(tags);
+  }
   card.append(text);
 
   // With a selection going, or Ctrl or Shift held, a click picks instead of opening.
@@ -658,6 +664,8 @@ function openClip(path) {
 }
 
 function showFavorite() {
+  // The list can come back while a tag is being typed: what's in the field is newer.
+  if (document.activeElement !== $('tags')) $('tags').value = state.current && state.current.tags ? state.current.tags.join(', ') : '';
   $('a-marks').hidden = !(state.current && state.current.bookmarks && state.current.bookmarks.length);
   const on = !!(state.current && state.current.favorite);
   $('a-favorite').setAttribute('aria-pressed', String(on));
@@ -1084,6 +1092,11 @@ $('s-yes').addEventListener('click', () => {
   toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
   post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
 });
+// When the field is left or Enter is pressed. Leaving the clip leaves the field first.
+$('tags').addEventListener('change', () => {
+  if (state.current) post({ type: 'tags', path: state.current.path, tags: $('tags').value.split(',') });
+});
+$('tags').addEventListener('keydown', e => { if (e.key === 'Enter') $('tags').blur(); });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1379,7 +1392,7 @@ function onMessage(message) {
       if (message.op === 'bookmarkClips') busy($('a-marks'), false);
       if (message.op === 'sendToDiscord') busy($('a-send'), false);
       // The star was lit before the app answered: a fresh list puts it back as it really is.
-      if (message.op === 'favorite' || message.op === 'favoriteMany') post({ type: 'list' });
+      if (message.op === 'favorite' || message.op === 'favoriteMany' || message.op === 'tags') post({ type: 'list' });
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
       if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;

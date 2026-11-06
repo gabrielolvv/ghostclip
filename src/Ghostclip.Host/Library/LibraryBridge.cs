@@ -268,6 +268,10 @@ internal sealed class LibraryBridge : IDisposable
                     UpdateLibraryQuietly(s => s.Forget(path));
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path));
                     break;
+                case "tags":
+                    LibraryStore.Update(_paths.LibraryFile, s => s.SetTags(path, r.Tags ?? []));
+                    await ListAsync().ConfigureAwait(true);
+                    break;
                 case "favorite":
                     LibraryStore.Update(_paths.LibraryFile, s => s.SetFavorite(path, r.Favorite));
                     await ListAsync().ConfigureAwait(true);
