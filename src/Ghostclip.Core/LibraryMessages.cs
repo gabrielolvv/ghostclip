@@ -64,7 +64,7 @@ public sealed record LibraryEvent(string Type, IReadOnlyList<ClipDto>? Clips = n
     ClipMeta? Meta = null, string? Thumb = null, string? Output = null, string? Op = null, string? Message = null,
     GhostclipConfig? Config = null, IReadOnlyList<string>? Encoders = null, IReadOnlyList<string>? Games = null,
     RecorderStatus? Status = null, IReadOnlyDictionary<string, string>? HotkeyLabels = null, string? Language = null,
-    long? StorageBytes = null, IReadOnlyList<MonitorInfo>? Monitors = null, int? Moved = null, int? Kept = null, bool? CanSendToDiscord = null);
+    long? StorageBytes = null, IReadOnlyList<MonitorInfo>? Monitors = null, int? Moved = null, int? Kept = null, bool? CanSendToDiscord = null, IReadOnlyList<SelfTestStep>? Steps = null);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

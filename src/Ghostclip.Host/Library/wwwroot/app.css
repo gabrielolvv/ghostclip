@@ -238,6 +238,13 @@ main { min-width: 0; min-height: 0; display: flex; }
 #card-menu .act.danger { color: var(--red); }
 
 /* The list of keys. */
+#test-panel { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
+#test-panel[hidden] { display: none; }
+.test-row { display: grid; grid-template-columns: 20px 1fr; gap: 2px 6px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.test-row .mark { color: var(--accent); }
+.test-row.failed .mark, .test-row.failed .detail { color: var(--red); }
+.test-row .detail { grid-column: 2; font: 11px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+#test-copy { margin-top: 12px; }
 #keys-panel { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
 #keys-panel[hidden] { display: none; }
 .keys-box { width: min(640px, 100%); max-height: 100%; overflow: auto; padding: 16px 20px 20px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--raised); }

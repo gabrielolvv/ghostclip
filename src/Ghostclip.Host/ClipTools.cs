@@ -375,7 +375,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // The encoder the recorder probed as working. Never a CPU encoder.
-    private string HardwareEncoder(GhostclipConfig cfg)
+    internal string HardwareEncoder(GhostclipConfig cfg)
     {
         ProbeCache? cache = null;
         if (File.Exists(paths.ProbeFile))

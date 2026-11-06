@@ -71,6 +71,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   que o Ghostclip não criou nunca são tocados.
 - **Apagar por idade** (opcional): passados os dias que você escolher, os clipes
   vão para a Lixeira, com o mesmo cuidado.
+- **Um autoteste** em Configurações que confere o encoder da GPU e cada cópia neste PC,
+  num clipe inventado, com um resultado para colar num relato de problema.
 - **Backup das configurações** num arquivo, para outro PC ou reinstalação, sem o seu webhook.
 - **Inglês, português ou espanhol,** ou o idioma do Windows, trocado na hora.
 

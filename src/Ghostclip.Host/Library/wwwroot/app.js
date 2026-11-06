@@ -602,6 +602,40 @@ document.addEventListener('keydown', e => {
   }
 }, true);
 
+// The self-test's panel: what the app says, as it comes.
+function showTest(steps, done) {
+  $('test-panel').hidden = false;
+  const failed = steps.filter(s => !s.ok).length;
+  $('test-title').textContent = !done
+    ? L('Testing this PC…', 'Testando este PC…', 'Probando este PC…')
+    : failed === 0 ? L('Everything passed', 'Tudo passou', 'Todo pasó')
+    : L(`${failed} of ${steps.length} failed`, `${failed} de ${steps.length} falharam`, `${failed} de ${steps.length} fallaron`);
+  const list = $('test-list');
+  list.replaceChildren();
+  for (const step of steps) {
+    const row = el('div', 'test-row' + (step.ok ? '' : ' failed'));
+    row.append(el('span', 'mark', step.ok ? '✓' : '✕'), el('span', '', step.name));
+    if (step.detail) row.append(el('span', 'detail', step.detail));
+    list.append(row);
+  }
+  $('test-copy').hidden = !done;
+}
+
+function closeTest() {
+  $('test-panel').hidden = true;
+}
+
+$('test-close').addEventListener('click', closeTest);
+$('test-copy').addEventListener('click', () => post({ type: 'selfTestCopy' }));
+document.addEventListener('keydown', e => {
+  if ($('test-panel').hidden) return;
+  if (e.key === 'Escape') closeTest();
+  if (e.key !== 'Tab' && !(e.target instanceof HTMLButtonElement && (e.key === 'Enter' || e.key === ' '))) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
 // Selection: acting on several clips at once. Only what is on screen stays selected, so an action never
 // touches a clip hidden by the search or another game.
 
@@ -1764,6 +1798,10 @@ function showSend(can) {
 }
 
 function onMessage(message) {
+  if (message.type === 'selfTest') {
+    showTest(message.steps || [], message.message === 'done');
+    return;
+  }
   // Saved settings say whether a webhook is there now; the list says it to begin with.
   if (message.type === 'done' && message.config) showSend(!!message.config.discordWebhook);
   if (Settings.onMessage(message)) return;
