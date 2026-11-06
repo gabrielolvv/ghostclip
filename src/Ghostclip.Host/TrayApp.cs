@@ -160,6 +160,7 @@ internal sealed class TrayApp : ApplicationContext
                 case HotkeyAction.MicMute: ToggleMicrophone(); break;
                 case HotkeyAction.ShortClip: SaveClip(_config.ShortClipSeconds); break;
                 case HotkeyAction.Pause: TogglePause(); break;
+                case HotkeyAction.Bookmark: MarkSession(); break;
             }
         };
         // An exit request set before this instance existed (by the installer's hook,
@@ -289,6 +290,7 @@ internal sealed class TrayApp : ApplicationContext
             case TrayCommand.Session: ToggleSession(); break;
             case TrayCommand.MicMute: ToggleMicrophone(); break;
             case TrayCommand.Pause: TogglePause(); break;
+            case TrayCommand.Bookmark: MarkSession(); break;
         }
     }
 
@@ -321,9 +323,10 @@ internal sealed class TrayApp : ApplicationContext
     {
         // Without a microphone track the mute key stays free for other programs.
         if (action == HotkeyAction.MicMute && !_config.Microphone) return;
-        // So do the short clip and pause keys, until one is chosen.
+        // So do the short clip, pause and bookmark keys, until one is chosen.
         if (action == HotkeyAction.ShortClip && !_config.HasShortClipHotkey) return;
         if (action == HotkeyAction.Pause && !_config.HasPauseHotkey) return;
+        if (action == HotkeyAction.Bookmark && !_config.HasBookmarkHotkey) return;
         var gesture = _config.Hotkeys[(int)action];
         var old = previous?.Hotkeys[(int)action];
         if (_hotkey.TryRegister(action, gesture, out var error))
@@ -667,6 +670,20 @@ internal sealed class TrayApp : ApplicationContext
             _log.Warning("Screenshot failed: {Error}", ex.Message);
             Notify(L("Screenshot not saved", "Print não salvo", "Captura no guardada"), ex.Message, ToolTipIcon.Warning);
         }
+    }
+
+    // The clip key marks the moment and saves a clip too. This only marks it, for cutting clips from the session later.
+    private void MarkSession()
+    {
+        CheckPrivateAppNow();
+        if (Paused || !_session.Running)
+        {
+            Notify(L("Nothing marked", "Nada marcado", "Nada marcado"),
+                L("Bookmarks go in a session, and none is recording.", "Marcadores vão numa sessão, e nenhuma está gravando.", "Los marcadores van en una sesión, y no hay ninguna grabando."), ToolTipIcon.Warning);
+            return;
+        }
+        _session.AddBookmark();
+        if (_config.ConfirmationSound) _sound.Play();
     }
 
     private void ToggleSession()

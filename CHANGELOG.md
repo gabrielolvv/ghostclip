@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- An optional key, and `Ghostclip.exe --bookmark`, marks the moment in a session
+  without saving a clip, for cutting clips from the session later.
+
 ## 0.8.16
 
 ### Added
