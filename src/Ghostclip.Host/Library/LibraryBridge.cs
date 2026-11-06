@@ -19,6 +19,8 @@ internal sealed class LibraryBridge : IDisposable
     private readonly ILogger _log;
     private readonly ClipTools _tools;
     private readonly ClipMetaService _meta;
+    private IReadOnlyList<SelfTestStep>? _selfTest;
+    private IReadOnlyList<SelfTestStep>? _selfTestDone;
     private readonly SettingsService _settings;
     private readonly StatusWatcher _status;
     private readonly CancellationTokenSource _closing = new();
@@ -154,6 +156,34 @@ internal sealed class LibraryBridge : IDisposable
                 {
                     Process.Start(new ProcessStartInfo($"{UpdateService.RepositoryUrl}/releases/tag/v{version}") { UseShellExecute = true });
                 }
+                return;
+            }
+            if (r.Type == "selfTest")
+            {
+                // A second press while it runs: the page is already showing this one.
+                if (_selfTest is not null) return;
+                _selfTest = [];
+                // The panel opens right away, before the first step has anything to say.
+                _window.Post(new LibraryEvent("selfTest", Steps: []));
+                try
+                {
+                    var run = new SelfTest(_paths, _config, _tools);
+                    _selfTest = await Job(run.RunAsync(steps => _window.Post(new LibraryEvent("selfTest", Steps: [.. steps])), _closing.Token)).ConfigureAwait(true);
+                    _selfTestDone = _selfTest;
+                    _window.Post(new LibraryEvent("selfTest", Steps: [.. _selfTest], Message: "done"));
+                }
+                finally
+                {
+                    _selfTest = null;
+                }
+                return;
+            }
+            if (r.Type == "selfTestCopy")
+            {
+                var steps = _selfTestDone ?? [];
+                var details = await Task.Run(() => Diagnostics.Collect(_paths, _config, _log)).ConfigureAwait(true);
+                Clipboard.SetText(SelfTestReport.Format(steps) + Environment.NewLine + details);
+                _window.Post(new LibraryEvent("done", Op: "diagnostics"));
                 return;
             }
             if (r.Type == "diagnostics")

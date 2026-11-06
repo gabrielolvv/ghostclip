@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Settings > Advanced > Test this PC: checks the GPU encoder and every copy on a made-up
+  clip and shows what passed, to paste in a bug report. It doesn't record the screen or
+  touch your clips.
+
 ## 0.8.21
 
 ### Added

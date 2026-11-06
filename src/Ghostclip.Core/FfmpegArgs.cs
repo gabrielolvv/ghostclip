@@ -422,6 +422,21 @@ public static class FfmpegArgs
         return args;
     }
 
+    /// <summary>
+    /// The self-test's own clip: three seconds of a plain color and two tones, on the GPU encoder, named as saving
+    /// names its tracks. Made from nothing, so no screen is captured.
+    /// </summary>
+    public static IReadOnlyList<string> SelfTestClip(string output, string encoderName) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
+        "-filter_complex", "color=c=0x336699:s=1280x720:r=30:d=3,format=nv12[v];sine=f=440:d=3[a0];sine=f=880:d=3[a1]",
+        "-map", "[v]", "-map", "[a0]", "-map", "[a1]",
+        "-c:v", encoderName, "-b:v", "4M", "-g", "30",
+        "-c:a", "aac", "-b:a", "128k",
+        "-metadata:s:a:0", "handler_name=Game", "-metadata:s:a:1", "handler_name=Microphone",
+        "-f", "mp4", output,
+    ];
+
     /// <summary>The longest GIF: past this it's a big file nobody can send.</summary>
     public const double GifMaxSeconds = 15;
 

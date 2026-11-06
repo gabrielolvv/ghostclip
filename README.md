@@ -70,6 +70,8 @@ QuickSync). There is no CPU encoder fallback.
   didn't make are never touched.
 - **Delete by age** (optional): past the days you choose, clips go to the Recycle
   Bin, under the same care.
+- **A self-test** in Settings that checks the GPU encoder and every copy on this PC,
+  on a made-up clip, with a result to paste in a bug report.
 - **Settings backup** to a file, for another PC or a reinstall, without your webhook.
 - **English, Portuguese or Spanish,** or whatever Windows uses, switched live.
 
