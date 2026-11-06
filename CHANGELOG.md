@@ -3,6 +3,17 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Tags: write words on a clip or picture in the player, and the library's search finds
+  them. They show on its card, follow it when renamed, and don't change the file.
+
+### Fixed
+
+- A GIF's name in the library no longer shows its extension.
+
 ## 0.8.16
 
 ### Added
