@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A date filter in the library: today, the last 7 days or the last 30 days, together
+  with the game, the search and the sort.
+
 ## 0.8.17
 
 ### Added
