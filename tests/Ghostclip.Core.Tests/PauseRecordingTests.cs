@@ -15,11 +15,11 @@ public class PauseRecordingTests
     }
 
     [Fact]
-    public void Its_hotkey_comes_last_in_the_hotkey_list()
+    public void Its_hotkey_comes_after_the_short_clip_key()
     {
         // The tray finds each action's key by its position here.
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", ""], new GhostclipConfig().Normalize().Hotkeys);
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", "Alt+F7"], new GhostclipConfig { PauseHotkey = " Alt+F7 " }.Normalize().Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", "", ""], new GhostclipConfig().Normalize().Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", "Alt+F7", ""], new GhostclipConfig { PauseHotkey = " Alt+F7 " }.Normalize().Hotkeys);
     }
 
     [Theory]
