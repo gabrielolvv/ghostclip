@@ -210,8 +210,18 @@ internal sealed class LibraryBridge : IDisposable
                 case "meta" when ClipLibrary.IsImage(path):
                     // A screenshot is its own thumbnail and has nothing to probe.
                     break;
+                case "cover":
+                    // The picture first: if it can't be made, the card keeps the one it has.
+                    var (_, cover) = await Track(_meta.GetAsync(path, _closing.Token, r.Start)).ConfigureAwait(true);
+                    if (cover is null)
+                    {
+                        throw new InvalidOperationException(L("Couldn't make a picture from that moment.", "Não foi possível fazer uma imagem desse momento.", "No se pudo hacer una imagen de ese momento."));
+                    }
+                    LibraryStore.Update(_paths.LibraryFile, s => s.SetCover(path, r.Start));
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Thumb: $"https://{LibraryWindow.CacheHost}/{Path.GetFileName(cover)}"));
+                    break;
                 case "meta":
-                    var (meta, thumb) = await Track(_meta.GetAsync(path, _closing.Token)).ConfigureAwait(true);
+                    var (meta, thumb) = await Track(_meta.GetAsync(path, _closing.Token, LibraryStore.Read(_paths.LibraryFile).CoverFor(path))).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("meta", Path: path, Meta: meta,
                         Thumb: thumb is null ? null : $"https://{LibraryWindow.CacheHost}/{Path.GetFileName(thumb)}"));
                     break;

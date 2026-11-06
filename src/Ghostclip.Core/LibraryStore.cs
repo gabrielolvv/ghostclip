@@ -32,6 +32,9 @@ public sealed record LibraryState
     /// <summary>Seconds from the start of the clip, ascending.</summary>
     public Dictionary<string, List<double>> Bookmarks { get; set; } = [];
 
+    /// <summary>The second of a clip people picked for its card.</summary>
+    public Dictionary<string, double> Covers { get; set; } = [];
+
     public bool IsFavorite(string path)
     {
         if (Favorites.Any(p => SamePath(p, path))) return true;
@@ -42,6 +45,33 @@ public sealed record LibraryState
     public IReadOnlyList<double> BookmarksFor(string path) =>
         (Bookmarks.FirstOrDefault(b => string.Equals(b.Key, path, StringComparison.OrdinalIgnoreCase)).Value
             ?? Bookmarks.FirstOrDefault(b => SameClip(b.Key, path)).Value) ?? [];
+
+    public double? CoverFor(string path)
+    {
+        foreach (var cover in Covers)
+        {
+            if (SamePath(cover.Key, path)) return cover.Value;
+        }
+        foreach (var cover in Covers)
+        {
+            if (SameClip(cover.Key, path)) return cover.Value;
+        }
+        return null;
+    }
+
+    public void SetCover(string path, double seconds)
+    {
+        RemoveCover(path);
+        if (seconds >= 0) Covers[path] = seconds;
+    }
+
+    private void RemoveCover(string path)
+    {
+        foreach (var key in Covers.Keys.Where(k => SamePath(k, path)).ToList())
+        {
+            Covers.Remove(key);
+        }
+    }
 
     public void SetFavorite(string path, bool favorite)
     {
@@ -78,9 +108,11 @@ public sealed record LibraryState
     {
         var favorite = IsFavorite(from);
         var bookmarks = BookmarksFor(from).ToList();
+        var cover = CoverFor(from);
         Forget(from);
         if (favorite) SetFavorite(to, true);
         SetBookmarks(to, bookmarks);
+        if (cover is { } seconds) SetCover(to, seconds);
     }
 
     /// <summary>A file deleted: its own entries go; another clip's, matched only by name, stay.</summary>
@@ -89,6 +121,7 @@ public sealed record LibraryState
         Favorites.RemoveAll(p => SamePath(p, path));
         _favoriteTails = null;
         RemoveBookmarks(path);
+        RemoveCover(path);
     }
 
     private void RemoveBookmarks(string path)

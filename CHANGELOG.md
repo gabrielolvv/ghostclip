@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Use as cover in the player: the frame on screen becomes the clip's picture on its card
+  in the library. The file stays as it is, and the cover follows the clip when renamed.
+
 ## 0.8.16
 
 ### Added

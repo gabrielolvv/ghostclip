@@ -138,6 +138,13 @@ public static class ClipMedia
         Math.Max(1, (int)Math.Ceiling(durationSeconds * PeakSampleRate / PeakCount));
 
     /// <summary>File name stem for a clip's cached thumbnail and meta; a changed file gets a new one.</summary>
+    /// <summary>
+    /// A thumbnail's file in the cache. A cover gets a name for its time, or the window would go on showing the one
+    /// it has from the same address. Starting with the key, the cache's pruning treats it like the others.
+    /// </summary>
+    public static string ThumbName(string key, double? coverAt) =>
+        coverAt is { } at ? string.Create(CultureInfo.InvariantCulture, $"{key}.{(long)Math.Round(at * 1000)}.jpg") : key + ".jpg";
+
     public static string CacheKey(string path, long bytes, DateTime lastWriteUtc)
     {
         var text = string.Create(CultureInfo.InvariantCulture, $"{Path.GetFullPath(path).ToUpperInvariant()}|{bytes}|{lastWriteUtc.Ticks}");
