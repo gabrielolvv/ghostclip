@@ -195,6 +195,9 @@ main { min-width: 0; min-height: 0; display: flex; }
 .rename .field { flex: 1; min-width: 0; }
 .rename span { flex: none; }
 
+#a-fade[aria-pressed=true] { color: var(--accent); border-color: var(--accent); }
+#a-fade[aria-pressed=true] svg { fill: none; }
+
 /* Favorites, screenshots and bookmarks */
 .act[aria-pressed=true] { color: #E5B34B; border-color: rgba(229, 179, 75, 0.5); }
 .act[aria-pressed=true] svg { fill: currentColor; }
@@ -203,7 +206,7 @@ main { min-width: 0; min-height: 0; display: flex; }
 .star svg { width: 13px; height: 13px; fill: currentColor; }
 #image { width: 100%; height: 100%; object-fit: contain; display: block; }
 .is-image .stage { cursor: default; }
-.is-image #timeline, .is-image .times, .is-image #a-trim, .is-image #a-discord, .is-image #a-gif, .is-image #a-frame, .is-image #a-audio, .is-image #a-vertical, .is-image #play-hint { display: none; }
+.is-image #timeline, .is-image .times, .is-image #a-trim, .is-image #a-discord, .is-image #a-fade, .is-image #a-gif, .is-image #a-frame, .is-image #a-audio, .is-image #a-vertical, .is-image #play-hint { display: none; }
 .is-image .actions { margin-top: 14px; }
 .bookmark { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer; z-index: 1; }
 .bookmark::before { content: ""; position: absolute; left: 0; top: -1px; border: 4.5px solid transparent; border-top: 6px solid #E5B34B; }

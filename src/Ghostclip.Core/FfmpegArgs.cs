@@ -270,14 +270,15 @@ public static class FfmpegArgs
     /// </summary>
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
-    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null)
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, double fadeFor = 0)
     {
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise);
+        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise, fadeFor);
 
         var vf = new List<string>();
         if (plan.Height > 0) vf.Add(Inv($"scale=-2:{plan.Height}"));
         if (plan.Fps > 0) vf.Add(Inv($"fps={plan.Fps}"));
+        if (fadeFor > 0) vf.Add(Fade("fade", fadeFor));
         vf.Add("format=nv12");
         var rate = Inv($"{plan.VideoKbps}k");
         var gop = Inv($"{(plan.Fps > 0 ? plan.Fps : 60) * 2}");
@@ -297,16 +298,16 @@ public static class FfmpegArgs
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
     /// <param name="cropAt">Where the part kept sits across the room it has: 0 at the left, 0.5 in the middle, 1 at the right.</param>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null)
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, double fadeFor = 0)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
         var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
-        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise);
+        AddOneAudioTrack(args, audioTracks, keep, volumes, denoise, fadeFor);
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
         args.AddRange([
-            "-vf", VerticalCrop(cropAt) + ",scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + ",format=nv12",
+            "-vf", VerticalCrop(cropAt) + ",scale=1080:1920" + (capped ? Inv($",fps={MaxFps}") : "") + (fadeFor > 0 ? "," + Fade("fade", fadeFor) : "") + ",format=nv12",
             "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"), "-g", Inv($"{fps * 2}"),
             "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "-f", "mp4", output,
@@ -336,23 +337,36 @@ public static class FfmpegArgs
         return noise.Length > 0 && level.Length > 0 ? noise + "," + level : noise + level;
     }
 
-    // The tracks into one, labelled [a]: one or more, with something to do.
-    private static string MixGraph(IReadOnlyList<int> tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise)
+    // In and out over half a second, or a quarter of a short clip each way. fade or afade: they take the same options.
+    private static string Fade(string filter, double duration)
     {
-        if (tracks.Count == 1) return Inv($"[0:a:{tracks[0]}]{TrackFilter(tracks[0], volumes, denoise)}[a]");
+        var seconds = Math.Min(0.5, duration / 4);
+        return Inv($"{filter}=t=in:st=0:d={seconds:0.###},{filter}=t=out:st={duration - seconds:0.###}:d={seconds:0.###}");
+    }
+
+    // The tracks into one, labelled [a]: one or more, with something to do.
+    private static string MixGraph(IReadOnlyList<int> tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor = 0)
+    {
+        var fade = fadeFor > 0 ? Fade("afade", fadeFor) : "";
+        if (tracks.Count == 1)
+        {
+            var filter = TrackFilter(tracks[0], volumes, denoise);
+            return Inv($"[0:a:{tracks[0]}]{(filter.Length > 0 && fade.Length > 0 ? filter + "," + fade : filter + fade)}[a]");
+        }
         // Only a track with something to go through gets a filter, under a label of its own.
         var changed = tracks.Where(i => TrackFilter(i, volumes, denoise).Length > 0).ToList();
         var filters = string.Concat(changed.Select(i => Inv($"[0:a:{i}]{TrackFilter(i, volumes, denoise)}[v{i}];")));
         var inputs = string.Concat(tracks.Select(i => changed.Contains(i) ? Inv($"[v{i}]") : Inv($"[0:a:{i}]")));
-        return Inv($"{filters}{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0[a]");
+        var mix = Inv($"{filters}{inputs}amix=inputs={tracks.Count}:duration=first:normalize=0");
+        return fade.Length > 0 ? $"{mix}[m];[m]{fade}[a]" : mix + "[a]";
     }
 
-    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise)
+    private static void AddOneAudioTrack(List<string> args, int audioTracks, IReadOnlyList<int>? keep, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor)
     {
         var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
-        if (tracks.Count > 1 || (tracks.Count == 1 && TrackFilter(tracks[0], volumes, denoise).Length > 0))
+        if (tracks.Count > 1 || (tracks.Count == 1 && (fadeFor > 0 || TrackFilter(tracks[0], volumes, denoise).Length > 0)))
         {
-            args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise), "-map", "0:v:0", "-map", "[a]"]);
+            args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise, fadeFor), "-map", "0:v:0", "-map", "[a]"]);
         }
         else if (tracks.Count == 1)
         {

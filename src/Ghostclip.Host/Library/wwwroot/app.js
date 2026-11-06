@@ -623,6 +623,7 @@ function openClip(path) {
   tracksOff.clear();
   trackVolumes.clear();
   tracksDenoised.clear();
+  $('a-fade').setAttribute('aria-pressed', 'false');
   $('a-audio').hidden = false;
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
@@ -742,11 +743,13 @@ function exportTracks() {
   if (!meta) return {};
   const all = trackNames(meta).map((_, i) => i);
   const volume = i => trackVolumes.get(i) ?? 100;
+  const fade = $('a-fade').getAttribute('aria-pressed') === 'true';
   const kept = all.filter(i => !tracksOff.has(i) && volume(i) > 0);
   return {
     ...(kept.length < all.length ? { tracks: kept } : {}),
     ...(all.some(i => volume(i) !== 100) ? { volumes: all.map(i => volume(i) / 100) } : {}),
     ...(kept.some(i => tracksDenoised.has(i)) ? { denoise: kept.filter(i => tracksDenoised.has(i)) } : {}),
+    ...(fade ? { fade: true } : {}),
   };
 }
 
@@ -1083,6 +1086,9 @@ $('s-yes').addEventListener('click', () => {
   busy($('a-send'), true);
   toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
   post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
+});
+$('a-fade').addEventListener('click', () => {
+  $('a-fade').setAttribute('aria-pressed', String($('a-fade').getAttribute('aria-pressed') !== 'true'));
 });
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });

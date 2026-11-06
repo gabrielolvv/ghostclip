@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Fade in the player: the Discord size and vertical copies fade in and out, picture and
+  sound, over half a second, so they don't start and end dry. The clip stays as it is.
+
 ## 0.8.16
 
 ### Added
