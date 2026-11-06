@@ -150,7 +150,7 @@ installer and the minimal FFmpeg is described in
 - In the library: copy a clip and paste it straight into Discord, compress
   it to Discord's size limit, show it in its folder or send it to the
   Recycle Bin. In the player, the arrows seek, comma and period go frame by
-  frame, I and O mark the trim, < and > change the speed, from 0.25x to 2x, N and P go to
+  frame (? lists them all), I and O mark the trim, < and > change the speed, from 0.25x to 2x, N and P go to
   the next and previous clip, B and Shift+B jump between bookmarks, M mutes and F
   goes full screen.
 - Settings are a page in the library (the gear in its sidebar, or Settings in

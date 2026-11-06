@@ -150,7 +150,7 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as
-  setas navegam, vírgula e ponto andam quadro a quadro, I e O marcam o corte, < e > mudam a
+  setas navegam, vírgula e ponto andam quadro a quadro (? lista todas), I e O marcam o corte, < e > mudam a
   velocidade, de 0,25x a 2x, N e P vão para o próximo clipe e o anterior, B e Shift+B pulam entre
   marcadores, M silencia e F vai para tela cheia.
 - As configurações são uma página da biblioteca (a engrenagem na barra
