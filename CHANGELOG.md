@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A menu on the library's cards, from the right button: open, copy, favorite, rename,
+  show in folder, select and delete, without opening the clip.
+- Keys on a card in focus: F2 renames, Delete asks about the Recycle Bin, F favorites.
+
 ## 0.8.20
 
 ### Changed
