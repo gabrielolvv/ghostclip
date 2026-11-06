@@ -688,6 +688,7 @@ function openClip(path) {
   trackVolumes.clear();
   tracksDenoised.clear();
   $('a-fade').setAttribute('aria-pressed', 'false');
+  closeExportMenu(false);
   $('a-audio').hidden = false;
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
@@ -1256,6 +1257,57 @@ $('a-copy-trim').addEventListener('click', () => {
   toast(L('Saving trim…', 'Salvando corte…', 'Guardando recorte…'));
   post({ type: 'copyTrim', path: state.current.path, start: state.start, end: state.end });
 });
+// The Export menu. Choosing closes it, except Fade, which is a choice for the copies still to come.
+function exportOpen() { return !$('export-menu').hidden; }
+
+function closeExportMenu(giveFocusBack) {
+  if (!exportOpen()) return;
+  $('export-menu').hidden = true;
+  $('a-export').setAttribute('aria-expanded', 'false');
+  if (giveFocusBack) $('a-export').focus();
+}
+
+function exportItems() {
+  return [...$('export-menu').querySelectorAll('button')].filter(b => !b.hidden);
+}
+
+function openExportMenu() {
+  $('export-menu').hidden = false;
+  $('a-export').setAttribute('aria-expanded', 'true');
+}
+
+$('a-export').addEventListener('click', () => {
+  if (exportOpen()) closeExportMenu(false);
+  else openExportMenu();
+});
+$('a-export').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  e.stopPropagation();
+  openExportMenu();
+  const items = exportItems();
+  items[e.key === 'ArrowDown' ? 0 : items.length - 1].focus();
+});
+$('export-menu').addEventListener('click', e => {
+  const item = e.target.closest('button');
+  if (item && item.id !== 'a-fade') closeExportMenu(false);
+});
+$('export-menu').addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    closeExportMenu(false);
+    return;
+  }
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  // Here the arrows go through the menu, not the video.
+  e.preventDefault();
+  e.stopPropagation();
+  const items = exportItems();
+  const at = items.indexOf(document.activeElement);
+  items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+});
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest || !e.target.closest('.menu-wrap')) closeExportMenu(false);
+});
 $('a-copy').addEventListener('click', () => { if (state.current) post({ type: 'copy', path: state.current.path }); });
 $('a-folder').addEventListener('click', () => { if (state.current) post({ type: 'reveal', path: state.current.path }); });
 $('a-favorite').addEventListener('click', () => {
@@ -1362,6 +1414,10 @@ function resortSoon() {
 
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
+  if (e.key === 'Escape' && exportOpen()) {
+    closeExportMenu(true);
+    return;
+  }
   // Esc leaves full screen first: it mustn't also close the clip, whichever of the two hears it first.
   if (e.key === 'Escape' && (document.fullscreenElement || performance.now() - leftFullScreenAt < 300)) {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});

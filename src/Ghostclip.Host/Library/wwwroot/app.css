@@ -217,6 +217,20 @@ main { min-width: 0; min-height: 0; display: flex; }
 #a-fade[aria-pressed=true] { color: var(--accent); border-color: var(--accent); }
 #a-fade[aria-pressed=true] svg { fill: none; }
 
+/* The copies and what else makes something from a clip, out of the way of the picture. */
+.menu-wrap { position: relative; display: inline-flex; }
+.menu {
+  position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; display: flex; flex-direction: column; gap: 2px; min-width: 220px; padding: 6px;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: var(--raised); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+.menu[hidden] { display: none; }
+.menu .act { width: 100%; justify-content: flex-start; border-color: transparent; background: none; }
+.menu .act:hover, .menu .act:focus-visible { background: rgba(255, 255, 255, 0.06); outline: none; }
+/* Closed, the button says something is going on in there. */
+.menu-wrap:has(.busy) #a-export { border-color: var(--accent); color: var(--accent); }
+.menu-wrap:has(#a-fade[aria-pressed=true]) #a-export::after { content: "· fade"; margin-left: 2px; font: 11px var(--mono); color: var(--accent); }
+.is-image .menu-wrap { display: none; }
+
 /* Favorites, screenshots and bookmarks */
 .act[aria-pressed=true] { color: #E5B34B; border-color: rgba(229, 179, 75, 0.5); }
 .act[aria-pressed=true] svg { fill: currentColor; }
