@@ -69,6 +69,7 @@ function setLanguage(next) {
 }
 
 const state = {
+  since: 'all',     // all, today, or a number of days
   clips: [],
   listed: false,         // the first list arrived
   meta: new Map(),       // path -> { meta, thumb }
@@ -178,11 +179,22 @@ function snapStart(keyframes, seconds) {
 
 // Library view
 
+function withinDates(clip) {
+  if (state.since === 'all') return true;
+  const saved = savedDate(clip);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // Today counts as a day, so "last 7 days" goes back to the start of the seventh: a clip from a week ago at this hour
+  // doesn't come and go during the day.
+  const from = state.since === 'today' ? today : new Date(today.getFullYear(), today.getMonth(), today.getDate() - Number(state.since) + 1);
+  return saved >= from;
+}
+
 function visibleClips() {
   const q = state.query.trim().toLowerCase();
   const clips = state.clips.filter(c =>
     (state.game === null || c.game === state.game) && (!state.favorites || c.favorite) &&
-    (state.kind === 'all' || (state.kind === 'images') === !!c.image) &&
+    (state.kind === 'all' || (state.kind === 'images') === !!c.image) && withinDates(c) &&
     (q === '' || c.game.toLowerCase().includes(q) || fileName(c.path).toLowerCase().includes(q)
       || (c.tags || []).some(t => t.toLowerCase().includes(q))));
   return sortClips(clips);
@@ -1233,9 +1245,11 @@ $('search').addEventListener('input', e => { state.query = e.target.value; rende
 state.sort = readChoice('sort', ['newest', 'oldest', 'largest', 'longest']);
 $('sort').value = state.sort;
 $('kind').value = state.kind;
+$('since').value = state.since;
 $('sort').addEventListener('change', e => { state.sort = e.target.value; keepChoice('sort', state.sort); renderGrid(); });
 // Not remembered, unlike the sort: opening the library to a clip just saved that a filter hides would look like losing it.
 $('kind').addEventListener('change', e => { state.kind = e.target.value; renderGrid(); });
+$('since').addEventListener('change', e => { state.since = e.target.value; renderGrid(); });
 
 // Sorting by length needs every clip's details, not only the cards on screen. Asked for two at a time and only while
 // the list is showing, so a clip opened meanwhile doesn't wait behind the whole library.

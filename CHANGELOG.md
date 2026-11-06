@@ -7,6 +7,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- A date filter in the library: today, the last 7 days or the last 30 days, together
+  with the game, the search and the sort.
 - Play all in the library: the videos in the list on screen, one after another. Going
   back to the library ends it.
 - Next and previous in the player, from buttons or the N and P keys: the clip beside
