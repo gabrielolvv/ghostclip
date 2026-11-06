@@ -44,7 +44,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Buffer de replay no disco que você escolher,** para poupar o SSD do sistema.
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
-  aponta para ele; favoritos, renomear e ações em vários de uma vez. Só roda enquanto a janela está aberta.
+  aponta para ele; favoritos, etiquetas que a busca encontra, renomear e ações em
+  vários de uma vez. Só roda enquanto a janela está aberta.
 - **Corte** arrastando duas alças, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
@@ -57,6 +58,7 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
   É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
 - **Só o áudio:** o som do trecho marcado como .m4a, para aquela fala da call.
+- **Escolher a capa do clipe** para o cartão na biblioteca, a partir do quadro na tela.
 - **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
@@ -163,6 +165,7 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 | `Ghostclip.exe --session` | Começa ou para uma sessão |
 | `Ghostclip.exe --mute` | Muta ou desmuta a faixa do microfone |
 | `Ghostclip.exe --pause` | Pausa ou retoma a gravação |
+| `Ghostclip.exe --bookmark` | Marca o momento numa sessão, sem salvar um clipe |
 | `Ghostclip.exe --trim <clipe> <início> <fim>` | Gera `<clipe>_trim.mp4` por stream copy |
 | `Ghostclip.exe --compress <clipe>` | Gera `<clipe>_discord.mp4` dentro do limite do Discord |
 

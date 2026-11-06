@@ -42,7 +42,7 @@ QuickSync). There is no CPU encoder fallback.
 - **Replay buffer on the drive you choose,** to spare the system's SSD.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; a clip plays as you point at
-  it; favorites, renaming and acting on several at once. It runs only while its window is open.
+  it; favorites, tags the search finds, renaming and acting on several at once. It runs only while its window is open.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
@@ -56,6 +56,7 @@ QuickSync). There is no CPU encoder fallback.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
   It's the one export on the CPU, at low priority, only while it's being made.
 - **Audio only:** the sound of the trim marks as an .m4a, for that line from the call.
+- **Choose a clip's cover** for its card in the library, from the frame on screen.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
 - **Join clips** into one video, without re-encoding, for a compilation.
 - **Space limit** (optional): past it, the oldest clips and screenshots make
@@ -162,6 +163,7 @@ installer and the minimal FFmpeg is described in
 | `Ghostclip.exe --session` | Starts or stops a session |
 | `Ghostclip.exe --mute` | Mutes or unmutes the microphone track |
 | `Ghostclip.exe --pause` | Pauses or resumes recording |
+| `Ghostclip.exe --bookmark` | Marks the moment in a session, without saving a clip |
 | `Ghostclip.exe --trim <clip> <start> <end>` | Writes `<clip>_trim.mp4` by stream copy |
 | `Ghostclip.exe --compress <clip>` | Writes `<clip>_discord.mp4` under the Discord limit |
 

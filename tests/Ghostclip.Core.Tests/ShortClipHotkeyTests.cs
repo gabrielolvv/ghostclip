@@ -19,7 +19,7 @@ public class ShortClipHotkeyTests
     {
         var config = new GhostclipConfig { ShortClipHotkey = " Alt+F7 " }.Normalize();
         Assert.True(config.HasShortClipHotkey);
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "Alt+F7", ""], config.Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "Alt+F7", "", ""], config.Hotkeys);
         Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "Alt+F7"], config.ChosenHotkeys);
     }
 
@@ -27,7 +27,7 @@ public class ShortClipHotkeyTests
     public void Without_a_key_it_keeps_its_place_in_the_hotkey_list()
     {
         // The tray finds each action's key by its position here.
-        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", ""], new GhostclipConfig().Normalize().Hotkeys);
+        Assert.Equal(["Alt+F10", "Alt+F11", "Alt+F9", "Alt+F8", "", "", ""], new GhostclipConfig().Normalize().Hotkeys);
     }
 
     [Theory]

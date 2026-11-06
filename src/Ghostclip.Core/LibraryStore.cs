@@ -4,7 +4,8 @@ namespace Ghostclip.Core;
 
 /// <summary>
 /// What the library knows about files beyond the files themselves: which are
-/// favorites, and the bookmarks a session recording left in its clip. Keyed by
+/// favorites, the bookmarks a session recording left in its clip, and the tags people
+/// wrote on it. Keyed by
 /// full path; renaming or deleting through the library carries them along. A
 /// clip found under another clips folder (the folder moved, or Settings points
 /// elsewhere) is still recognized by its game folder and name, but only as a
@@ -32,6 +33,15 @@ public sealed record LibraryState
     /// <summary>Seconds from the start of the clip, ascending.</summary>
     public Dictionary<string, List<double>> Bookmarks { get; set; } = [];
 
+    /// <summary>The second of a clip people picked for its card.</summary>
+    public Dictionary<string, double> Covers { get; set; } = [];
+
+    /// <summary>Words people wrote on a clip to find it again.</summary>
+    public Dictionary<string, List<string>> Tags { get; set; } = [];
+
+    private const int MaxTagLength = 40;
+    private const int MaxTags = 20;
+
     public bool IsFavorite(string path)
     {
         if (Favorites.Any(p => SamePath(p, path))) return true;
@@ -42,6 +52,50 @@ public sealed record LibraryState
     public IReadOnlyList<double> BookmarksFor(string path) =>
         (Bookmarks.FirstOrDefault(b => string.Equals(b.Key, path, StringComparison.OrdinalIgnoreCase)).Value
             ?? Bookmarks.FirstOrDefault(b => SameClip(b.Key, path)).Value) ?? [];
+
+    public double? CoverFor(string path)
+    {
+        foreach (var cover in Covers)
+        {
+            if (SamePath(cover.Key, path)) return cover.Value;
+        }
+        foreach (var cover in Covers)
+        {
+            if (SameClip(cover.Key, path)) return cover.Value;
+        }
+        return null;
+    }
+
+    public void SetCover(string path, double seconds)
+    {
+        RemoveCover(path);
+        if (seconds >= 0) Covers[path] = seconds;
+    }
+
+    private void RemoveCover(string path)
+    {
+        foreach (var key in Covers.Keys.Where(k => SamePath(k, path)).ToList())
+        {
+            Covers.Remove(key);
+        }
+    }
+
+    public IReadOnlyList<string> TagsFor(string path) =>
+        (Tags.FirstOrDefault(t => SamePath(t.Key, path)).Value
+            ?? Tags.FirstOrDefault(t => SameClip(t.Key, path)).Value) ?? [];
+
+    public void SetTags(string path, IEnumerable<string> tags)
+    {
+        RemoveTags(path);
+        var tidy = tags
+            .Select(t => string.Join(' ', t.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)))
+            .Where(t => t.Length > 0)
+            .Select(t => t.Length > MaxTagLength ? t[..MaxTagLength].TrimEnd() : t)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxTags)
+            .ToList();
+        if (tidy.Count > 0) Tags[path] = tidy;
+    }
 
     public void SetFavorite(string path, bool favorite)
     {
@@ -78,9 +132,13 @@ public sealed record LibraryState
     {
         var favorite = IsFavorite(from);
         var bookmarks = BookmarksFor(from).ToList();
+        var cover = CoverFor(from);
+        var tags = TagsFor(from).ToList();
         Forget(from);
         if (favorite) SetFavorite(to, true);
         SetBookmarks(to, bookmarks);
+        if (cover is { } seconds) SetCover(to, seconds);
+        SetTags(to, tags);
     }
 
     /// <summary>A file deleted: its own entries go; another clip's, matched only by name, stay.</summary>
@@ -89,6 +147,16 @@ public sealed record LibraryState
         Favorites.RemoveAll(p => SamePath(p, path));
         _favoriteTails = null;
         RemoveBookmarks(path);
+        RemoveCover(path);
+        RemoveTags(path);
+    }
+
+    private void RemoveTags(string path)
+    {
+        foreach (var key in Tags.Keys.Where(k => SamePath(k, path)).ToList())
+        {
+            Tags.Remove(key);
+        }
     }
 
     private void RemoveBookmarks(string path)
