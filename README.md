@@ -43,6 +43,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; a clip plays as you point at
   it; favorites, tags the search finds, renaming and acting on several at once. It runs only while its window is open.
+- **Play all** the videos in a list, one after another, to go back over a game or
+  your favorites.
 - **Trim** by dragging two handles, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit

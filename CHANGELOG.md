@@ -7,6 +7,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Play all in the library: the videos in the list on screen, one after another. Going
+  back to the library ends it.
 - Next and previous in the player, from buttons or the N and P keys: the clip beside
   this one in the list on screen, without going back to the library.
 
