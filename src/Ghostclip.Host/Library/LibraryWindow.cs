@@ -25,6 +25,8 @@ internal sealed partial class LibraryWindow : Form
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Canvas };
     private readonly LibraryBridge _bridge;
     private readonly string _boundsFile;
+    private bool _fullScreen;
+    private FormWindowState _stateBeforeFullScreen;
 
     public LibraryWindow(GhostclipPaths paths, GhostclipConfig config, ILogger log, string? clip)
     {
@@ -119,6 +121,8 @@ internal sealed partial class LibraryWindow : Form
             MapClips();
             core.SetVirtualHostNameToFolderMapping(CacheHost, _bridge.ThumbsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += _bridge.OnMessage;
+            // WebView2 only fills its control: for the page's full screen, the window has to cover the screen.
+            core.ContainsFullScreenElementChanged += (_, _) => SetFullScreen(core.ContainsFullScreenElement);
             // In the right language from the first paint; a change later arrives as a "language" event.
             core.Navigate($"https://{AppHost}/index.html?lang={UiText.Code}");
         }
@@ -128,6 +132,26 @@ internal sealed partial class LibraryWindow : Form
             MessageBox.Show(L($"The clip library couldn't start: {ex.Message}", $"A biblioteca de clipes não conseguiu abrir: {ex.Message}", $"La biblioteca de clips no pudo abrirse: {ex.Message}"),
                 "Ghostclip", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             Close();
+        }
+    }
+
+    private void SetFullScreen(bool on)
+    {
+        if (on == _fullScreen) return;
+        _fullScreen = on;
+        if (on)
+        {
+            _stateBeforeFullScreen = WindowState;
+            // Maximized with a border leaves the taskbar showing: it has to come back down first.
+            if (WindowState == FormWindowState.Maximized) WindowState = FormWindowState.Normal;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Maximized;
+        }
+        else
+        {
+            WindowState = FormWindowState.Normal;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            WindowState = _stateBeforeFullScreen;
         }
     }
 
@@ -141,6 +165,8 @@ internal sealed partial class LibraryWindow : Form
             e.Cancel = true;
             return;
         }
+        // What's remembered is the window as it was before full screen.
+        SetFullScreen(false);
         var r = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
         new WindowBounds(r.X, r.Y, r.Width, r.Height, WindowState == FormWindowState.Maximized).Write(_boundsFile);
         base.OnFormClosing(e);

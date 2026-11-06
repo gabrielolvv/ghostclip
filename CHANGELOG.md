@@ -9,6 +9,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 - Card size in the library: small, to see more at once, or large, to see the pictures
   better. It stays between visits.
+- Volume in the player, with M to mute. It stays from clip to clip and between visits,
+  and the file doesn't change.
+- Full screen in the player, from a button, F or a double click. Esc comes back.
+- In a session, B and Shift+B jump to the next and previous bookmark.
 
 ## 0.8.18
 
