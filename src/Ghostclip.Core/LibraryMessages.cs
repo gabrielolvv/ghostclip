@@ -13,7 +13,7 @@ namespace Ghostclip.Core;
 /// pickFolder and pickFfmpeg for the settings page.
 /// </summary>
 public sealed record LibraryRequest(string Type, string? Path = null, double Start = 0, double End = 0,
-    GhostclipConfig? Config = null, bool Confirmed = false, string? Name = null, bool Favorite = false, IReadOnlyList<string>? Paths = null, IReadOnlyList<int>? Tracks = null, IReadOnlyList<double>? Volumes = null, double CropAt = 0.5, IReadOnlyList<int>? Denoise = null);
+    GhostclipConfig? Config = null, bool Confirmed = false, string? Name = null, bool Favorite = false, IReadOnlyList<string>? Paths = null, IReadOnlyList<int>? Tracks = null, IReadOnlyList<double>? Volumes = null, double CropAt = 0.5, IReadOnlyList<int>? Denoise = null, IReadOnlyList<string>? Tags = null);
 
 /// <summary>
 /// A clip or screenshot as the page sees it. Url plays or shows it through the
@@ -22,17 +22,19 @@ public sealed record LibraryRequest(string Type, string? Path = null, double Sta
 /// for it. Bookmarks are seconds a session recording marked.
 /// </summary>
 public sealed record ClipDto(string Path, string Url, string Game, string Saved, long Bytes, bool Derived, string Version,
-    bool Image = false, bool Favorite = false, IReadOnlyList<double>? Bookmarks = null)
+    bool Image = false, bool Favorite = false, IReadOnlyList<double>? Bookmarks = null, IReadOnlyList<string>? Tags = null)
 {
     public const string ClipsHost = "https://clips.ghostclip/";
 
     public static ClipDto From(ClipEntry e, LibraryState? state = null)
     {
         var bookmarks = state?.BookmarksFor(e.Path);
+        var tags = state?.TagsFor(e.Path);
         return new(e.Path, ClipsHost + e.RelativeUrl, e.Game,
             e.SavedLocal.ToString("s", CultureInfo.InvariantCulture), e.Bytes, e.Derived,
             string.Create(CultureInfo.InvariantCulture, $"{e.Bytes}-{e.LastWriteUtc.Ticks}"),
-            e.Image, state?.IsFavorite(e.Path) ?? false, bookmarks is { Count: > 0 } ? bookmarks : null);
+            e.Image, state?.IsFavorite(e.Path) ?? false, bookmarks is { Count: > 0 } ? bookmarks : null,
+            tags is { Count: > 0 } ? tags : null);
     }
 }
 

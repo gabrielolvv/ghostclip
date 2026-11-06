@@ -110,6 +110,9 @@ public sealed record GhostclipConfig
     /// <summary>Stops recording and deletes the replay buffer until pressed again. Empty, the default: the tray menu still does it.</summary>
     public string PauseHotkey { get; set; } = "";
 
+    /// <summary>Marks the moment in a session without saving a clip. Empty, the default: only the clip key marks it.</summary>
+    public string BookmarkHotkey { get; set; } = "";
+
     public int ClipSeconds { get; set; } = 60;
     public int Fps { get; set; } = 60;
     public int BitrateMbps { get; set; } = 20;
@@ -227,7 +230,8 @@ public sealed record GhostclipConfig
             : MicMuteHotkey;
         var shortClip = new[] { Hotkey, screenshot, session, mute }.Any(k => Same(k, ShortClipHotkey)) ? "" : ShortClipHotkey;
         var pause = new[] { Hotkey, screenshot, session, mute, shortClip }.Any(k => Same(k, PauseHotkey)) ? "" : PauseHotkey;
-        return this with { ScreenshotHotkey = screenshot, SessionHotkey = session, MicMuteHotkey = mute, ShortClipHotkey = shortClip, PauseHotkey = pause };
+        var bookmark = new[] { Hotkey, screenshot, session, mute, shortClip, pause }.Any(k => Same(k, BookmarkHotkey)) ? "" : BookmarkHotkey;
+        return this with { BookmarkHotkey = bookmark, ScreenshotHotkey = screenshot, SessionHotkey = session, MicMuteHotkey = mute, ShortClipHotkey = shortClip, PauseHotkey = pause };
     }
 
     private GhostclipConfig Clamped() => this with
@@ -240,6 +244,7 @@ public sealed record GhostclipConfig
         ShortClipHotkey = string.IsNullOrWhiteSpace(ShortClipHotkey) || HotkeyRules.TakesCommonShortcut(ShortClipHotkey) ? "" : ShortClipHotkey.Trim(),
         ShortClipSeconds = Math.Clamp(ShortClipSeconds, 10, 600),
         PauseHotkey = string.IsNullOrWhiteSpace(PauseHotkey) || HotkeyRules.TakesCommonShortcut(PauseHotkey) ? "" : PauseHotkey.Trim(),
+        BookmarkHotkey = string.IsNullOrWhiteSpace(BookmarkHotkey) || HotkeyRules.TakesCommonShortcut(BookmarkHotkey) ? "" : BookmarkHotkey.Trim(),
         ClipSeconds = Math.Clamp(ClipSeconds, 10, 600),
         Fps = Math.Clamp(Fps, 24, 144),
         BitrateMbps = Math.Clamp(BitrateMbps, 2, 150),
@@ -297,15 +302,18 @@ public sealed record GhostclipConfig
     /// <summary>The game's profile or the mute hotkey: either one mutes the microphone track.</summary>
     public bool MicrophoneMutedFor(string? game, bool byHotkey) => byHotkey || (ProfileFor(game)?.MuteMicrophone ?? false);
 
-    /// <summary>The save, screenshot, session, mute, short clip and pause hotkeys, in that order. The last two are empty until chosen.</summary>
+    /// <summary>The save, screenshot, session, mute, short clip, pause and bookmark hotkeys, in that order. The last three are empty until chosen.</summary>
     [JsonIgnore]
-    public IReadOnlyList<string> Hotkeys => [Hotkey, ScreenshotHotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey, PauseHotkey];
+    public IReadOnlyList<string> Hotkeys => [Hotkey, ScreenshotHotkey, SessionHotkey, MicMuteHotkey, ShortClipHotkey, PauseHotkey, BookmarkHotkey];
 
     [JsonIgnore]
     public bool HasShortClipHotkey => !string.IsNullOrWhiteSpace(ShortClipHotkey);
 
     [JsonIgnore]
     public bool HasPauseHotkey => !string.IsNullOrWhiteSpace(PauseHotkey);
+
+    [JsonIgnore]
+    public bool HasBookmarkHotkey => !string.IsNullOrWhiteSpace(BookmarkHotkey);
 
     /// <summary>The hotkeys that have a key, to check them; <see cref="Hotkeys"/> keeps each action's place.</summary>
     [JsonIgnore]

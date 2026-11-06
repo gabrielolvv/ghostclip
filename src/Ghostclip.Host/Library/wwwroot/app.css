@@ -121,6 +121,9 @@ main { min-width: 0; min-height: 0; display: flex; }
 .card-text { padding: 8px 10px 9px; }
 .card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-sub { font: 11px var(--mono); color: var(--muted); }
+.card-tags { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px var(--mono); color: var(--accent); }
+.tags-row { margin: 0 0 10px; }
+.tags-row .field { width: 100%; box-sizing: border-box; }
 
 .problem {
   display: flex; flex-direction: column; gap: 2px; margin: -4px 0 18px; padding: 10px 14px; border-radius: 8px;
