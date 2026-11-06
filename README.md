@@ -161,6 +161,7 @@ installer and the minimal FFmpeg is described in
 | `Ghostclip.exe --session` | Starts or stops a session |
 | `Ghostclip.exe --mute` | Mutes or unmutes the microphone track |
 | `Ghostclip.exe --pause` | Pauses or resumes recording |
+| `Ghostclip.exe --bookmark` | Marks the moment in a session, without saving a clip |
 | `Ghostclip.exe --trim <clip> <start> <end>` | Writes `<clip>_trim.mp4` by stream copy |
 | `Ghostclip.exe --compress <clip>` | Writes `<clip>_discord.mp4` under the Discord limit |
 

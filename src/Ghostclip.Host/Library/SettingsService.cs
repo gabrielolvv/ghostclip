@@ -229,6 +229,7 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         ["micMuteHotkey"] = KeyLabels.Describe(config.MicMuteHotkey),
         ["shortClipHotkey"] = KeyLabels.Describe(config.ShortClipHotkey),
         ["pauseHotkey"] = KeyLabels.Describe(config.PauseHotkey),
+        ["bookmarkHotkey"] = KeyLabels.Describe(config.BookmarkHotkey),
     };
 
     // Said here rather than as a recorder that stops: it must be a whole path to a folder that takes files.
@@ -267,8 +268,8 @@ internal sealed class SettingsService(LibraryWindow window, GhostclipPaths paths
         var keys = config.ChosenHotkeys.Select(g => HotkeyWindow.TryParse(g, out var m, out var k, out _) ? (m, k) : default).ToList();
         if (keys.Distinct().Count() < keys.Count)
         {
-            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session, muting the microphone and pausing recording can't share a hotkey.",
-                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão, mutar o microfone e pausar a gravação não podem usar a mesma hotkey.", "Guardar un clip, guardar un clip corto, hacer una captura, grabar una sesión, silenciar el micrófono y pausar la grabación no pueden compartir la misma tecla.");
+            return L("Saving a clip, saving a short clip, taking a screenshot, recording a session, muting the microphone, pausing recording and marking a session can't share a hotkey.",
+                "Salvar clipe, salvar clipe curto, tirar print, gravar sessão, mutar o microfone, pausar a gravação e marcar a sessão não podem usar a mesma hotkey.", "Guardar un clip, guardar un clip corto, hacer una captura, grabar una sesión, silenciar el micrófono, pausar la grabación y marcar la sesión no pueden compartir la misma tecla.");
         }
         return null;
     }
