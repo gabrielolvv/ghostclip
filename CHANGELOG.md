@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Next and previous in the player, from buttons or the N and P keys: the clip beside
+  this one in the list on screen, without going back to the library.
+
 ## 0.8.17
 
 ### Added
