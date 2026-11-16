@@ -814,6 +814,11 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (selected.size === 0) return;
+  // Asking which game: Esc goes back to the bar, and Delete waits for that answer.
+  if (gameAsking) {
+    if (e.key === 'Escape') $('sel-game-no').click();
+    return;
+  }
   if (e.key === 'Delete' && !binAsking) {
     e.preventDefault();
     $('sel-bin').click();
@@ -1125,6 +1130,9 @@ function showScrub(t) {
     scrub.src = scrubUrl();
     scrubSeeking = false;
   }
+  // Before its details load, a video takes a time without seeking to it, and never at all to 0, so no seeked
+  // would come: loadedmetadata seeks to the newest place instead.
+  if (scrub.readyState === 0) return;
   // One seek at a time: a pointer sweeping across asks for the newest place once the last one is shown.
   if (!scrubSeeking) {
     scrubSeeking = true;
@@ -1151,6 +1159,8 @@ scrub.addEventListener('seeked', () => {
 });
 scrub.addEventListener('loadedmetadata', () => {
   if (scrub.videoWidth && scrub.videoHeight) scrub.style.aspectRatio = `${scrub.videoWidth} / ${scrub.videoHeight}`;
+  scrubSeeking = false;
+  if (scrubWant !== null) showScrub(scrubWant);
 });
 // A clip this window can't play shows no frame: the box goes rather than stay black.
 scrub.addEventListener('error', () => { if (scrub.getAttribute('src')) releaseScrub(); });
@@ -1467,7 +1477,8 @@ video.addEventListener('pause', () => {
   cancelAnimationFrame(frame);
   placePlayhead();
 });
-video.addEventListener('seeked', placePlayhead);
+// Not placePlayhead itself: the event would be its follow, and the view would leave what's zoomed in on.
+video.addEventListener('seeked', () => placePlayhead());
 // Without the HEVC extension the audio plays but no picture is decoded; say so instead of a black frame.
 video.addEventListener('loadedmetadata', () => { $('no-video').hidden = video.videoWidth > 0; });
 document.querySelector('.stage').addEventListener('click', togglePlay);
