@@ -85,49 +85,54 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// encoder, always as H.264 (Discord doesn't embed HEVC). Retries once,
     /// lower, if the encoder overshoots.
     /// </summary>
-    public async Task<(string Path, long Bytes)> CompressAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, bool fade = false, bool level = false, CancellationToken ct = default)
+    /// <param name="start">With <paramref name="end"/>, the trim marks: the part between them, or all of the clip when they're around it.</param>
+    public async Task<(string Path, long Bytes)> CompressAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, bool fade = false, bool level = false, double start = 0, double end = 0, CancellationToken ct = default)
     {
         var cfg = config();
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var part = FfmpegArgs.MarkedPart(start, end, info.Duration);
+        var length = part?.Length ?? info.Duration;
         var limit = cfg.DiscordLimitMB;
         var silent = ClipMedia.TracksToKeep(info.AudioTracks, tracks).Count == 0;
-        var plan = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit, silent: silent);
+        var plan = CompressionPlanner.Plan(length, info.Height, info.Fps, limit, silent: silent);
         if (plan is null)
         {
             var max = limit * 8.0 * 1024 * 0.92 / (CompressionPlanner.MinVideoKbps + (silent ? 0 : CompressionPlanner.AudioKbps));
-            throw new InvalidOperationException(L($"{info.Duration:0} s is too long for {limit} MB. Trim it to {max:0} s or less first.",
-                $"{info.Duration:0} s é longo demais para {limit} MB. Corte para {max:0} s ou menos antes.", $"{info.Duration:0} s es demasiado largo para {limit} MB. Recórtalo antes a {max:0} s o menos."));
+            throw new InvalidOperationException(L($"{length:0} s is too long for {limit} MB. Mark {max:0} s or less with the trim handles first.",
+                $"{length:0} s é longo demais para {limit} MB. Marque {max:0} s ou menos com as alças de corte antes.", $"{length:0} s es demasiado largo para {limit} MB. Marca antes {max:0} s o menos con los tiradores de recorte."));
         }
 
         var encoder = HardwareEncoder(cfg);
         var output = ClipNaming.DerivedPath(clip, "discord", File.Exists);
-        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, tracks, volumes, denoise, fade ? info.Duration : 0, level, ct).ConfigureAwait(false);
+        var size = await EncodeAsync(clip, output, plan, encoder, info.AudioTracks, tracks, volumes, denoise, fade ? length : 0, level, part, ct).ConfigureAwait(false);
         var limitBytes = limit * 1024L * 1024;
         if (size > limitBytes)
         {
-            var retry = CompressionPlanner.Plan(info.Duration, info.Height, info.Fps, limit, CompressionPlanner.RetrySafety(size, limit), silent);
+            var retry = CompressionPlanner.Plan(length, info.Height, info.Fps, limit, CompressionPlanner.RetrySafety(size, limit), silent);
             if (retry is not null)
             {
                 log.Information("Compressed clip came out at {Size} bytes, over {Limit} MB; retrying at {Kbps} kbps", size, limit, retry.VideoKbps);
-                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, tracks, volumes, denoise, fade ? info.Duration : 0, level, ct).ConfigureAwait(false);
+                size = await EncodeAsync(clip, output, retry, encoder, info.AudioTracks, tracks, volumes, denoise, fade ? length : 0, level, part, ct).ConfigureAwait(false);
             }
         }
         PartFile.Commit(output);
-        log.Information("Compressed {Clip} to {Output} ({Size} bytes, {Kbps} kbps, {Height}p)", clip, output, size, plan.VideoKbps, plan.Height);
+        log.Information("Compressed {Clip} to {Output} ({Size} bytes, {Kbps} kbps, {Height}p, {Length:0.0} s from {Start:0.0})", clip, output, size, plan.VideoKbps, plan.Height, length, part?.Start ?? 0);
         return (output, size);
     }
 
     /// <summary>Re-encodes a part of the picture into Game_..._vertical.mp4, on the hardware encoder, always as H.264.</summary>
-    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, bool fade = false, bool level = false, CancellationToken ct = default)
+    public async Task<string> VerticalAsync(string clip, IReadOnlyList<int>? tracks = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, bool fade = false, bool level = false, double start = 0, double end = 0, CancellationToken ct = default)
     {
         var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var part = FfmpegArgs.MarkedPart(start, end, info.Duration);
+        var length = part?.Length ?? info.Duration;
         var encoder = HardwareEncoder(config());
         var output = ClipNaming.DerivedPath(clip, "vertical", File.Exists);
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes, cropAt, denoise, fade ? info.Duration : 0, level),
-                FfmpegArgs.VerticalTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Vertical(clip, PartFile.For(output), encoder, info.AudioTracks, info.Fps, tracks, volumes, cropAt, denoise, fade ? length : 0, level, part?.Start ?? 0, part?.Length ?? 0),
+                FfmpegArgs.VerticalTimeout(length), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -140,7 +145,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             throw new InvalidOperationException(L($"Could not make the vertical copy: {r.FirstError}", $"Não foi possível fazer a cópia vertical: {r.FirstError}", $"No se pudo hacer la copia vertical: {r.FirstError}"));
         }
         PartFile.Commit(output);
-        log.Information("Vertical copy of {Clip}: {Output}", clip, output);
+        log.Information("Vertical copy of {Clip}, {Length:0.0} s from {Start:0.0}: {Output}", clip, length, part?.Start ?? 0, output);
         return output;
     }
 
@@ -176,7 +181,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     /// Posts a clip or picture to the Discord webhook, by way of a Discord size copy when it won't do as it is.
     /// Only when people ask, on each clip. Returns the copy made, or null.
     /// </summary>
-    public async Task<string?> SendToDiscordAsync(string clip, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, bool fade, bool level = false, CancellationToken ct = default)
+    public async Task<string?> SendToDiscordAsync(string clip, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, bool fade, bool level = false, double start = 0, double end = 0, CancellationToken ct = default)
     {
         var cfg = config();
         if (!DiscordWebhook.IsValid(cfg.DiscordWebhook)) throw new InvalidOperationException(DiscordWebhook.NotAWebhook());
@@ -193,9 +198,9 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         else
         {
             var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
-            if (DiscordWebhook.NeedsCopy(bytes, limit, info.AudioTracks, info.VideoCodec, tracks is not null || volumes is not null || denoise is not null || fade || level))
+            if (DiscordWebhook.NeedsCopy(bytes, limit, info.AudioTracks, info.VideoCodec, tracks is not null || volumes is not null || denoise is not null || fade || level || FfmpegArgs.MarkedPart(start, end, info.Duration) is not null))
             {
-                (copy, _) = await CompressAsync(clip, tracks, volumes, denoise, fade, level, ct).ConfigureAwait(false);
+                (copy, _) = await CompressAsync(clip, tracks, volumes, denoise, fade, level, start, end, ct).ConfigureAwait(false);
             }
         }
         await DiscordWebhook.SendAsync(Discord, cfg.DiscordWebhook!, copy ?? clip, ct).ConfigureAwait(false);
@@ -384,12 +389,12 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     }
 
     // Writes the .part file; the caller moves it into place once the size is right.
-    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor, bool level, CancellationToken ct)
+    private async Task<long> EncodeAsync(string clip, string output, CompressionPlan plan, string encoder, int audioTracks, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor, bool level, (double Start, double Length)? part, CancellationToken ct)
     {
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks, tracks, volumes, denoise, fadeFor, level),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Compress(clip, PartFile.For(output), plan, encoder, audioTracks, tracks, volumes, denoise, fadeFor, level, part?.Start ?? 0, part?.Length ?? 0),
                 TimeSpan.FromMinutes(15), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

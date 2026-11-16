@@ -53,8 +53,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Trim** by dragging two handles, with the wheel to zoom in and the frame under
   the pointer shown above the timeline, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
-- **Compress for Discord:** re-encodes on the GPU to fit the upload limit
-  (10 MB by default), mixing game and mic into one track.
+- **Compress for Discord:** re-encodes the trim marks on the GPU to fit the upload
+  limit (10 MB by default), mixing game and mic into one track.
 - **Send to Discord** from the player, through a webhook of yours, fitted to the
   limit. It's the only way a clip leaves your PC, and only when you click.
 - **Vertical copy** for Shorts, TikTok and Reels: the part of the picture you choose, at
