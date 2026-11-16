@@ -60,6 +60,7 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .update-head { font-size: 10px; letter-spacing: 0.14em; color: var(--accent); }
 .update-card .act { align-self: stretch; justify-content: center; }
 .side-foot #total { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-foot #cost { line-height: 1.5; }
 .link { color: var(--muted); font-size: 11px; transition: color var(--fast); }
 .link:hover { color: var(--accent); }
 
