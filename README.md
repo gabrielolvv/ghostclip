@@ -148,8 +148,8 @@ installer and the minimal FFmpeg is described in
 
 - **Alt+F10** saves to `Videos\Ghostclip\<Game>\<Game>_YYYY-MM-DD_HH-MM-SS.mp4`.
 - Double-click the tray icon, or click a "Clip saved" notification, to open
-  the library. The tray menu also shows what is being recorded and has
-  settings and folders. The icon's dot is red while recording.
+  the library. The tray menu also shows what is being recorded, copies the
+  last clip to paste in Discord, and has settings and folders. The icon's dot is red while recording.
 - In the library: copy a clip and paste it straight into Discord, compress
   it to Discord's size limit, show it in its folder or send it to the
   Recycle Bin. In the player, the arrows seek, comma and period go frame by
@@ -175,6 +175,7 @@ installer and the minimal FFmpeg is described in
 | `Ghostclip.exe --mute` | Mutes or unmutes the microphone track |
 | `Ghostclip.exe --pause` | Pauses or resumes recording |
 | `Ghostclip.exe --bookmark` | Marks the moment in a session, without saving a clip |
+| `Ghostclip.exe --copy-last` | Puts the newest clip on the clipboard, ready to paste |
 | `Ghostclip.exe --trim <clip> <start> <end>` | Writes `<clip>_trim.mp4` by stream copy |
 | `Ghostclip.exe --compress <clip>` | Writes `<clip>_discord.mp4` under the Discord limit |
 

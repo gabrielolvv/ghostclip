@@ -9,6 +9,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 - A clip saved under the wrong game can move to another one, or to a new one, from its
   menu or for a whole selection. Its name takes the new game, unless you renamed it.
+- "Copy last clip" in the tray menu, and `--copy-last` for a Stream Deck, put the newest
+  clip on the clipboard, ready to paste in Discord. Right after a save, it waits for that
+  one.
 
 ## 0.8.24
 

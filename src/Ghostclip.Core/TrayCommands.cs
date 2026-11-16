@@ -1,7 +1,7 @@
 namespace Ghostclip.Core;
 
 /// <summary>What another launch of Ghostclip.exe can ask the running copy to do.</summary>
-public enum TrayCommand { SaveClip, ShortClip, Screenshot, Session, MicMute, Pause, Bookmark }
+public enum TrayCommand { SaveClip, ShortClip, Screenshot, Session, MicMute, Pause, Bookmark, CopyLast }
 
 /// <summary>
 /// For Stream Deck, macros and mouse software: "Ghostclip.exe --save" and the like do what the hotkeys do, without
@@ -18,6 +18,7 @@ public static class TrayCommands
         TrayCommand.MicMute => "--mute",
         TrayCommand.Pause => "--pause",
         TrayCommand.Bookmark => "--bookmark",
+        TrayCommand.CopyLast => "--copy-last",
         _ => throw new ArgumentOutOfRangeException(nameof(command)),
     };
 

@@ -150,7 +150,8 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 - **Alt+F10** salva em `Vídeos\Ghostclip\<Jogo>\<Jogo>_AAAA-MM-DD_HH-MM-SS.mp4`.
 - Clique duas vezes no ícone da bandeja, ou numa notificação "Clipe salvo",
   para abrir a biblioteca. O menu da bandeja também mostra o que está sendo
-  gravado e tem configurações e pastas. O ponto do ícone fica vermelho
+  gravado, copia o último clipe para colar no Discord e tem configurações e
+  pastas. O ponto do ícone fica vermelho
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as
@@ -176,6 +177,7 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 | `Ghostclip.exe --mute` | Muta ou desmuta a faixa do microfone |
 | `Ghostclip.exe --pause` | Pausa ou retoma a gravação |
 | `Ghostclip.exe --bookmark` | Marca o momento numa sessão, sem salvar um clipe |
+| `Ghostclip.exe --copy-last` | Põe o clipe mais novo na área de transferência, pronto para colar |
 | `Ghostclip.exe --trim <clipe> <início> <fim>` | Gera `<clipe>_trim.mp4` por stream copy |
 | `Ghostclip.exe --compress <clipe>` | Gera `<clipe>_discord.mp4` dentro do limite do Discord |
 
