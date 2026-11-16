@@ -166,7 +166,7 @@
         </button>
         <div class="menu-wrap">
           <button id="a-export" class="act" type="button" aria-haspopup="menu" aria-expanded="false">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg><span data-pt="Exportar" data-es="Exportar">Export</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg><span data-pt="Exportar" data-es="Exportar">Export</span><span id="export-flags" class="mono" hidden></span>
           </button>
           <div id="export-menu" class="menu" role="menu" hidden>
         <button id="a-discord" class="act" type="button">
@@ -195,6 +195,9 @@
         </button>
         <button id="a-fade" class="act" type="button" aria-pressed="false" title="The Discord size and vertical copies fade in and out, picture and sound. The clip stays as it is." data-pt-title="As cópias para o Discord e vertical entram e saem em fade, imagem e som. O clipe fica como está." data-es-title="Las copias para Discord y vertical entran y salen con un fundido, imagen y sonido. El clip no cambia.">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18L14 6z"/></svg><span>Fade</span>
+        </button>
+        <button id="a-level" class="act" type="button" aria-pressed="false" title="The copies' sound comes out at one steady loudness: a quiet game comes up, a loud microphone comes down. The clip stays as it is." data-pt-title="O som das cópias sai num volume só: o jogo baixo sobe, o microfone alto desce. O clipe fica como está." data-es-title="El sonido de las copias sale a un solo volumen: el juego bajo sube, el micrófono alto baja. El clip no cambia.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-4M8 17V7M12 15V9M16 17V7M20 14v-4"/></svg><span data-pt="Igualar volume" data-es="Igualar volumen">Even volume</span>
         </button>
           </div>
         </div>

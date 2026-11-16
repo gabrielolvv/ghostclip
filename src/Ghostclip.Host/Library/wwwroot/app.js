@@ -954,6 +954,8 @@ function openClip(path) {
   trackVolumes.clear();
   tracksDenoised.clear();
   $('a-fade').setAttribute('aria-pressed', 'false');
+  $('a-level').setAttribute('aria-pressed', 'false');
+  showExportFlags();
   closeExportMenu(false);
   $('a-audio').hidden = false;
   $('tracks-row').hidden = true;
@@ -1204,12 +1206,14 @@ function exportTracks() {
   const all = trackNames(meta).map((_, i) => i);
   const volume = i => trackVolumes.get(i) ?? 100;
   const fade = $('a-fade').getAttribute('aria-pressed') === 'true';
+  const level = $('a-level').getAttribute('aria-pressed') === 'true';
   const kept = all.filter(i => !tracksOff.has(i) && volume(i) > 0);
   return {
     ...(kept.length < all.length ? { tracks: kept } : {}),
     ...(all.some(i => volume(i) !== 100) ? { volumes: all.map(i => volume(i) / 100) } : {}),
     ...(kept.some(i => tracksDenoised.has(i)) ? { denoise: kept.filter(i => tracksDenoised.has(i)) } : {}),
     ...(fade ? { fade: true } : {}),
+    ...(level && kept.length > 0 ? { level: true } : {}),
   };
 }
 
@@ -1639,9 +1643,20 @@ $('s-yes').addEventListener('click', () => {
   toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
   post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
 });
-$('a-fade').addEventListener('click', () => {
-  $('a-fade').setAttribute('aria-pressed', String($('a-fade').getAttribute('aria-pressed') !== 'true'));
-});
+// Switches for the copies, not copies: the menu stays open for the one to make, and Export says which are on.
+function showExportFlags() {
+  const on = id => $(id).getAttribute('aria-pressed') === 'true';
+  const flags = [on('a-fade') ? 'fade' : '', on('a-level') ? L('even', 'igualado', 'igualado') : ''].filter(Boolean);
+  $('export-flags').hidden = flags.length === 0;
+  $('export-flags').textContent = flags.map(f => `· ${f}`).join(' ');
+}
+
+for (const id of ['a-fade', 'a-level']) {
+  $(id).addEventListener('click', () => {
+    $(id).setAttribute('aria-pressed', String($(id).getAttribute('aria-pressed') !== 'true'));
+    showExportFlags();
+  });
+}
 $('a-cover').addEventListener('click', () => {
   if (!state.current || $('a-cover').classList.contains('busy')) return;
   busy($('a-cover'), true);
@@ -1697,7 +1712,7 @@ $('a-export').addEventListener('keydown', e => {
 });
 $('export-menu').addEventListener('click', e => {
   const item = e.target.closest('button');
-  if (item && item.id !== 'a-fade') closeExportMenu(false);
+  if (item && item.id !== 'a-fade' && item.id !== 'a-level') closeExportMenu(false);
 });
 $('export-menu').addEventListener('keydown', e => {
   if (e.key === 'Tab') {
