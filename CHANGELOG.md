@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A copy leads back to its clip: a trim, a Discord, vertical or slow-motion copy, a GIF or
+  a saved frame shows "from ..." in the player's header, which opens the clip it was made
+  from, while that clip is still in the library.
+
 ## 0.8.29
 
 ### Changed

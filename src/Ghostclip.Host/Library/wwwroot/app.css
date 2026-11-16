@@ -149,6 +149,7 @@ main { min-width: 0; min-height: 0; display: flex; }
 
 /* Clip view */
 #clip-info { margin-left: auto; font-size: 11px; letter-spacing: 0.06em; }
+#clip-source { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--muted); transition: color var(--fast), background var(--fast); }
 .icon:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
 .stage {

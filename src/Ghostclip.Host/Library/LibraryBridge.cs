@@ -435,7 +435,10 @@ internal sealed class LibraryBridge : IDisposable
             var clips = await Task.Run(() =>
             {
                 var state = LibraryStore.Read(library);
-                return ClipLibrary.Scan(root).Select(c => ClipDto.From(c, state)).ToList();
+                var scan = ClipLibrary.Scan(root);
+                // A copy leads back to its clip only while that clip is listed too.
+                var listed = scan.Select(c => c.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                return scan.Select(c => ClipDto.From(c, state, ClipLibrary.SourceOf(c.Path, listed.Contains))).ToList();
             }).ConfigureAwait(true);
             _window.Post(new LibraryEvent("clips", Clips: clips, Root: root, HotkeyLabels: SaveHotkeyLabel(), CanSendToDiscord: DiscordWebhook.IsValid(_config.DiscordWebhook)));
         }
