@@ -3,6 +3,17 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- The frame shown over the timeline no longer sticks on the first one when the pointer
+  comes in at the very start, as it does over the trim start handle.
+- Zoomed in on the timeline, a seek with the video paused, as when a trim handle is let go,
+  no longer moves the view away from what you were looking at.
+- While the selection bar asks which game to move clips to, Delete no longer starts the
+  Recycle Bin question on top of it, and Esc goes back to the bar.
+
 ## 0.8.33
 
 ### Added
