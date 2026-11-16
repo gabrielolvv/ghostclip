@@ -277,6 +277,10 @@ main { min-width: 0; min-height: 0; display: flex; }
 .bookmark { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer; z-index: 1; }
 .bookmark::before { content: ""; position: absolute; left: 0; top: -1px; border: 4.5px solid transparent; border-top: 6px solid #E5B34B; }
 .bookmark::after { content: ""; position: absolute; left: 4px; top: 4px; bottom: 0; width: 1px; background: rgba(229, 179, 75, 0.6); }
+/* A loud moment: the bookmark's shape in the accent, from below, so the two read apart. */
+.bookmark.loud::before { top: auto; bottom: -1px; border-top: 4.5px solid transparent; border-bottom: 6px solid var(--accent); }
+.bookmark.loud::after { top: 0; bottom: 4px; background: rgba(92, 225, 230, 0.45); }
+#loud-toggle[aria-pressed=true] { color: var(--accent); }
 
 .toast {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);

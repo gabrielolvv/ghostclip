@@ -33,7 +33,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Prints** no Alt+F11, salvos em JPEG junto dos clipes.
 - **Gravação da sessão** no Alt+F9: guarda tudo do começo ao fim, e a hotkey
   de clipe adiciona marcadores para pular até o momento ou cortar clipes em volta
-  dele, com o que veio depois. Ela aproveita o
+  dele, com o que veio depois. O player também marca onde o som se destaca, para achar
+  as jogadas que ninguém marcou. Ela aproveita o
   buffer de replay em vez de rodar um segundo encoder, então o jogo não paga
   nada a mais.
 - **Pausa** pela bandeja ou por uma tecla que você escolhe: para a gravação e

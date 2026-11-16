@@ -9,12 +9,48 @@ namespace Ghostclip.Core;
 /// <param name="Peaks">Peak level of the first audio track, 0..1, in <see cref="ClipMedia.PeakCount"/> buckets.</param>
 /// <param name="AudioTitles">The tracks' names as saving wrote them ("Game", "Microphone", "Discord"); null in details cached before they were read.</param>
 public sealed record ClipMeta(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec,
-    IReadOnlyList<double> Keyframes, IReadOnlyList<float> Peaks, IReadOnlyList<string>? AudioTitles = null);
+    IReadOnlyList<double> Keyframes, IReadOnlyList<float> Peaks, IReadOnlyList<string>? AudioTitles = null)
+{
+    /// <summary>Where the sound stands out in a long recording (<see cref="ClipMedia.LoudMoments"/>), from the peaks: details cached before it have them too.</summary>
+    public IReadOnlyList<double> LoudMoments => ClipMedia.LoudMoments(Peaks, Duration);
+}
 
 /// <summary>Parsing what ffprobe and FFmpeg report about a clip for the library.</summary>
 public static class ClipMedia
 {
     public const int PeakCount = 400;
+
+    /// <summary>A recording shorter than this is its own moment.</summary>
+    public const double LoudMomentsFrom = 120;
+
+    private const int MostLoudMoments = 8;
+    private const double LoudMomentsApart = 20;
+    private const double LoudMomentLead = 2;
+
+    /// <summary>
+    /// The seconds, ascending, where the sound stands out in a recording of <see cref="LoudMomentsFrom"/> or more:
+    /// a peak well over its usual level and near its loudest, the loudest first, <see cref="LoudMomentsApart"/> s
+    /// apart and <see cref="MostLoudMoments"/> at most, each a little before the peak to see what led to it. A
+    /// recording loud all along has none.
+    /// </summary>
+    public static IReadOnlyList<double> LoudMoments(IReadOnlyList<float> peaks, double duration)
+    {
+        if (duration < LoudMomentsFrom || peaks.Count == 0) return [];
+        var sorted = peaks.Order().ToArray();
+        var loudest = sorted[^1];
+        if (loudest <= 0) return [];
+        var over = Math.Max(sorted[sorted.Length / 2] * 1.5, loudest * 0.75);
+        var bucket = duration / peaks.Count;
+        var chosen = new List<double>();
+        foreach (var i in Enumerable.Range(0, peaks.Count).Where(i => peaks[i] >= over).OrderByDescending(i => peaks[i]).ThenBy(i => i))
+        {
+            var at = i * bucket;
+            if (chosen.Any(c => Math.Abs(c - at) < LoudMomentsApart)) continue;
+            chosen.Add(at);
+            if (chosen.Count == MostLoudMoments) break;
+        }
+        return [.. chosen.Order().Select(t => Math.Round(Math.Max(0, t - LoudMomentLead), 2))];
+    }
 
     /// <summary>The audio tracks a copy takes, in order: all of them without a choice, and only tracks the clip has.</summary>
     public static IReadOnlyList<int> TracksToKeep(int total, IReadOnlyList<int>? keep) =>
