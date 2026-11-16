@@ -488,6 +488,15 @@ function askToDelete(clip) {
   $('sel-bin').click();
 }
 
+// The selection's bar asks for the game, about the selection when this card is in it and about this card otherwise.
+function askForGame(clip) {
+  if (!selected.has(clip.path)) {
+    clearSelection();
+    togglePick(clip.path, false);
+  }
+  $('sel-game').click();
+}
+
 function closeCardMenu() {
   $('card-menu').hidden = true;
 }
@@ -506,6 +515,7 @@ function openCardMenu(clip, x, y) {
     item(L('Copy file', 'Copiar arquivo', 'Copiar archivo'), () => post({ type: 'copy', path: clip.path })),
     item(clip.favorite ? L('Remove from favorites', 'Tirar dos favoritos', 'Quitar de favoritos') : L('Add to favorites', 'Adicionar aos favoritos', 'Añadir a favoritos'), () => favoriteClip(clip)),
     item(L('Rename', 'Renomear', 'Renombrar'), () => renameClip(clip)),
+    item(L('Change game', 'Mudar de jogo', 'Cambiar de juego'), () => askForGame(clip)),
     item(L('Show in folder', 'Mostrar na pasta', 'Mostrar en la carpeta'), () => post({ type: 'reveal', path: clip.path })),
     item(selected.has(clip.path) ? L('Unselect', 'Tirar da seleção', 'Quitar de la selección') : L('Select', 'Selecionar', 'Seleccionar'), () => togglePick(clip.path, false)),
     item(L('Delete', 'Apagar', 'Eliminar'), () => askToDelete(clip), 'danger'),
@@ -653,6 +663,9 @@ const selected = new Set();
 let selectAnchor = null;
 let binAsking = false;
 let binAskedAt = 0;
+// The bar asks which game the selection belongs to, and remembers it for the answer.
+let gameAsking = false;
+let movingTo = '';
 
 function togglePick(path, range) {
   // The order on screen: sorting by length can be about to change it.
@@ -665,6 +678,7 @@ function togglePick(path, range) {
     if (selectAnchor) selected.add(path);
   }
   binAsking = false;
+  gameAsking = false;
   showSelection();
 }
 
@@ -672,6 +686,7 @@ function clearSelection() {
   selected.clear();
   selectAnchor = null;
   binAsking = false;
+  gameAsking = false;
   showSelection();
 }
 
@@ -689,6 +704,8 @@ function showSelection() {
   const bar = $('selbar');
   bar.hidden = selected.size === 0;
   bar.classList.toggle('warn', binAsking);
+  if (selected.size === 0) gameAsking = false;
+  $('sel-game-form').hidden = !gameAsking;
   if (selected.size === 0) return;
   const clips = selectedClips();
   const favorites = clips.filter(c => c.favorite).length;
@@ -698,10 +715,16 @@ function showSelection() {
     ` ${favorites === 1 ? '1 é favorito' : `${favorites} são favoritos`}.`, ` ${favorites} de ellos ${favorites === 1 ? 'es favorito' : 'son favoritos'}.`);
   $('selbar-text').textContent = binAsking
     ? L(`Send ${items} to the Recycle Bin?${also}`, `Mandar ${items} para a Lixeira?${also}`, `¿Enviar ${items} a la Papelera de reciclaje?${also}`)
-    : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`, `Seleccionados: ${items}`);
-  $('sel-all').hidden = binAsking;
-  $('sel-join').hidden = binAsking || count < 2 || clips.some(c => c.image);
-  $('sel-favorite').hidden = binAsking;
+    : gameAsking
+      ? L(`Move ${items} to the game`, `Mover ${items} para o jogo`, `Mover ${items} al juego`)
+      : L(`${items} selected`, `${items} ${count === 1 ? 'selecionado' : 'selecionados'}`, `Seleccionados: ${items}`);
+  const asking = binAsking || gameAsking;
+  $('sel-all').hidden = asking;
+  $('sel-join').hidden = asking || count < 2 || clips.some(c => c.image);
+  $('sel-game').hidden = asking;
+  $('sel-favorite').hidden = asking;
+  $('sel-bin').hidden = gameAsking;
+  $('sel-cancel').hidden = gameAsking;
   $('sel-favorite').textContent = favorites === clips.length ? L('Remove from favorites', 'Tirar dos favoritos', 'Quitar de favoritos') : L('Add to favorites', 'Adicionar aos favoritos', 'Añadir a favoritos');
   $('sel-bin').textContent = binAsking ? L('Send to Recycle Bin', 'Mandar para a Lixeira', 'Enviar a la Papelera') : L('Recycle Bin', 'Lixeira', 'Papelera de reciclaje');
   $('sel-cancel').textContent = binAsking ? L('Keep them', 'Manter', 'Conservarlos') : L('Cancel', 'Cancelar', 'Cancelar');
@@ -715,6 +738,38 @@ $('sel-join').addEventListener('click', () => {
   toast(L('Joining the clips…', 'Juntando os clipes…', 'Uniendo los clips…'));
   post({ type: 'joinClips', paths: selectedClips().map(c => c.path) });
   clearSelection();
+});
+// Into another game's folder: the names the library knows are offered, and any other makes a new one.
+$('sel-game').addEventListener('click', () => {
+  binAsking = false;
+  gameAsking = true;
+  const games = [...new Set(state.clips.map(c => c.game))].sort((a, b) => a.localeCompare(b));
+  $('game-names').replaceChildren(...games.map(game => { const o = document.createElement('option'); o.value = game; return o; }));
+  $('sel-game-name').value = '';
+  showSelection();
+  $('sel-game-name').focus();
+});
+$('sel-game-no').addEventListener('click', () => {
+  gameAsking = false;
+  showSelection();
+  $('sel-game').focus();
+});
+$('sel-game-name').addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  e.preventDefault();
+  $('sel-game-no').click();
+});
+$('sel-game-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const game = $('sel-game-name').value.trim();
+  if (!game) {
+    $('sel-game-name').focus();
+    return;
+  }
+  movingTo = game;
+  post({ type: 'moveGame', paths: [...selected], name: game });
+  clearSelection();
+  document.querySelector('#grid .card')?.focus({ preventScroll: true });
 });
 $('sel-favorite').addEventListener('click', () => {
   const clips = selectedClips();
@@ -746,7 +801,7 @@ $('sel-cancel').addEventListener('click', () => {
 });
 // From the keyboard the bar is past every card: Delete goes straight to its question, Ctrl+A picks what's on screen.
 document.addEventListener('keydown', e => {
-  if ($('library').hidden || e.target === $('search')) return;
+  if ($('library').hidden || e.target === $('search') || e.target === $('sel-game-name')) return;
   if (e.key.toLowerCase() === 'a' && e.ctrlKey && !e.altKey) {
     e.preventDefault();
     // Not under the question: it asked about what was selected then.
@@ -1845,6 +1900,16 @@ function onDone(message) {
       break;
     case 'joinClips':
       toast(L('Joined clip saved', 'Clipe unido salvo', 'Clip unido guardado'), false, open);
+      break;
+    case 'moveGame':
+      if (message.kept > 0) {
+        toast(L(`Moved: ${message.moved}. Not moved: ${message.kept}, open in another program.`,
+          `Movidos: ${message.moved}. Não movidos: ${message.kept}, abertos em outro programa.`, `Movidos: ${message.moved}. No movidos: ${message.kept}, abiertos en otro programa.`), true);
+      } else if (message.moved > 0) {
+        const n = message.moved;
+        toast(L(`Moved ${n === 1 ? '1 item' : `${n} items`} to ${movingTo}`,
+          `${n === 1 ? '1 item movido' : `${n} itens movidos`} para ${movingTo}`, `${n === 1 ? '1 elemento movido' : `${n} elementos movidos`} a ${movingTo}`));
+      }
       break;
     case 'deleteMany':
       if (message.kept > 0) {

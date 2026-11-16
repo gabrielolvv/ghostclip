@@ -346,6 +346,8 @@ details.more[open] summary { color: var(--text); }
   background: var(--raised); border: 1px solid var(--line-strong); animation: fade var(--fast) ease-out;
 }
 .savebar span { flex: 1; }
+.sel-game { display: flex; align-items: center; gap: 10px; }
+.sel-game .field { width: 200px; }
 .savebar.warn { border-color: rgba(229, 179, 75, 0.55); }
 .savebar.warn span { color: #E5B34B; }
 .settings-open #games .game.on { background: none; box-shadow: none; color: var(--muted); }

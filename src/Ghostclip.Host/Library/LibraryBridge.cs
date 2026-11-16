@@ -200,7 +200,7 @@ internal sealed class LibraryBridge : IDisposable
                 Process.Start(new ProcessStartInfo(Root) { UseShellExecute = true });
                 return;
             }
-            if (r.Type is "favoriteMany" or "deleteMany" or "joinClips")
+            if (r.Type is "favoriteMany" or "deleteMany" or "joinClips" or "moveGame")
             {
                 // One write, and one question from Windows, for the whole selection. A path outside the clips folder
                 // is ignored, as the page never sends one.
@@ -218,6 +218,12 @@ internal sealed class LibraryBridge : IDisposable
                 {
                     var joined = await Job(_tools.JoinAsync(selection, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Output: joined));
+                    return;
+                }
+                if (r.Type == "moveGame")
+                {
+                    MoveToGame(selection, r.Name);
+                    await ListAsync().ConfigureAwait(true);
                     return;
                 }
                 var kept = RecycleBin.SendAll(selection, _window.Handle);
@@ -348,6 +354,36 @@ internal sealed class LibraryBridge : IDisposable
             _log.Warning("Library {Op} failed for {Path}: {Error}", r.Type, r.Path, ex.Message);
             _window.Post(new LibraryEvent("error", Op: r.Type, Path: r.Path, Message: ex.Message));
         }
+    }
+
+    // Into another game's folder, for when the wrong game was in front at the save. One open in another program
+    // stays where it is and is counted as such. A folder left empty stays too: a save may be on its way into it,
+    // and the library lists games by their clips, not by their folders.
+    private void MoveToGame(IReadOnlyList<string> selection, string? game)
+    {
+        var moves = new List<(string From, string To)>();
+        var kept = 0;
+        foreach (var from in selection)
+        {
+            var to = ClipNaming.MovedPath(Root, from, game, p => File.Exists(p) || Directory.Exists(p));
+            if (to is null) continue;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+                File.Move(from, to);
+                moves.Add((from, to));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.Warning("Couldn't move {Path} to another game: {Error}", from, ex.Message);
+                kept++;
+            }
+        }
+        UpdateLibraryQuietly(s =>
+        {
+            foreach (var (from, to) in moves) s.Move(from, to);
+        });
+        _window.Post(new LibraryEvent("done", Op: "moveGame", Moved: moves.Count, Kept: kept, Output: moves.Count > 0 ? moves[0].To : null));
     }
 
     private Task<T> Track<T>(Task<T> task)

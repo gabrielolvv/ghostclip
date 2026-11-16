@@ -79,6 +79,35 @@ public static class ClipNaming
     }
 
     /// <summary>
+    /// Where a clip goes when it belongs to another game: that game's folder under <paramref name="root"/>. A name
+    /// Ghostclip gave (Game_time, and its copies) takes the new game too; one people gave stays. Null when it's the
+    /// game it's in already. Throws, with a message for people, on a blank game.
+    /// </summary>
+    public static string? MovedPath(string root, string path, string? game, Func<string, bool> exists)
+    {
+        if (string.IsNullOrWhiteSpace(game))
+        {
+            throw new InvalidOperationException(UiText.L("Type a game.", "Digite um jogo.", "Escribe un juego."));
+        }
+        var safe = SafeGameName(game);
+        var relative = Path.GetRelativePath(root, path);
+        var separator = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+        var from = separator > 0 ? relative[..separator] : FallbackGame;
+        if (string.Equals(from, safe, StringComparison.OrdinalIgnoreCase)) return null;
+
+        var extension = Path.GetExtension(path);
+        var stem = Path.GetFileNameWithoutExtension(path);
+        if (ClipLibrary.IsGhostclipName(from, stem)) stem = safe + stem[from.Length..];
+        var dir = Path.Combine(root, safe);
+        var target = Path.Combine(dir, stem + extension);
+        for (var n = 2; exists(target); n++)
+        {
+            target = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{stem}_{n}{extension}"));
+        }
+        return target;
+    }
+
+    /// <summary>
     /// The path <paramref name="path"/> gets when renamed to <paramref name="name"/>: same folder,
     /// same extension. Null when the name doesn't change. Throws, with a message for
     /// people, on a name Windows can't use or one another file already has.

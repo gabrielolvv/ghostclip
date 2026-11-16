@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- A clip saved under the wrong game can move to another one, or to a new one, from its
+  menu or for a whole selection. Its name takes the new game, unless you renamed it.
+
 ## 0.8.24
 
 ### Added
