@@ -50,7 +50,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Play all** the videos in a list, one after another, to go back over a game or
   your favorites.
 - **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
-- **Trim** by dragging two handles, with the wheel to zoom in, without re-encoding. The start snaps to
+- **Trim** by dragging two handles, with the wheel to zoom in and the frame under
+  the pointer shown above the timeline, without re-encoding. The start snaps to
   a keyframe, so the result starts exactly where the timeline shows.
 - **Compress for Discord:** re-encodes on the GPU to fit the upload limit
   (10 MB by default), mixing game and mic into one track.

@@ -3,6 +3,13 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Pointing at the timeline shows the frame there, with its time, above it, and dragging a
+  trim handle shows the frame the cut will start or end on. The video stays where it was.
+
 ## 0.8.26
 
 ### Added
