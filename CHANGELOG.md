@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- The Discord size and vertical copies, and a clip sent to Discord, take the trim marks,
+  as the GIF, slow motion and audio only already did: marking a part and pressing Discord
+  size is enough, without saving the trim and opening it first. A clip opens with the
+  marks around all of it, so nothing changes until they're moved.
+
 ## 0.8.28
 
 ### Added

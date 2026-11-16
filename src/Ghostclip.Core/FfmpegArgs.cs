@@ -271,9 +271,10 @@ public static class FfmpegArgs
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
     /// <param name="level">The mix evened out to one steady loudness.</param>
-    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, double fadeFor = 0, bool level = false)
+    /// <param name="length">With <paramref name="start"/>, the part of the clip to take; 0 takes all of it.</param>
+    public static IReadOnlyList<string> Compress(string input, string output, CompressionPlan plan, string encoderName, int audioTracks, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, double fadeFor = 0, bool level = false, double start = 0, double length = 0)
     {
-        var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
+        var args = GpuInput(input, start, length);
         AddOneAudioTrack(args, audioTracks, keep, volumes, denoise, fadeFor, level);
 
         var vf = new List<string>();
@@ -299,11 +300,11 @@ public static class FfmpegArgs
     /// <param name="keep">The audio tracks to take; null takes them all, and none makes a silent copy.</param>
     /// <param name="volumes">Each track's volume by track number, 1 being as recorded and 2 the most; a missing one is 1.</param>
     /// <param name="cropAt">Where the part kept sits across the room it has: 0 at the left, 0.5 in the middle, 1 at the right.</param>
-    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, double fadeFor = 0, bool level = false)
+    public static IReadOnlyList<string> Vertical(string input, string output, string encoderName, int audioTracks, double sourceFps, IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, double cropAt = 0.5, IReadOnlyList<int>? denoise = null, double fadeFor = 0, bool level = false, double start = 0, double length = 0)
     {
         const int MaxFps = 60;
         const int VideoKbps = 12000;
-        var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va", "-i", input };
+        var args = GpuInput(input, start, length);
         AddOneAudioTrack(args, audioTracks, keep, volumes, denoise, fadeFor, level);
         var capped = sourceFps > MaxFps;
         var fps = capped || sourceFps <= 0 ? MaxFps : (int)Math.Round(sourceFps);
@@ -314,6 +315,28 @@ public static class FfmpegArgs
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
         return args;
+    }
+
+    // Decoded on the GPU, from the part asked for: seeking before the input re-encodes from that frame on.
+    private static List<string> GpuInput(string input, double start, double length)
+    {
+        var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va" };
+        if (length > 0) args.AddRange(["-ss", Inv($"{start}"), "-t", Inv($"{length}")]);
+        args.AddRange(["-i", input]);
+        return args;
+    }
+
+    /// <summary>
+    /// The part of a clip between the trim marks, for the copies that take it. Null for the whole clip: marks
+    /// around all of it, as a clip opens, or marks with nothing between them.
+    /// </summary>
+    public static (double Start, double Length)? MarkedPart(double start, double end, double duration)
+    {
+        start = Math.Max(0, start);
+        end = Math.Min(end, duration);
+        if (end - start < 0.1) return null;
+        if (start <= 0.05 && end >= duration - 0.05) return null;
+        return (start, end - start);
     }
 
     private static string VerticalCrop(double cropAt)

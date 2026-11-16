@@ -1513,7 +1513,7 @@ $('a-discord').addEventListener('click', () => {
   if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
   toast(L('Compressing on the GPU…', 'Comprimindo na GPU…', 'Comprimiendo en la GPU…'));
-  post({ type: 'compress', path: state.current.path, ...exportTracks() });
+  post({ type: 'compress', path: state.current.path, start: state.start, end: state.end, ...exportTracks() });
 });
 // The part of the picture a vertical copy keeps. cropAt is where the frame sits across the room it has, as the app wants it.
 let cropAt = 0.5;
@@ -1546,7 +1546,7 @@ function makeVertical() {
   closeFrame();
   busy($('a-vertical'), true);
   toast(L('Making the vertical copy on the GPU…', 'Fazendo a cópia vertical na GPU…', 'Haciendo la copia vertical en la GPU…'));
-  post({ type: 'vertical', path: state.current.path, cropAt, ...exportTracks() });
+  post({ type: 'vertical', path: state.current.path, cropAt, start: state.start, end: state.end, ...exportTracks() });
 }
 
 $('a-vertical').addEventListener('click', () => {
@@ -1641,7 +1641,7 @@ $('s-yes').addEventListener('click', () => {
   if (!state.current) return;
   busy($('a-send'), true);
   toast(L('Sending to Discord…', 'Enviando ao Discord…', 'Enviando a Discord…'));
-  post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : exportTracks()) });
+  post({ type: 'sendToDiscord', path: state.current.path, ...(state.current.image ? {} : { start: state.start, end: state.end, ...exportTracks() }) });
 });
 // Switches for the copies, not copies: the menu stays open for the one to make, and Export says which are on.
 function showExportFlags() {
