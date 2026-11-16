@@ -381,6 +381,9 @@ function renderCard(clip) {
       // Stopped here: what the Delete key does with a selection is to ask, and this just asked.
       e.stopPropagation();
       askToDelete(clip);
+    } else if (e.key.toLowerCase() === 'c' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      post({ type: 'copy', path: clip.path });
     } else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       favoriteClip(clip);
@@ -565,6 +568,7 @@ function showKeys() {
       ['N P', L('Next or previous clip', 'Próximo clipe ou anterior', 'Clip siguiente o anterior')],
       ['B', L('Next bookmark, with Shift the previous', 'Próximo marcador, com Shift o anterior', 'Marcador siguiente, con Shift el anterior')],
       ['M', L('Mute', 'Silenciar', 'Silenciar')],
+      ['Ctrl + C', L('Copy it to paste in Discord: the trim marks, or all of it', 'Copiar para colar no Discord: o trecho marcado, ou tudo', 'Copiarlo para pegar en Discord: el tramo marcado, o todo')],
       ['F', L('Full screen', 'Tela cheia', 'Pantalla completa')],
       ['+ − 0', L('Zoom the timeline in, out, or back to all of it; the wheel does too', 'Aproximar a linha do tempo, afastar ou voltar ao todo; a roda do mouse também', 'Acercar la línea de tiempo, alejarla o volver al total; la rueda del ratón también')],
       ['Esc', L('Back to the library', 'Voltar para a biblioteca', 'Volver a la biblioteca')],
@@ -573,6 +577,7 @@ function showKeys() {
       ['Enter', L('Open the clip in focus', 'Abrir o clipe em foco', 'Abrir el clip en foco')],
       [L('Space', 'Espaço', 'Espacio'), L('Select it', 'Selecionar', 'Seleccionarlo')],
       ['F2', L('Rename it', 'Renomear', 'Renombrarlo')],
+      ['Ctrl + C', L('Copy it to paste in Discord', 'Copiar para colar no Discord', 'Copiarlo para pegar en Discord')],
       ['F', L('Add it to favorites, or remove it', 'Adicionar aos favoritos ou tirar', 'Añadirlo a favoritos o quitarlo')],
       ['Delete', L('Ask about sending it to the Recycle Bin', 'Perguntar se manda para a Lixeira', 'Preguntar si se envía a la Papelera')],
       ['Ctrl + A', L('Select everything on screen', 'Selecionar tudo o que está na tela', 'Seleccionar todo lo que está en pantalla')],
@@ -1856,6 +1861,13 @@ document.addEventListener('keydown', e => {
   // Esc leaves full screen first: it mustn't also close the clip, whichever of the two hears it first.
   if (e.key === 'Escape' && (document.fullscreenElement || performance.now() - leftFullScreenAt < 300)) {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    return;
+  }
+  // Ctrl+C copies the clip as Copy trim does: the part between the marks, or all of it. Text you selected is yours.
+  if (state.current && !$('clip').hidden && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'c'
+    && !(e.target instanceof HTMLTextAreaElement) && !String(window.getSelection() || '')) {
+    e.preventDefault();
+    (state.current.image ? $('a-copy') : $('a-copy-trim')).click();
     return;
   }
   if (state.current && !$('clip').hidden && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {

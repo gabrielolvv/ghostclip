@@ -48,8 +48,9 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   tamanho dos cartões, renomear, mudar de jogo um clipe salvo no jogo errado, ir de
   uma cópia ao clipe de onde ela saiu e ações em vários de uma vez. Mostra o que a gravação
   usa agora: CPU, memória e disco. Só roda enquanto a janela está aberta.
-- **Um menu em cada cartão,** pelo botão direito, e F2, Delete e F no que está em
-  foco, para agir num clipe sem abri-lo.
+- **Um menu em cada cartão,** pelo botão direito, e F2, Delete, F e Ctrl+C no que está
+  em foco, para agir num clipe sem abri-lo. No player, Ctrl+C copia o trecho marcado, ou
+  tudo.
 - **Tocar todos** os vídeos de uma lista, um depois do outro, para rever um jogo ou
   os favoritos.
 - **Copiar corte:** o trecho marcado na área de transferência, pronto para colar, num passo só.
