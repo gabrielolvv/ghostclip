@@ -5,7 +5,7 @@ namespace Ghostclip.Core;
 
 /// <summary>One saved clip or screenshot as the library shows it.</summary>
 /// <param name="RelativeUrl">Path under the clips folder, escaped per segment, for the library's virtual host.</param>
-/// <param name="Derived">A _trim, _discord, _vertical or _joined copy of another clip.</param>
+/// <param name="Derived">A _trim, _discord, _vertical, _joined or _slow copy of another clip.</param>
 /// <param name="LastWriteUtc">With <paramref name="Bytes"/>, tells a replaced file from the one it replaced.</param>
 /// <param name="Image">A screenshot rather than a video.</param>
 public sealed record ClipEntry(string Path, string RelativeUrl, string Game, DateTime SavedLocal, long Bytes, bool Derived, DateTime LastWriteUtc, bool Image = false);
@@ -83,7 +83,7 @@ public static partial class ClipLibrary
     /// then any _trim/_discord/_vertical/_joined/_gif/_frame copies of copies. Telegram's video_&lt;time&gt; in its own folder is not.
     /// </summary>
     public static bool IsGhostclipName(string folder, string stem) =>
-        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical|_joined|_gif|_frame|_audio)(_\d+)?)*$",
+        Regex.IsMatch(stem, "^" + Regex.Escape(folder) + @"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?((_trim|_discord|_vertical|_joined|_gif|_frame|_audio|_slow)(_\d+)?)*$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>The save time in Game_YYYY-MM-DD_HH-MM-SS[_n][_trim|_discord|_vertical|_joined|_gif|_frame[_n]]...., or null.</summary>
@@ -109,9 +109,9 @@ public static partial class ClipLibrary
             .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
             .Select(Uri.EscapeDataString));
 
-    [GeneratedRegex(@"_(?<time>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(_\d+)?(_(trim|discord|vertical|joined|gif|frame)(_\d+)?)*$")]
+    [GeneratedRegex(@"_(?<time>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(_\d+)?(_(trim|discord|vertical|joined|gif|frame|audio|slow)(_\d+)?)*$")]
     private static partial Regex SavedName();
 
-    [GeneratedRegex(@"_(trim|discord|vertical|joined)(_\d+)?$")]
+    [GeneratedRegex(@"_(trim|discord|vertical|joined|slow)(_\d+)?$")]
     private static partial Regex DerivedSuffix();
 }
