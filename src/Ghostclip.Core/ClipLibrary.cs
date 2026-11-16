@@ -96,6 +96,19 @@ public static partial class ClipLibrary
 
     public static bool IsDerived(string fileName) => DerivedSuffix().IsMatch(Path.GetFileNameWithoutExtension(fileName));
 
+    /// <summary>
+    /// The clip a copy was made from: its name without the last _trim, _discord, _vertical, _slow, _gif or _frame,
+    /// as an .mp4 in the same folder, when <paramref name="exists"/> says it's there. A copy of a copy leads to
+    /// that copy. Null for a clip that isn't a copy, and for a joined one, which comes from several.
+    /// </summary>
+    public static string? SourceOf(string path, Func<string, bool> exists)
+    {
+        var m = CopyOf().Match(Path.GetFileNameWithoutExtension(path));
+        if (!m.Success) return null;
+        var source = Path.Combine(Path.GetDirectoryName(path) ?? "", m.Groups["source"].Value + ".mp4");
+        return exists(source) ? source : null;
+    }
+
     /// <summary>Whether <paramref name="path"/> lies under <paramref name="root"/>, after resolving "..".</summary>
     public static bool IsInside(string root, string path)
     {
@@ -114,4 +127,7 @@ public static partial class ClipLibrary
 
     [GeneratedRegex(@"_(trim|discord|vertical|joined|slow)(_\d+)?$")]
     private static partial Regex DerivedSuffix();
+
+    [GeneratedRegex(@"^(?<source>.+)_(trim|discord|vertical|slow|gif|frame)(_\d+)?$")]
+    private static partial Regex CopyOf();
 }

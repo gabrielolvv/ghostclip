@@ -22,11 +22,12 @@ public sealed record LibraryRequest(string Type, string? Path = null, double Sta
 /// for it. Bookmarks are seconds a session recording marked.
 /// </summary>
 public sealed record ClipDto(string Path, string Url, string Game, string Saved, long Bytes, bool Derived, string Version,
-    bool Image = false, bool Favorite = false, IReadOnlyList<double>? Bookmarks = null, IReadOnlyList<string>? Tags = null)
+    bool Image = false, bool Favorite = false, IReadOnlyList<double>? Bookmarks = null, IReadOnlyList<string>? Tags = null, string? Source = null)
 {
     public const string ClipsHost = "https://clips.ghostclip/";
 
-    public static ClipDto From(ClipEntry e, LibraryState? state = null)
+    /// <param name="source">The clip this one is a copy of, when it's still in the library.</param>
+    public static ClipDto From(ClipEntry e, LibraryState? state = null, string? source = null)
     {
         var bookmarks = state?.BookmarksFor(e.Path);
         var tags = state?.TagsFor(e.Path);
@@ -34,7 +35,7 @@ public sealed record ClipDto(string Path, string Url, string Game, string Saved,
             e.SavedLocal.ToString("s", CultureInfo.InvariantCulture), e.Bytes, e.Derived,
             string.Create(CultureInfo.InvariantCulture, $"{e.Bytes}-{e.LastWriteUtc.Ticks}"),
             e.Image, state?.IsFavorite(e.Path) ?? false, bookmarks is { Count: > 0 } ? bookmarks : null,
-            tags is { Count: > 0 } ? tags : null);
+            tags is { Count: > 0 } ? tags : null, source);
     }
 }
 

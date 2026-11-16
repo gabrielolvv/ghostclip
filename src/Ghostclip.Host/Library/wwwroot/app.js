@@ -964,6 +964,16 @@ function openClip(path) {
   $('send-row').hidden = true;
   closeFrame();
   $('clip-game').textContent = `${clip.game} · ${stem(clip.path)}`;
+  // A copy leads back to the clip it was made from, while that one is still here.
+  const source = clip.source && state.clips.find(c => c.path.toLowerCase() === clip.source.toLowerCase());
+  $('clip-source').hidden = !source;
+  if (source) {
+    // The game is in the header already: the name goes on from the time, which tells the clips apart.
+    const name = stem(source.path);
+    const short = name.toLowerCase().startsWith(`${source.game}_`.toLowerCase()) ? name.slice(source.game.length + 1) : name;
+    $('clip-source').textContent = L(`from ${short}`, `de ${short}`, `de ${short}`);
+    $('clip-source').title = L(`Open ${name}, the clip this copy was made from`, `Abrir ${name}, o clipe de onde esta cópia saiu`, `Abrir ${name}, el clip del que salió esta copia`);
+  }
   $('no-video').hidden = true;
   // The list leaves image out for videos: undefined would make toggle flip the class instead of removing it.
   $('clip').classList.toggle('is-image', !!clip.image);
@@ -1503,6 +1513,9 @@ window.addEventListener('resize', () => { if (state.current) drawWave(); });
 function busy(button, on) { button.classList.toggle('busy', on); }
 
 $('back').addEventListener('click', closeClip);
+$('clip-source').addEventListener('click', () => {
+  if (state.current && state.current.source) openWhenListed(state.current.source);
+});
 $('a-trim').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-trim').classList.contains('busy')) return;
   busy($('a-trim'), true);
