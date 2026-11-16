@@ -45,7 +45,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
   aponta para ele; favoritos, etiquetas que a busca encontra, filtro por data,
-  tamanho dos cartões, renomear e ações em vários de uma vez. Só roda enquanto a janela está aberta.
+  tamanho dos cartões, renomear e ações em vários de uma vez. Mostra o que a gravação
+  usa agora: CPU, memória e disco. Só roda enquanto a janela está aberta.
 - **Um menu em cada cartão,** pelo botão direito, e F2, Delete e F no que está em
   foco, para agir num clipe sem abri-lo.
 - **Tocar todos** os vídeos de uma lista, um depois do outro, para rever um jogo ou

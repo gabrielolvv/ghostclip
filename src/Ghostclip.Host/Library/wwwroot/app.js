@@ -1797,7 +1797,23 @@ function showSend(can) {
   if (!can) $('send-row').hidden = true;
 }
 
+// What recording uses now, under the clips' total. Nothing when the tray isn't running.
+function showCost(cost) {
+  const box = $('cost');
+  box.hidden = !cost;
+  if (!cost) return;
+  const cpu = cost.cpuPercent == null ? '…' : `${cost.cpuPercent < 10 ? cost.cpuPercent.toFixed(1) : Math.round(cost.cpuPercent)}%`;
+  const disk = cost.diskMBPerMinute == null
+    ? L('not recording', 'sem gravar', 'sin grabar')
+    : L(`${Math.round(cost.diskMBPerMinute)} MB/min to disk`, `${Math.round(cost.diskMBPerMinute)} MB/min no disco`, `${Math.round(cost.diskMBPerMinute)} MB/min al disco`);
+  box.textContent = `CPU ${cpu} · RAM ${fmtSize(cost.memoryBytes)} · ${disk}`;
+}
+
 function onMessage(message) {
+  if (message.type === 'cost') {
+    showCost(message.cost);
+    return;
+  }
   if (message.type === 'selfTest') {
     showTest(message.steps || [], message.message === 'done');
     return;

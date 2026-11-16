@@ -23,6 +23,7 @@ internal sealed class LibraryBridge : IDisposable
     private IReadOnlyList<SelfTestStep>? _selfTestDone;
     private readonly SettingsService _settings;
     private readonly StatusWatcher _status;
+    private readonly CostWatcher _cost;
     private readonly CancellationTokenSource _closing = new();
     private readonly System.Windows.Forms.Timer _changed = new() { Interval = 500 };
     private readonly System.Windows.Forms.Timer _configChanged = new() { Interval = 300 };
@@ -47,6 +48,7 @@ internal sealed class LibraryBridge : IDisposable
         _tools = new ClipTools(paths, () => _config, log);
         _meta = new ClipMetaService(paths, _tools, log);
         _status = new StatusWatcher(window, paths);
+        _cost = new CostWatcher(window, () => _paths.BufferDirFor(_config), () => _tools.Ffmpeg());
         _settings = new SettingsService(window, paths, () => _config, () => Root, OnSettingsSaved, _status);
         window.Deactivate += (_, _) => _settings.WindowDeactivated();
         Directory.CreateDirectory(ThumbsDir);
@@ -516,6 +518,7 @@ internal sealed class LibraryBridge : IDisposable
         lock (_work) running = [.. _work];
         try { Task.WaitAll(running, TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
         _watcher?.Dispose();
+        _cost.Dispose();
         _configWatcher?.Dispose();
         _configChanged.Dispose();
         _status.Dispose();

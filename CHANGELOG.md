@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Under the clips' total, the library shows what recording uses now: CPU, memory and how
+  fast the replay buffer is written. The library window isn't counted, and the GPU isn't
+  measured.
+
 ## 0.8.22
 
 ### Added
