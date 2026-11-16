@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Loud moments: in a recording of two minutes or more, the player marks where the sound
+  stands out, up to eight, from the waveform it already has, so the plays nobody bookmarked
+  in a long session are found too. B and Shift+B go through them with the bookmarks, and
+  the LOUD MOMENTS button under the timeline hides them. A recording loud all along gets
+  none.
+
 ## 0.8.32
 
 ### Added

@@ -566,7 +566,7 @@ function showKeys() {
       ['I O', L('Mark the start and end of the trim', 'Marcar o início e o fim do corte', 'Marcar el inicio y el fin del recorte')],
       ['< >', L('Slower or faster', 'Mais devagar ou mais rápido', 'Más lento o más rápido')],
       ['N P', L('Next or previous clip', 'Próximo clipe ou anterior', 'Clip siguiente o anterior')],
-      ['B', L('Next bookmark, with Shift the previous', 'Próximo marcador, com Shift o anterior', 'Marcador siguiente, con Shift el anterior')],
+      ['B', L('Next bookmark or loud moment, with Shift the previous', 'Próximo marcador ou pico de som, com Shift o anterior', 'Marcador o pico de sonido siguiente, con Shift el anterior')],
       ['M', L('Mute', 'Silenciar', 'Silenciar')],
       ['Ctrl + C', L('Copy it to paste in Discord: the trim marks, or all of it', 'Copiar para colar no Discord: o trecho marcado, ou tudo', 'Copiarlo para pegar en Discord: el tramo marcado, o todo')],
       ['F', L('Full screen', 'Tela cheia', 'Pantalla completa')],
@@ -999,6 +999,7 @@ function openClip(path) {
   state.end = 0;
   view = null;
   $('zoom-fit').hidden = true;
+  $('loud-toggle').hidden = true;
   showView('clip');
   if (clip.image) {
     $('clip-info').textContent = fmtSize(clip.bytes);
@@ -1256,11 +1257,46 @@ function setupTimeline() {
 }
 
 // A session's bookmarks on the timeline; a click jumps there.
+// Where the sound stands out in a long recording, which the app finds in the waveform. Shown unless turned off.
+let showLoud = readChoice('loudMoments', ['on', 'off']) === 'on';
+
+function loudMoments(meta) {
+  return showLoud && meta && meta.loudMoments ? meta.loudMoments.filter(at => at <= meta.duration) : [];
+}
+
+function showLoudToggle(meta) {
+  const count = meta && meta.loudMoments ? meta.loudMoments.length : 0;
+  const button = $('loud-toggle');
+  button.hidden = count === 0 || !!(state.current && state.current.image);
+  button.setAttribute('aria-pressed', String(showLoud));
+  button.textContent = L(`LOUD MOMENTS · ${count}`, `PICOS DE SOM · ${count}`, `PICOS DE SONIDO · ${count}`);
+}
+
+$('loud-toggle').addEventListener('click', () => {
+  showLoud = !showLoud;
+  keepChoice('loudMoments', showLoud ? 'on' : 'off');
+  placeBookmarks();
+});
+
 function placeBookmarks() {
   for (const old of document.querySelectorAll('.bookmark')) old.remove();
   const meta = currentMeta();
   const clip = state.current;
-  if (!meta || !clip || !clip.bookmarks) return;
+  showLoudToggle(meta);
+  if (!meta || !clip) return;
+  for (const at of loudMoments(meta)) {
+    if (!inView(at, meta)) continue;
+    const mark = el('div', 'bookmark loud');
+    mark.style.left = pctAt(at, meta);
+    mark.title = L(`Loud moment · ${fmtTime(at)}`, `Pico de som · ${fmtTime(at)}`, `Pico de sonido · ${fmtTime(at)}`);
+    mark.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      video.currentTime = at;
+      placePlayhead(true);
+    });
+    $('timeline').append(mark);
+  }
+  if (!clip.bookmarks) return;
   for (const [i, at] of clip.bookmarks.entries()) {
     if (at > meta.duration || !inView(at, meta)) continue;
     const mark = el('div', 'bookmark');
@@ -1924,9 +1960,10 @@ function playerKey(e) {
   } else if (key === '0') {
     e.preventDefault();
     zoomTo(meta, 0, meta.duration);
-  } else if (key === 'b' && state.current.bookmarks) {
-    // Shift goes back. A little room, so going back from a mark just reached doesn't land on it again.
-    const marks = state.current.bookmarks.filter(at => at <= meta.duration).sort((a, b) => a - b);
+  } else if (key === 'b') {
+    // Bookmarks and the loud moments shown. Shift goes back, with a little room, so going back from a mark just
+    // reached doesn't land on it again.
+    const marks = [...(state.current.bookmarks || []).filter(at => at <= meta.duration), ...loudMoments(meta)].sort((a, b) => a - b);
     const at = video.currentTime;
     const target = e.shiftKey ? marks.filter(m => m < at - 0.5).pop() : marks.find(m => m > at + 0.05);
     if (target !== undefined) {
