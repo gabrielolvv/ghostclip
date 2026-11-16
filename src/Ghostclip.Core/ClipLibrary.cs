@@ -55,6 +55,9 @@ public static partial class ClipLibrary
         return clips;
     }
 
+    /// <summary>The newest save in a scan, newest first: a copy made from it later, or a screenshot, isn't one.</summary>
+    public static ClipEntry? LastClip(IReadOnlyList<ClipEntry> clips) => clips.FirstOrDefault(c => !c.Image && !c.Derived);
+
     /// <summary>
     /// Creates the clips folder if needed. False, with the reason, when it can't
     /// be used: a drive that isn't plugged in, a path without permission.

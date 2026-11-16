@@ -22,6 +22,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _statusItem = new() { Enabled = false };
     private readonly ToolStripMenuItem _updateItem = new() { Visible = false };
+    private readonly ToolStripMenuItem _copyLastItem;
     private readonly ToolStripMenuItem _libraryItem;
     private readonly ToolStripMenuItem _clipsFolderItem;
     private readonly ToolStripMenuItem _settingsItem;
@@ -72,6 +73,8 @@ internal sealed class TrayApp : ApplicationContext
     private string? _configError;
     private RecorderStatus? _published;
     private string? _lastClip;
+    // The saves still being made into MP4s: "Copy last clip" right after a save means that one, not the one before.
+    private Task _finishing = Task.CompletedTask;
     private DateTime _lastWarningUtc;
     // Why the recorder stopped, for the library: the balloon that said so is gone after a few seconds.
     private string? _problem;
@@ -92,6 +95,7 @@ internal sealed class TrayApp : ApplicationContext
         _sessionItem = new ToolStripMenuItem("", null, (_, _) => ToggleSession());
         _micItem = new ToolStripMenuItem("", null, (_, _) => ToggleMicrophone());
         _pauseItem = new ToolStripMenuItem("", null, (_, _) => TogglePause());
+        _copyLastItem = new ToolStripMenuItem("", null, (_, _) => CopyLastClip());
         _libraryItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary());
         _clipsFolderItem = new ToolStripMenuItem("", null, (_, _) => OpenFolder(_config.ResolvedClipsFolder));
         _settingsItem = new ToolStripMenuItem("", null, (_, _) => OpenLibrary(settings: true));
@@ -110,6 +114,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add(_micItem);
         menu.Items.Add(_pauseItem);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(_copyLastItem);
         menu.Items.Add(_libraryItem);
         menu.Items.Add(_clipsFolderItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -291,6 +296,7 @@ internal sealed class TrayApp : ApplicationContext
             case TrayCommand.MicMute: ToggleMicrophone(); break;
             case TrayCommand.Pause: TogglePause(); break;
             case TrayCommand.Bookmark: MarkSession(); break;
+            case TrayCommand.CopyLast: CopyLastClip(); break;
         }
     }
 
@@ -369,6 +375,7 @@ internal sealed class TrayApp : ApplicationContext
             ? WithHotkey(HotkeyAction.Pause, L("Resume recording", "Retomar gravação", "Reanudar grabación"))
             : WithHotkey(HotkeyAction.Pause, L("Pause recording", "Pausar gravação", "Pausar grabación"));
         _updateItem.Text = L($"Restart to update to {_updateVersion}", $"Reiniciar para atualizar para {_updateVersion}", $"Reiniciar para actualizar a {_updateVersion}");
+        _copyLastItem.Text = L("Copy last clip", "Copiar último clipe", "Copiar último clip");
         _libraryItem.Text = L("Open library", "Abrir biblioteca", "Abrir biblioteca");
         _clipsFolderItem.Text = L("Open clips folder", "Abrir pasta de clipes", "Abrir carpeta de clips");
         _settingsItem.Text = L("Settings...", "Configurações...", "Configuración...");
@@ -564,7 +571,7 @@ internal sealed class TrayApp : ApplicationContext
         }
         // The clip is safe from here on: confirm right away, the MP4 follows.
         if (_config.ConfirmationSound) _sound.Play();
-        _ = FinishAsync(snapshot);
+        _finishing = Task.WhenAll(_finishing, FinishAsync(snapshot));
     }
 
     // Nothing on screen reaches the disk until it is pressed again, for a bank's page or a password. The buffer goes,
@@ -730,7 +737,7 @@ internal sealed class TrayApp : ApplicationContext
             return;
         }
         if (_config.ConfirmationSound) _sound.Play();
-        _ = FinishAsync(snapshot, session: true);
+        _finishing = Task.WhenAll(_finishing, FinishAsync(snapshot, session: true));
     }
 
     private async Task FinishAsync(ClipSnapshot snapshot, bool session = false)
@@ -922,6 +929,53 @@ internal sealed class TrayApp : ApplicationContext
                 _log.Debug("Could not clear the old buffer in {Dir}: {Error}", dir, ex.Message);
             }
         }
+    }
+
+    // The newest save on the clipboard, to paste in Discord or a chat without opening the library. One still
+    // being made is waited for; a copy made from a clip later, or a screenshot, isn't a save.
+    private async void CopyLastClip()
+    {
+        try
+        {
+            await _finishing.ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            // Said already, by the save that failed: the newest clip on disk is still worth copying.
+            _log.Debug("A save before the copy failed: {Error}", ex.Message);
+        }
+        var root = _config.ResolvedClipsFolder;
+        ClipEntry? last;
+        try
+        {
+            last = await Task.Run(() => ClipLibrary.LastClip(ClipLibrary.Scan(root))).ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warning("Could not look for the last clip in {Root}: {Error}", root, ex.Message);
+            last = null;
+        }
+        if (_shuttingDown) return;
+        if (last is null)
+        {
+            Notify(L("No clip to copy", "Nenhum clipe para copiar", "Ningún clip para copiar"),
+                L("Save one first.", "Salve um primeiro.", "Guarda uno primero."), ToolTipIcon.Warning);
+            return;
+        }
+        try
+        {
+            Clipboard.SetFileDropList(new System.Collections.Specialized.StringCollection { last.Path });
+        }
+        catch (System.Runtime.InteropServices.ExternalException ex)
+        {
+            // Another program holding the clipboard.
+            _log.Warning("Could not copy {Path}: {Error}", last.Path, ex.Message);
+            Notify(L("Clip not copied", "Clipe não copiado", "Clip no copiado"), ex.Message, ToolTipIcon.Warning);
+            return;
+        }
+        _lastClip = last.Path;
+        Notify(L("Clip copied", "Clipe copiado", "Clip copiado"),
+            L($"{last.Game}, {last.SavedLocal:HH:mm}. Paste it in Discord.", $"{last.Game}, {last.SavedLocal:HH:mm}. Cole no Discord.", $"{last.Game}, {last.SavedLocal:HH:mm}. Pégalo en Discord."), ToolTipIcon.None);
     }
 
     private void Notify(string title, string text, ToolTipIcon icon)
