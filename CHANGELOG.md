@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Slow motion in the Export menu: a copy of the trim marks, their last 20 seconds at
+  most, at the player's speed when it's slowed down (0.5x or 0.25x) and at half speed
+  otherwise. The sound slows down too, without going deeper. Each frame stays on screen
+  longer, so a 60 fps clip at half speed plays at 30.
+
 ## 0.8.25
 
 ### Added

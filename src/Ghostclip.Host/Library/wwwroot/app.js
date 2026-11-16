@@ -925,6 +925,12 @@ function setSpeed(speed) {
   video.playbackRate = speed;
   $('speed').textContent = `${speed}x`;
   $('speed').classList.toggle('changed', speed !== 1);
+  // The slow-motion copy goes at what you're watching, when that's slower.
+  $('slow-speed').textContent = `${slowSpeed()}x`;
+}
+
+function slowSpeed() {
+  return video.playbackRate < 1 ? video.playbackRate : 0.5;
 }
 
 function stepSpeed(by, wrap) {
@@ -1527,6 +1533,13 @@ $('a-gif').addEventListener('click', () => {
   toast(L('Making the GIF…', 'Fazendo o GIF…', 'Haciendo el GIF…'));
   post({ type: 'gif', path: state.current.path, start: state.start, end: state.end });
 });
+$('a-slow').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-slow').classList.contains('busy')) return;
+  busy($('a-slow'), true);
+  const speed = slowSpeed();
+  toast(L(`Making the ${speed}x copy…`, `Fazendo a cópia em ${speed}x…`, `Haciendo la copia a ${speed}x…`));
+  post({ type: 'slow', path: state.current.path, start: state.start, end: state.end, speed, ...exportTracks() });
+});
 $('a-marks').addEventListener('click', () => {
   if (!state.current || $('a-marks').classList.contains('busy')) return;
   busy($('a-marks'), true);
@@ -1881,6 +1894,10 @@ function onDone(message) {
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
       break;
+    case 'slow':
+      busy($('a-slow'), false);
+      toast(L('Slow-motion copy saved', 'Cópia em câmera lenta salva', 'Copia en cámara lenta guardada'), false, open);
+      break;
     case 'gif':
       busy($('a-gif'), false);
       toast(L(`GIF saved: ${message.message}`, `GIF salvo: ${message.message}`, `GIF guardado: ${message.message}`), false, open);
@@ -2026,6 +2043,7 @@ function onMessage(message) {
       if (message.op === 'compress') busy($('a-discord'), false);
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
+      if (message.op === 'slow') busy($('a-slow'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
       if (message.op === 'audio') busy($('a-audio'), false);
       if (message.op === 'bookmarkClips') busy($('a-marks'), false);

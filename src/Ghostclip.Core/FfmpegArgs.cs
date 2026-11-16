@@ -344,10 +344,10 @@ public static class FfmpegArgs
         return Inv($"{filter}=t=in:st=0:d={seconds:0.###},{filter}=t=out:st={duration - seconds:0.###}:d={seconds:0.###}");
     }
 
-    // The tracks into one, labelled [a]: one or more, with something to do.
-    private static string MixGraph(IReadOnlyList<int> tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor = 0)
+    // The tracks into one, labelled [a]: one or more, with something to do. Then, filters for the mix as a whole.
+    private static string MixGraph(IReadOnlyList<int> tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, double fadeFor = 0, string? then = null)
     {
-        var fade = fadeFor > 0 ? Fade("afade", fadeFor) : "";
+        var fade = string.Join(',', new[] { fadeFor > 0 ? Fade("afade", fadeFor) : "", then ?? "" }.Where(f => f.Length > 0));
         if (tracks.Count == 1)
         {
             var filter = TrackFilter(tracks[0], volumes, denoise);
@@ -444,13 +444,60 @@ public static class FfmpegArgs
     /// What a GIF takes of a clip: the trim marks, cut down to their last <see cref="GifMaxSeconds"/>, since
     /// a replay is saved right after the moment it's for. Marks that make no sense count as the whole clip.
     /// </summary>
-    public static (double Start, double Length) GifRange(double start, double end, double duration)
+    public static (double Start, double Length) GifRange(double start, double end, double duration) =>
+        LastOfMarks(start, end, duration, GifMaxSeconds);
+
+    private static (double Start, double Length) LastOfMarks(double start, double end, double duration, double most)
     {
         start = Math.Max(0, start);
         end = Math.Min(end, duration);
         if (end <= start) (start, end) = (0, duration);
-        start = Math.Max(start, end - GifMaxSeconds);
+        start = Math.Max(start, end - most);
         return (start, end - start);
+    }
+
+    /// <summary>The most of a clip a slow-motion copy takes: at a quarter speed, it already plays for over a minute.</summary>
+    public const double SlowMotionMaxSeconds = 20;
+
+    /// <summary>What a slow-motion copy takes: the trim marks, cut down to their last <see cref="SlowMotionMaxSeconds"/>, as a GIF does.</summary>
+    public static (double Start, double Length) SlowMotionRange(double start, double end, double duration) =>
+        LastOfMarks(start, end, duration, SlowMotionMaxSeconds);
+
+    /// <summary>
+    /// A slowed-down copy of <paramref name="length"/> seconds from <paramref name="start"/>, on the hardware encoder:
+    /// each frame stays on screen longer, so a 60 fps clip at half speed plays at 30. The sound is slowed without
+    /// going deeper, after the tracks are mixed into one as in the other copies.
+    /// </summary>
+    /// <param name="speed">From 0.25 up to, but not including, 1.</param>
+    public static IReadOnlyList<string> SlowMotion(string input, string output, string encoderName, double start, double length, double speed, int audioTracks,
+        IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null)
+    {
+        if (!(speed >= 0.25 && speed < 1)) throw new ArgumentOutOfRangeException(nameof(speed), speed, "Slower than normal, down to a quarter.");
+        const int VideoKbps = 12000;
+        var args = new List<string>
+        {
+            "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va",
+            "-ss", Inv($"{start}"), "-t", Inv($"{length}"), "-i", input,
+        };
+        var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
+        if (tracks.Count == 0) args.AddRange(["-map", "0:v:0", "-an"]);
+        else args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise, then: Tempo(speed)), "-map", "0:v:0", "-map", "[a]"]);
+        args.AddRange([
+            "-vf", Inv($"setpts={1 / speed:0.###}*PTS") + ",format=nv12",
+            "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"),
+            "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart", "-f", "mp4", output,
+        ]);
+        return args;
+    }
+
+    // atempo slows to half at most in one go: a quarter is two halvings.
+    private static string Tempo(double speed)
+    {
+        var parts = new List<string>();
+        for (; speed < 0.5 - 1e-9; speed /= 0.5) parts.Add("atempo=0.5");
+        parts.Add(Inv($"atempo={speed:0.###}"));
+        return string.Join(',', parts);
     }
 
     /// <summary>
