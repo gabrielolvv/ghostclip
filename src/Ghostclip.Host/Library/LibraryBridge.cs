@@ -268,16 +268,16 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: trimmed));
                     break;
                 case "compress":
-                    var (compressed, bytes) = await Job(_tools.CompressAsync(path, r.Tracks, r.Volumes, r.Denoise, r.Fade, _closing.Token)).ConfigureAwait(true);
+                    var (compressed, bytes) = await Job(_tools.CompressAsync(path, r.Tracks, r.Volumes, r.Denoise, r.Fade, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: compressed,
                         Message: string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.0} MB")));
                     break;
                 case "vertical":
-                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, r.Denoise, r.Fade, _closing.Token)).ConfigureAwait(true);
+                    var vertical = await Job(_tools.VerticalAsync(path, r.Tracks, r.Volumes, r.CropAt, r.Denoise, r.Fade, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: vertical));
                     break;
                 case "sendToDiscord":
-                    var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, r.Denoise, r.Fade, _closing.Token)).ConfigureAwait(true);
+                    var sentCopy = await Job(_tools.SendToDiscordAsync(path, r.Tracks, r.Volumes, r.Denoise, r.Fade, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: sentCopy));
                     break;
                 case "bookmarkClips":
@@ -291,7 +291,7 @@ internal sealed class LibraryBridge : IDisposable
                         Message: cuts.Count.ToString(CultureInfo.InvariantCulture)));
                     break;
                 case "audio":
-                    var audio = await Job(_tools.AudioOnlyAsync(path, r.Start, r.End, r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
+                    var audio = await Job(_tools.AudioOnlyAsync(path, r.Start, r.End, r.Tracks, r.Volumes, r.Denoise, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: audio));
                     break;
                 case "frame":
@@ -301,7 +301,7 @@ internal sealed class LibraryBridge : IDisposable
                 case "slow":
                     // The player's speed when it's slowed down; half otherwise.
                     var slow = await Job(_tools.SlowMotionAsync(path, r.Start, r.End, r.Speed is >= 0.25 and < 1 ? r.Speed : 0.5,
-                        r.Tracks, r.Volumes, r.Denoise, _closing.Token)).ConfigureAwait(true);
+                        r.Tracks, r.Volumes, r.Denoise, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: slow));
                     break;
                 case "gif":

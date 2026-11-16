@@ -73,10 +73,13 @@ internal sealed class SelfTest(GhostclipPaths paths, GhostclipConfig config, Cli
                 }).ConfigureAwait(true);
 
                 await Step(L("Discord size, with volume, noise reduction and fade", "Tamanho do Discord, com volume, redução de ruído e fade", "Tamaño de Discord, con volumen, reducción de ruido y fundido"), async () =>
-                    Size((await tools.CompressAsync(clip, null, [1, 0.5], [1], true, ct).ConfigureAwait(true)).Path)).ConfigureAwait(true);
+                    Size((await tools.CompressAsync(clip, null, [1, 0.5], [1], true, ct: ct).ConfigureAwait(true)).Path)).ConfigureAwait(true);
 
-                await Step(L("Vertical copy", "Cópia vertical", "Copia vertical"), async () =>
-                    Size(await tools.VerticalAsync(clip, null, null, 0.25, null, false, ct).ConfigureAwait(true))).ConfigureAwait(true);
+                await Step(L("Vertical copy, with even volume", "Cópia vertical, com volume igualado", "Copia vertical, con volumen igualado"), async () =>
+                    Size(await tools.VerticalAsync(clip, null, null, 0.25, null, false, level: true, ct: ct).ConfigureAwait(true))).ConfigureAwait(true);
+
+                await Step(L("Slow motion", "Câmera lenta", "Cámara lenta"), async () =>
+                    Size(await tools.SlowMotionAsync(clip, 0, 2, 0.5, null, null, null, ct: ct).ConfigureAwait(true))).ConfigureAwait(true);
 
                 await Step("GIF", async () =>
                 {
@@ -88,7 +91,7 @@ internal sealed class SelfTest(GhostclipPaths paths, GhostclipConfig config, Cli
                     Starts(await tools.FrameAsync(clip, 1, ct).ConfigureAwait(true), [0xFF, 0xD8])).ConfigureAwait(true);
 
                 await Step(L("Audio only", "Só o áudio", "Solo el audio"), async () =>
-                    Size(await tools.AudioOnlyAsync(clip, 0, 2, [1], null, null, ct).ConfigureAwait(true))).ConfigureAwait(true);
+                    Size(await tools.AudioOnlyAsync(clip, 0, 2, [1], null, null, ct: ct).ConfigureAwait(true))).ConfigureAwait(true);
 
                 if (trim is not null)
                 {

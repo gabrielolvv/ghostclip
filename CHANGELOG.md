@@ -3,6 +3,20 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- "Even volume" in the Export menu: the sound of the Discord, vertical, slow-motion and
+  audio-only copies comes out at one steady loudness, so a quiet game comes up and a loud
+  microphone comes down. The clip stays as it is.
+- The self-test also checks the slow-motion copy, and the vertical copy with even volume.
+
+### Fixed
+
+- The Export button says when fade is on again. It had stopped showing since buttons
+  started lighting up under the pointer.
+
 ## 0.8.27
 
 ### Added

@@ -62,7 +62,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   único jeito de um clipe sair do seu PC, e só quando você clica.
 - **Cópia vertical** para Shorts, TikTok e Reels: a parte da imagem que você escolher, em 1080x1920,
   codificado na GPU. Nesta e na cópia para o Discord, você escolhe quais faixas
-  de áudio entram, em que volume, se o ruído sai do microfone e se entra e sai em fade.
+  de áudio entram, em que volume, se o ruído sai do microfone, se o som sai num volume
+  só e se entra e sai em fade.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
 - **Câmera lenta** de até 20 s a partir do trecho marcado, na metade ou num quarto da
   velocidade, no encoder da GPU.

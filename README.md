@@ -59,8 +59,9 @@ QuickSync). There is no CPU encoder fallback.
   limit. It's the only way a clip leaves your PC, and only when you click.
 - **Vertical copy** for Shorts, TikTok and Reels: the part of the picture you choose, at
   1080x1920, encoded on the GPU. For this and the Discord copy, you choose which
-  audio tracks go in, at what volume, whether noise comes out of the microphone, and
-  whether it fades in and out.
+  audio tracks go in, at what volume, whether noise comes out of the microphone,
+  whether the sound is evened out to one steady loudness, and whether it fades in
+  and out.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
 - **Slow motion** of up to 20 s from the trim marks, at half or a quarter speed,
   on the GPU encoder.
