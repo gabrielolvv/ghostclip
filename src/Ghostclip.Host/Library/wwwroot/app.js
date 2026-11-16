@@ -556,6 +556,7 @@ function showKeys() {
       ['B', L('Next bookmark, with Shift the previous', 'Próximo marcador, com Shift o anterior', 'Marcador siguiente, con Shift el anterior')],
       ['M', L('Mute', 'Silenciar', 'Silenciar')],
       ['F', L('Full screen', 'Tela cheia', 'Pantalla completa')],
+      ['+ − 0', L('Zoom the timeline in, out, or back to all of it; the wheel does too', 'Aproximar a linha do tempo, afastar ou voltar ao todo; a roda do mouse também', 'Acercar la línea de tiempo, alejarla o volver al total; la rueda del ratón también')],
       ['Esc', L('Back to the library', 'Voltar para a biblioteca', 'Volver a la biblioteca')],
     ]],
     [L('LIBRARY', 'BIBLIOTECA', 'BIBLIOTECA'), [
@@ -917,6 +918,8 @@ function openClip(path) {
   }
   state.start = 0;
   state.end = 0;
+  view = null;
+  $('zoom-fit').hidden = true;
   showView('clip');
   if (clip.image) {
     $('clip-info').textContent = fmtSize(clip.bytes);
@@ -1122,9 +1125,9 @@ function placeBookmarks() {
   const clip = state.current;
   if (!meta || !clip || !clip.bookmarks) return;
   for (const [i, at] of clip.bookmarks.entries()) {
-    if (at > meta.duration) continue;
+    if (at > meta.duration || !inView(at, meta)) continue;
     const mark = el('div', 'bookmark');
-    mark.style.left = `${(at / meta.duration) * 100}%`;
+    mark.style.left = pctAt(at, meta);
     mark.title = L(`Bookmark ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`, `Marcador ${i + 1} · ${fmtTime(at)}`);
     mark.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -1135,14 +1138,60 @@ function placeBookmarks() {
   }
 }
 
+// The part of the clip the timeline shows: all of it, or what the wheel zoomed in on.
+const MIN_VIEW = 2;
+let view = null;
+
+function viewOf(meta) {
+  return view && view.to > view.from ? view : { from: 0, to: meta.duration };
+}
+
+function fraction(t, meta) {
+  const v = viewOf(meta);
+  return (t - v.from) / (v.to - v.from);
+}
+
+const pctAt = (t, meta) => `${fraction(t, meta) * 100}%`;
+const inView = (t, meta) => { const f = fraction(t, meta); return f >= 0 && f <= 1; };
+
+// Zoomed in by factor around the time at, kept inside the clip. All of it again means no zoom at all.
+function zoomTo(meta, from, to) {
+  const span = Math.max(Math.min(MIN_VIEW, meta.duration), Math.min(meta.duration, to - from));
+  let start = Math.max(0, Math.min(from, meta.duration - span));
+  view = span >= meta.duration - 0.001 ? null : { from: start, to: start + span };
+  $('zoom-fit').hidden = !view;
+  placeBookmarks();
+  layoutRange();
+}
+
+function zoomAround(at, factor) {
+  const meta = currentMeta();
+  if (!meta) return;
+  const v = viewOf(meta);
+  const span = (v.to - v.from) * factor;
+  const where = (at - v.from) / (v.to - v.from);
+  zoomTo(meta, at - span * where, at - span * where + span);
+}
+
+function panBy(share) {
+  const meta = currentMeta();
+  if (!meta || !view) return;
+  const span = view.to - view.from;
+  zoomTo(meta, view.from + span * share, view.to + span * share);
+}
+
 function layoutRange() {
   const meta = currentMeta();
   if (!meta) return;
-  const pct = t => `${(t / meta.duration) * 100}%`;
-  $('range').style.left = pct(state.start);
-  $('range').style.width = `${((state.end - state.start) / meta.duration) * 100}%`;
-  $('h-start').style.left = pct(state.start);
-  $('h-end').style.left = pct(state.end);
+  const clamp = f => Math.min(1, Math.max(0, f));
+  const left = clamp(fraction(state.start, meta)), right = clamp(fraction(state.end, meta));
+  $('range').style.left = `${left * 100}%`;
+  $('range').style.width = `${(right - left) * 100}%`;
+  // A handle outside what's shown isn't there to grab.
+  $('h-start').style.left = pctAt(state.start, meta);
+  $('h-end').style.left = pctAt(state.end, meta);
+  $('h-start').style.visibility = inView(state.start, meta) ? '' : 'hidden';
+  $('h-end').style.visibility = inView(state.end, meta) ? '' : 'hidden';
   const length = state.end - state.start;
   const hint = dragging === 'start' ? L(' · STARTS ON A KEYFRAME', ' · COMEÇA NUM KEYFRAME', ' · EMPIEZA EN UN KEYFRAME') : '';
   $('t-range').textContent = `${fmtTime(state.start)} → ${fmtTime(state.end)} · ${Math.round(length)} S${hint}`;
@@ -1168,12 +1217,16 @@ function drawWave() {
   const bars = Math.min(peaks.length, Math.floor(width / (2 * gap)));
   const barWidth = width / bars - gap;
   const middle = height / 2;
+  const shown = viewOf(meta);
+  const index = t => Math.min(peaks.length - 1, Math.floor((t / meta.duration) * peaks.length));
   for (let i = 0; i < bars; i++) {
-    const from = Math.floor((i * peaks.length) / bars);
-    const to = Math.max(from + 1, Math.floor(((i + 1) * peaks.length) / bars));
+    // The peaks of the time this bar covers: all of the clip, or what's zoomed in on.
+    const from = index(shown.from + (i / bars) * (shown.to - shown.from));
+    const to = Math.max(from + 1, index(shown.from + ((i + 1) / bars) * (shown.to - shown.from)));
     let peak = 0;
     for (let j = from; j < to; j++) peak = Math.max(peak, peaks[j]);
-    const t = ((i + 0.5) / bars) * meta.duration;
+    const v = viewOf(meta);
+    const t = v.from + ((i + 0.5) / bars) * (v.to - v.from);
     const inside = t >= state.start && t <= state.end;
     ctx.fillStyle = inside ? 'rgba(92, 225, 230, 0.85)' : 'rgba(232, 234, 237, 0.22)';
     const h = Math.max(gap, peak * (height - 8 * ratio));
@@ -1181,10 +1234,18 @@ function drawWave() {
   }
 }
 
-function placePlayhead() {
+// Zoomed in, the view follows the video while it plays, and when a key sends it out of view. Not while people
+// zoom or move along themselves: the playhead then just isn't shown.
+function placePlayhead(follow = !video.paused) {
   const meta = currentMeta();
   if (!meta) return;
-  $('playhead').style.left = `${(video.currentTime / meta.duration) * 100}%`;
+  if (view && follow && !inView(video.currentTime, meta)) {
+    const span = view.to - view.from;
+    zoomTo(meta, video.currentTime - span * 0.1, video.currentTime + span * 0.9);
+    return;
+  }
+  $('playhead').style.left = pctAt(video.currentTime, meta);
+  $('playhead').style.visibility = inView(video.currentTime, meta) ? '' : 'hidden';
 }
 
 // Only runs while the video plays: an idle window draws nothing.
@@ -1242,7 +1303,8 @@ function timeAt(clientX) {
   const meta = currentMeta();
   const box = $('timeline').getBoundingClientRect();
   const x = Math.min(Math.max(clientX - box.left, 0), box.width);
-  return (x / box.width) * meta.duration;
+  const v = viewOf(meta);
+  return v.from + (x / box.width) * (v.to - v.from);
 }
 
 function moveHandle(which, t) {
@@ -1288,6 +1350,15 @@ for (const [id, which] of [['h-start', 'start'], ['h-end', 'end']]) {
     }
   });
 }
+
+// The wheel zooms around the pointer; with Shift, or sideways, it moves along.
+$('timeline').addEventListener('wheel', e => {
+  if (!currentMeta()) return;
+  e.preventDefault();
+  if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) panBy(Math.sign(e.shiftKey ? e.deltaY : e.deltaX) * 0.2);
+  else zoomAround(timeAt(e.clientX), e.deltaY < 0 ? 0.7 : 1 / 0.7);
+}, { passive: false });
+$('zoom-fit').addEventListener('click', () => { const meta = currentMeta(); if (meta) zoomTo(meta, 0, meta.duration); });
 
 $('timeline').addEventListener('pointerdown', e => {
   if (!currentMeta() || e.target.classList.contains('handle')) return;
@@ -1659,7 +1730,7 @@ function playerKey(e) {
   if (!meta || state.current.image || $('clip').hidden || e.ctrlKey || e.altKey || e.metaKey) return;
   const seek = t => {
     video.currentTime = Math.min(meta.duration, Math.max(0, t));
-    placePlayhead();
+    placePlayhead(true);
   };
   const key = e.key.toLowerCase();
   if (key === 'arrowleft' || key === 'arrowright') {
@@ -1674,6 +1745,12 @@ function playerKey(e) {
   } else if (key === 'i' || key === 'o') {
     e.preventDefault();
     moveHandle(key === 'i' ? 'start' : 'end', video.currentTime);
+  } else if (key === '+' || key === '=' || key === '-') {
+    e.preventDefault();
+    zoomAround(video.currentTime, key === '-' ? 1 / 0.7 : 0.7);
+  } else if (key === '0') {
+    e.preventDefault();
+    zoomTo(meta, 0, meta.duration);
   } else if (key === 'b' && state.current.bookmarks) {
     // Shift goes back. A little room, so going back from a mark just reached doesn't land on it again.
     const marks = state.current.bookmarks.filter(at => at <= meta.duration).sort((a, b) => a - b);

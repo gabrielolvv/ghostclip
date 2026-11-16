@@ -7,6 +7,9 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 
 ### Added
 
+- Zoom on the timeline: the wheel zooms in around the pointer, Shift and the wheel
+  move along, and + − 0 do it from the keyboard. Trimming a long session no longer
+  means a pixel worth several seconds. While playing, the view follows the video.
 - The library's sidebar shows how much space each game's clips take, and the favorites',
   under their names.
 
