@@ -155,7 +155,7 @@ instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 - Clique duas vezes no ícone da bandeja, ou numa notificação "Clipe salvo",
   para abrir a biblioteca. O menu da bandeja também mostra o que está sendo
   gravado, copia o último clipe para colar no Discord e tem configurações e
-  pastas. O ponto do ícone fica vermelho
+  pastas. Nas configurações dá para copiar cada clipe novo assim que ele é salvo. O ponto do ícone fica vermelho
   enquanto grava.
 - Na biblioteca: copie um clipe e cole direto no Discord, comprima para o
   limite do Discord, mostre na pasta ou mande para a Lixeira. No player, as

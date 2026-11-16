@@ -199,6 +199,12 @@ public sealed record GhostclipConfig
 
     public bool ConfirmationSound { get; set; } = true;
 
+    /// <summary>
+    /// Puts each clip and screenshot on the clipboard once it's saved, ready to paste in Discord. It takes over
+    /// whatever was there, so it's off until people turn it on. Sessions are left out: they're rarely sendable.
+    /// </summary>
+    public bool CopyNewClips { get; set; }
+
     /// <summary>Starts Ghostclip at sign-in (installed copies only).</summary>
     public bool StartWithWindows { get; set; } = true;
 
