@@ -71,6 +71,13 @@
         <span id="selbar-text"></span>
         <button id="sel-all" class="act" type="button" data-pt="Selecionar tudo" data-es="Seleccionar todo">Select all</button>
         <button id="sel-join" class="act" type="button" title="One video from these clips, oldest first, without re-encoding" data-pt-title="Um vídeo só com estes clipes, do mais antigo ao mais novo, sem recodificar" data-es-title="Un solo video con estos clips, del más antiguo al más reciente, sin recodificar" data-pt="Juntar" data-es="Unir">Join</button>
+        <button id="sel-game" class="act" type="button" title="For when the wrong game was in front at the save" data-pt-title="Para quando o jogo errado estava na frente ao salvar" data-es-title="Para cuando el juego equivocado estaba delante al guardar" data-pt="Mudar de jogo" data-es="Cambiar de juego">Change game</button>
+        <form id="sel-game-form" class="sel-game" hidden>
+          <input id="sel-game-name" class="field" type="text" list="game-names" spellcheck="false" autocomplete="off" aria-label="Game" data-pt-label="Jogo" data-es-label="Juego">
+          <datalist id="game-names"></datalist>
+          <button id="sel-game-yes" class="act primary" type="submit" data-pt="Mover" data-es="Mover">Move</button>
+          <button id="sel-game-no" class="act" type="button" data-pt="Cancelar" data-es="Cancelar">Cancel</button>
+        </form>
         <button id="sel-favorite" class="act" type="button"></button>
         <button id="sel-bin" class="act" type="button"></button>
         <button id="sel-cancel" class="act" type="button"></button>
