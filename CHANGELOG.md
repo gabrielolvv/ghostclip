@@ -3,6 +3,14 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Ctrl+C copies a clip to paste in Discord: the card in focus in the library, and in the
+  player the trim marks, or all of the clip, as Copy trim does. Text you selected copies
+  as usual. The keys list has both.
+
 ## 0.8.31
 
 ### Added

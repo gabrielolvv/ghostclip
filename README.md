@@ -46,8 +46,9 @@ QuickSync). There is no CPU encoder fallback.
   moving a clip saved under the wrong game, going from a copy back to its clip, and
   acting on several at once. It shows what recording uses now: CPU, memory and
   disk. It runs only while its window is open.
-- **A menu on each card,** from the right button, and F2, Delete and F on the one in
-  focus, to act on a clip without opening it.
+- **A menu on each card,** from the right button, and F2, Delete, F and Ctrl+C on the
+  one in focus, to act on a clip without opening it. In the player, Ctrl+C copies the
+  trim marks, or all of it.
 - **Play all** the videos in a list, one after another, to go back over a game or
   your favorites.
 - **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
