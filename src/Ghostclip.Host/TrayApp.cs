@@ -571,7 +571,7 @@ internal sealed class TrayApp : ApplicationContext
         }
         // The clip is safe from here on: confirm right away, the MP4 follows.
         if (_config.ConfirmationSound) _sound.Play();
-        _finishing = Task.WhenAll(_finishing, FinishAsync(snapshot));
+        _finishing = Task.WhenAll(_finishing, FinishAsync(snapshot, copy: true));
     }
 
     // Nothing on screen reaches the disk until it is pressed again, for a bank's page or a password. The buffer goes,
@@ -670,7 +670,10 @@ internal sealed class TrayApp : ApplicationContext
             if (_config.ConfirmationSound) _sound.Play();
             _lastClip = path;
             _storage.Enforce();
-            Notify(L("Screenshot saved", "Print salvo", "Captura guardada"), L($"{game}. Click to open it.", $"{game}. Clique para abrir.", $"{game}. Haz clic para abrirla."), ToolTipIcon.None);
+            var copied = CopyIfAsked(path);
+            Notify(L("Screenshot saved", "Print salvo", "Captura guardada"), copied
+                ? L($"{game}. Copied: paste it in Discord.", $"{game}. Copiado: cole no Discord.", $"{game}. Copiada: pégala en Discord.")
+                : L($"{game}. Click to open it.", $"{game}. Clique para abrir.", $"{game}. Haz clic para abrirla."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
@@ -740,7 +743,8 @@ internal sealed class TrayApp : ApplicationContext
         _finishing = Task.WhenAll(_finishing, FinishAsync(snapshot, session: true));
     }
 
-    private async Task FinishAsync(ClipSnapshot snapshot, bool session = false)
+    // copy: a clip just saved, which "Copy new clips" puts on the clipboard. One recovered at start isn't.
+    private async Task FinishAsync(ClipSnapshot snapshot, bool session = false, bool copy = false)
     {
         try
         {
@@ -755,8 +759,10 @@ internal sealed class TrayApp : ApplicationContext
                         $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Clique para abrir.", $"{snapshot.Game}: {Clock(TimeSpan.FromSeconds(snapshot.Seconds))}, {snapshot.Bookmarks?.Count ?? 0} marcadores. Haz clic para abrirla."), ToolTipIcon.None);
                 return;
             }
-            Notify(L("Clip saved", "Clipe salvo", "Clip guardado"),
-                L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Haz clic para abrirlo."), ToolTipIcon.None);
+            var copied = copy && CopyIfAsked(path);
+            Notify(L("Clip saved", "Clipe salvo", "Clip guardado"), copied
+                ? L($"{snapshot.Game}: {snapshot.Seconds:0} s. Copied: paste it in Discord.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Copiado: cole no Discord.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Copiado: pégalo en Discord.")
+                : L($"{snapshot.Game}: {snapshot.Seconds:0} s. Click to open it.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Clique para abrir.", $"{snapshot.Game}: {snapshot.Seconds:0} s. Haz clic para abrirlo."), ToolTipIcon.None);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
@@ -928,6 +934,23 @@ internal sealed class TrayApp : ApplicationContext
             {
                 _log.Debug("Could not clear the old buffer in {Dir}: {Error}", dir, ex.Message);
             }
+        }
+    }
+
+    // "Copy new clips": the file on the clipboard, when people turned it on. Another program holding the clipboard
+    // leaves the save as it is, and the notification says so by not saying it was copied.
+    private bool CopyIfAsked(string path)
+    {
+        if (!_config.CopyNewClips) return false;
+        try
+        {
+            Clipboard.SetFileDropList(new System.Collections.Specialized.StringCollection { path });
+            return true;
+        }
+        catch (System.Runtime.InteropServices.ExternalException ex)
+        {
+            _log.Warning("Could not copy {Path}: {Error}", path, ex.Message);
+            return false;
         }
     }
 

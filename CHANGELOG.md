@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- "Copy new clips" in Settings > Clips: each clip and screenshot goes on the clipboard once
+  saved, so pressing Alt+F10 and then Ctrl+V in Discord is enough. It's off until you turn
+  it on, since it replaces what you had copied. Sessions, and clips recovered at start,
+  aren't copied.
+
 ## 0.8.30
 
 ### Added

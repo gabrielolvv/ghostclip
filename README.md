@@ -154,7 +154,8 @@ installer and the minimal FFmpeg is described in
 - **Alt+F10** saves to `Videos\Ghostclip\<Game>\<Game>_YYYY-MM-DD_HH-MM-SS.mp4`.
 - Double-click the tray icon, or click a "Clip saved" notification, to open
   the library. The tray menu also shows what is being recorded, copies the
-  last clip to paste in Discord, and has settings and folders. The icon's dot is red while recording.
+  last clip to paste in Discord, and has settings and folders. Settings can
+  also copy each new clip as soon as it's saved. The icon's dot is red while recording.
 - In the library: copy a clip and paste it straight into Discord, compress
   it to Discord's size limit, show it in its folder or send it to the
   Recycle Bin. In the player, the arrows seek, comma and period go frame by
