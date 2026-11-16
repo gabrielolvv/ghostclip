@@ -53,7 +53,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Tocar todos** os vídeos de uma lista, um depois do outro, para rever um jogo ou
   os favoritos.
 - **Copiar corte:** o trecho marcado na área de transferência, pronto para colar, num passo só.
-- **Corte** arrastando duas alças, com a roda do mouse para dar zoom, sem reencode. O início encaixa num
+- **Corte** arrastando duas alças, com a roda do mouse para dar zoom e o quadro sob o
+  ponteiro mostrado acima da linha do tempo, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
 - **Comprimir para o Discord:** reencoda na GPU para caber no limite de upload
   (10 MB por padrão), juntando jogo e microfone numa faixa só.

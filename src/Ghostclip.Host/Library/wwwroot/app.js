@@ -947,6 +947,7 @@ function openClip(path) {
     toast(L('That clip is no longer in your clips folder.', 'Esse clipe não está mais na sua pasta de clipes.', 'Ese clip ya no está en tu carpeta de clips.'), true);
     return;
   }
+  releaseScrub();
   state.current = clip;
   setSpeed(1);
   tracksOff.clear();
@@ -1078,7 +1079,63 @@ function releaseVideo() {
   video.pause();
   video.removeAttribute('src');
   video.load();
+  releaseScrub();
 }
+
+// The frame under the pointer on the timeline, or at the handle being dragged, from a second video that only
+// seeks. It holds the file open too, so it lets go wherever the player does, and when another clip opens.
+const scrub = $('scrub-video');
+let scrubWant = null;
+let scrubSeeking = false;
+
+function scrubUrl() {
+  return state.current ? `${state.current.url}?v=${encodeURIComponent(state.current.version)}` : '';
+}
+
+function showScrub(t) {
+  const meta = currentMeta();
+  if (!meta || !state.current || state.current.image) return;
+  const box = $('scrub');
+  const timeline = $('timeline').getBoundingClientRect();
+  box.hidden = false;
+  $('scrub-time').textContent = fmtTime(t);
+  // Over the time it shows, kept inside the timeline.
+  const x = fraction(t, meta) * timeline.width;
+  box.style.left = `${Math.max(0, Math.min(timeline.width - box.offsetWidth, x - box.offsetWidth / 2))}px`;
+  scrubWant = t;
+  if (scrub.getAttribute('src') !== scrubUrl()) {
+    scrub.src = scrubUrl();
+    scrubSeeking = false;
+  }
+  // One seek at a time: a pointer sweeping across asks for the newest place once the last one is shown.
+  if (!scrubSeeking) {
+    scrubSeeking = true;
+    scrub.currentTime = t;
+  }
+}
+
+function hideScrub() {
+  $('scrub').hidden = true;
+  scrubWant = null;
+}
+
+function releaseScrub() {
+  hideScrub();
+  scrubSeeking = false;
+  if (!scrub.getAttribute('src')) return;
+  scrub.removeAttribute('src');
+  scrub.load();
+}
+
+scrub.addEventListener('seeked', () => {
+  scrubSeeking = false;
+  if (scrubWant !== null && Math.abs(scrubWant - scrub.currentTime) > 0.04) showScrub(scrubWant);
+});
+scrub.addEventListener('loadedmetadata', () => {
+  if (scrub.videoWidth && scrub.videoHeight) scrub.style.aspectRatio = `${scrub.videoWidth} / ${scrub.videoHeight}`;
+});
+// A clip this window can't play shows no frame: the box goes rather than stay black.
+scrub.addEventListener('error', () => { if (scrub.getAttribute('src')) releaseScrub(); });
 
 function currentMeta() {
   const entry = state.current && state.meta.get(state.current.path);
@@ -1392,6 +1449,7 @@ for (const [id, which] of [['h-start', 'start'], ['h-end', 'end']]) {
   });
   handle.addEventListener('pointerup', () => {
     dragging = null;
+    if (!$('timeline').matches(':hover')) hideScrub();
     layoutRange();
     video.currentTime = which === 'start' ? state.start : Math.max(state.start, state.end - 2);
   });
@@ -1420,6 +1478,13 @@ $('timeline').addEventListener('wheel', e => {
   else zoomAround(timeAt(e.clientX), e.deltaY < 0 ? 0.7 : 1 / 0.7);
 }, { passive: false });
 $('zoom-fit').addEventListener('click', () => { const meta = currentMeta(); if (meta) zoomTo(meta, 0, meta.duration); });
+
+// While a handle is dragged it shows where the cut will be, which is where the handle stopped.
+$('timeline').addEventListener('pointermove', e => {
+  if (!currentMeta() || e.pointerType === 'touch') return;
+  showScrub(dragging === 'start' ? state.start : dragging === 'end' ? state.end : timeAt(e.clientX));
+});
+$('timeline').addEventListener('pointerleave', () => { if (!dragging) hideScrub(); });
 
 $('timeline').addEventListener('pointerdown', e => {
   if (!currentMeta() || e.target.classList.contains('handle')) return;
