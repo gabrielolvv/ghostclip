@@ -230,16 +230,24 @@ function keepChoice(key, value) {
 
 function renderSidebar() {
   const counts = new Map();
-  for (const c of state.clips) counts.set(c.game, (counts.get(c.game) || 0) + 1);
+  const sizes = new Map();
+  for (const c of state.clips) {
+    counts.set(c.game, (counts.get(c.game) || 0) + 1);
+    sizes.set(c.game, (sizes.get(c.game) || 0) + c.bytes);
+  }
   if (state.game !== null && !counts.has(state.game)) state.game = null;
   const games = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
   const nav = $('games');
   nav.replaceChildren();
-  const row = (label, count, game, favorites = false) => {
+  // How much each takes, under its name: what to look at first when the drive fills up.
+  const row = (label, count, game, favorites = false, bytes = 0) => {
     const b = el('button', 'game' + (state.game === game && state.favorites === favorites ? ' on' : ''));
     b.type = 'button';
-    b.append(el('span', 'name', label), el('span', 'mono', String(count)));
+    const name = el('span', 'name-wrap');
+    name.append(el('span', 'name', label));
+    if (bytes > 0) name.append(el('span', 'size mono', fmtSize(bytes)));
+    b.append(name, el('span', 'mono', String(count)));
     b.addEventListener('click', () => {
       state.game = game;
       state.favorites = favorites;
@@ -250,9 +258,10 @@ function renderSidebar() {
     });
     nav.append(b);
   };
+  const favorites = state.clips.filter(c => c.favorite);
   row(L('All clips', 'Todos os clipes', 'Todos los clips'), state.clips.length, null);
-  row(L('★ Favorites', '★ Favoritos', '★ Favoritos'), state.clips.filter(c => c.favorite).length, null, true);
-  for (const [game, count] of games) row(game, count, game);
+  row(L('★ Favorites', '★ Favoritos', '★ Favoritos'), favorites.length, null, true, favorites.reduce((sum, c) => sum + c.bytes, 0));
+  for (const [game, count] of games) row(game, count, game, false, sizes.get(game));
 
   const bytes = state.clips.reduce((sum, c) => sum + c.bytes, 0);
   $('total').textContent = state.clips.length ? fmtSize(bytes) : '';

@@ -52,6 +52,9 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .game:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
 .game.on { color: var(--text); background: rgba(255, 255, 255, 0.05); box-shadow: inset 2px 0 0 var(--accent); }
 .game .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game .name-wrap { display: flex; flex-direction: column; min-width: 0; }
+#games .game { align-items: center; }
+.game .size { font-size: 10px; line-height: 1.3; color: var(--muted); }
 .side-foot { margin-top: auto; padding: 12px 10px 0; font-size: 11px; line-height: 1.7; }
 .update-card {
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 -2px 12px; padding: 10px 12px;
