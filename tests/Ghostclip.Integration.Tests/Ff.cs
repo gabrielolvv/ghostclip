@@ -30,6 +30,14 @@ internal static partial class Ff
         Assert.True(r.Succeeded, $"ffmpeg failed: {r.FirstError}");
     }
 
+    /// <summary>ffmpeg or ffprobe with these arguments, as the app runs them; the whole result, which must have succeeded.</summary>
+    public static async Task<ProcessResult> ToolAsync(string tool, IReadOnlyList<string> args)
+    {
+        var r = await ProcessRunner.RunAsync(Path.Combine(Dir!, tool + ".exe"), args, TimeSpan.FromMinutes(1)).ConfigureAwait(false);
+        Assert.True(r.Succeeded, $"{tool} failed: {r.FirstError}");
+        return r;
+    }
+
     private static async Task<string> ProbeAsync(params string[] args)
     {
         var r = await ProcessRunner.RunAsync(Path.Combine(Dir!, "ffprobe.exe"), ["-v", "error", .. args], TimeSpan.FromMinutes(1)).ConfigureAwait(false);

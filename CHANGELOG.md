@@ -14,7 +14,8 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
 - So does the hotkey's save: the replay buffer's segments, made with the recorder's own
   segment options, joined into an MP4 by the app's list and remux, including the newest
   segment cut off mid-write, segments from before and after a worker restart, and the
-  audio shift.
+  audio shift. And a clip's details for the library: its keyframes and its waveform, read
+  as the app reads them, with a muted part showing flat.
 
 ## 0.8.41
 

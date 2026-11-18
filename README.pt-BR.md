@@ -169,7 +169,8 @@ dotnet build
 
 Testes: `dotnet test --project tests/Ghostclip.Core.Tests`. Os testes de
 integração rodam o FFmpeg de verdade num clipe inventado (salvar do buffer de
-replay, corte, tirar trecho, silenciar, as faixas do player, juntar, GIF, imagens) e precisam da pasta dele,
+replay, os keyframes e a forma de onda que a biblioteca lê, corte, tirar trecho,
+silenciar, as faixas do player, juntar, GIF, imagens) e precisam da pasta dele,
 como o CI faz com o build mínimo que vai no app:
 
 ```powershell
