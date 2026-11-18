@@ -84,6 +84,7 @@ const state = {
   pendingOpen: null,
   current: null,         // clip shown in the clip view
   start: 0,
+  startAsked: 0,         // where the start was put, before it snapped to a keyframe: muting needs no keyframe
   end: 0,
 };
 
@@ -175,6 +176,21 @@ function snapStart(keyframes, seconds) {
     snapped = k;
   }
   return snapped;
+}
+
+// What a copy is, from the last word Ghostclip put in its name.
+function copyTag(name) {
+  const kind = (/_(discord|vertical|joined|slow|fast|cut|muted)(_\d+)?\.mp4$/i.exec(name) || [])[1];
+  switch ((kind || '').toLowerCase()) {
+    case 'discord': return 'DISCORD';
+    case 'vertical': return 'VERTICAL';
+    case 'joined': return L('JOINED', 'JUNTOS', 'UNIDOS');
+    case 'slow': return L('SLOW', 'LENTO', 'LENTO');
+    case 'fast': return L('FAST', 'ACELERADO', 'ACELERADO');
+    case 'cut': return L('CUT OUT', 'SEM TRECHO', 'SIN TRAMO');
+    case 'muted': return L('MUTED', 'SILENCIADO', 'SILENCIADO');
+    default: return L('TRIM', 'CORTE', 'RECORTE');
+  }
 }
 
 // Library view
@@ -325,7 +341,7 @@ function renderCard(clip) {
     }
   } else if (clip.derived) {
     const name = fileName(clip.path);
-    thumb.append(el('span', 'tag', /_discord(_\d+)?\.mp4$/i.test(name) ? 'DISCORD' : /_vertical(_\d+)?\.mp4$/i.test(name) ? 'VERTICAL' : /_joined(_\d+)?\.mp4$/i.test(name) ? L('JOINED', 'JUNTOS', 'UNIDOS') : L('TRIM', 'CORTE', 'RECORTE')));
+    thumb.append(el('span', 'tag', copyTag(name)));
   } else if (clip.bookmarks) {
     thumb.append(el('span', 'tag', L(`SESSION · ${clip.bookmarks.length} ◆`, `SESSÃO · ${clip.bookmarks.length} ◆`, `SESIÓN · ${clip.bookmarks.length} ◆`)));
   }
@@ -1008,6 +1024,7 @@ function openClip(path) {
     video.src = url;
   }
   state.start = 0;
+  state.startAsked = 0;
   state.end = 0;
   view = null;
   $('zoom-fit').hidden = true;
@@ -1264,6 +1281,7 @@ function setupTimeline() {
   }
   if (state.end === 0) {
     state.start = 0;
+    state.startAsked = 0;
     state.end = meta.duration;
   }
   $('clip-info').textContent = [`${meta.height}P${Math.round(meta.fps)}`, codecLabel(meta.videoCodec),
@@ -1502,7 +1520,8 @@ function timeAt(clientX) {
 function moveHandle(which, t) {
   const meta = currentMeta();
   if (which === 'start') {
-    state.start = snapStart(meta.keyframes, Math.min(t, state.end - MIN_RANGE));
+    state.startAsked = Math.max(0, Math.min(t, state.end - MIN_RANGE));
+    state.start = snapStart(meta.keyframes, state.startAsked);
   } else {
     state.end = Math.min(meta.duration, Math.max(t, state.start + MIN_RANGE));
   }
@@ -1586,7 +1605,8 @@ $('a-mute').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-mute').classList.contains('busy')) return;
   busy($('a-mute'), true);
   toast(L('Muting the marked part…', 'Silenciando o trecho marcado…', 'Silenciando el tramo marcado…'));
-  post({ type: 'mute', path: state.current.path, start: state.start, end: state.end });
+  // From where the start was put: unlike a cut, muting re-encodes the sound and needs no keyframe.
+  post({ type: 'mute', path: state.current.path, start: Math.max(state.start, state.startAsked), end: state.end });
 });
 $('a-cut').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-cut').classList.contains('busy')) return;

@@ -125,7 +125,8 @@ public static partial class ClipLibrary
     [GeneratedRegex(@"_(?<time>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(_\d+)?(_(trim|discord|vertical|joined|gif|frame|audio|slow|fast|cut|muted)(_\d+)?)*$")]
     private static partial Regex SavedName();
 
-    [GeneratedRegex(@"_(trim|discord|vertical|joined|slow|fast|cut|muted)(_\d+)?$")]
+    // After the save time, as Ghostclip names a copy: "Final_cut" of one's own is not one.
+    [GeneratedRegex(@"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(_\d+)?(_(trim|discord|vertical|joined|gif|frame|audio|slow|fast|cut|muted)(_\d+)?)*_(trim|discord|vertical|joined|slow|fast|cut|muted)(_\d+)?$")]
     private static partial Regex DerivedSuffix();
 
     [GeneratedRegex(@"^(?<source>.+)_(trim|discord|vertical|slow|fast|cut|muted|gif|frame)(_\d+)?$")]

@@ -3,6 +3,24 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Mute part starts where you put the start mark, not at the keyframe before it as a trim
+  does: it re-encodes the sound and needs no keyframe, so up to 2 s more went quiet.
+- Sped-up and slow-motion copies have a keyframe every 2 s and no B-frames, as the
+  recordings do, so trimming or cutting them again lands where the timeline shows,
+  rather than every 4 s or more with a stray frame at the splice.
+- The library's cards call slow-motion, sped-up, cut-out and muted copies what they are,
+  instead of "Trim".
+- A file of your own whose name ends in a copy word, as "Final_cut.mp4", is no longer
+  taken for a copy: it stays the last clip to copy from the tray, with no "Trim" label.
+- Cut out says so when a part of the clip can't be read, instead of saving a short copy.
+- Cut out and mute part have as long as a session of hours takes on a slow disk.
+- The self-test's own clip has a keyframe every second on every GPU, so its cut-out step
+  can't fail on one whose encoder keeps its own spacing.
+
 ## 0.8.37
 
 ### Added

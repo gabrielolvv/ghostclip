@@ -459,7 +459,8 @@ public static class FfmpegArgs
         "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
         "-filter_complex", "color=c=0x336699:s=1280x720:r=30:d=3,format=nv12[v];sine=f=440:d=3[a0];sine=f=880:d=3[a1]",
         "-map", "[v]", "-map", "[a0]", "-map", "[a1]",
-        "-c:v", encoderName, "-b:v", "4M", "-g", "30",
+        // A keyframe every second, made sure of as in the recordings: its cut-out step needs them at 1 and 2 s.
+        "-c:v", encoderName, "-b:v", "4M", .. CopyKeyframes(encoderName, 30, every: 1),
         "-c:a", "aac", "-b:a", "128k",
         "-metadata:s:a:0", "handler_name=Game", "-metadata:s:a:1", "handler_name=Microphone",
         "-f", "mp4", output,
@@ -497,8 +498,9 @@ public static class FfmpegArgs
     /// going deeper, after the tracks are mixed into one as in the other copies.
     /// </summary>
     /// <param name="speed">From 0.25 up to, but not including, 1.</param>
+    /// <param name="fps">The clip's frame rate; 60 when not known.</param>
     public static IReadOnlyList<string> SlowMotion(string input, string output, string encoderName, double start, double length, double speed, int audioTracks,
-        IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, bool level = false)
+        IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, bool level = false, double fps = 60)
     {
         if (!(speed >= 0.25 && speed < 1)) throw new ArgumentOutOfRangeException(nameof(speed), speed, "Slower than normal, down to a quarter.");
         const int VideoKbps = 12000;
@@ -513,10 +515,32 @@ public static class FfmpegArgs
         args.AddRange([
             "-vf", Inv($"setpts={1 / speed:0.###}*PTS") + ",format=nv12",
             "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"),
+            // Each frame stays on screen longer: the encoder gets fewer a second.
+            .. CopyKeyframes(encoderName, (fps > 0 ? fps : 60) * speed),
             "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
         return args;
+    }
+
+    /// <summary>
+    /// For a copy that can be trimmed or cut again by stream copy, as the recordings: a keyframe every
+    /// <paramref name="every"/> s and no B-frames, which would bring a frame of a part cut out back in. As in the
+    /// recorder, the GOP, keyframes forced by the clock and IDRs forced: the GOP alone gave no keyframe on a Radeon, and
+    /// QSV kept its own GOP when only forced.
+    /// </summary>
+    /// <param name="fps">The frames a second the encoder gets; 60 when not known.</param>
+    private static string[] CopyKeyframes(string encoderName, double fps, int every = GhostclipConfig.SegmentSeconds)
+    {
+        if (!(fps > 0)) fps = 60;
+        var args = new List<string>
+        {
+            "-g", Inv($"{Math.Max(1, Math.Round(fps * every))}"), "-bf", "0",
+            "-force_key_frames", Inv($"expr:gte(t,n_forced*{every})"),
+        };
+        if (encoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)) args.AddRange(["-forced-idr", "1"]);
+        else if (encoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase) || encoderName.Contains("amf", StringComparison.OrdinalIgnoreCase)) args.AddRange(["-forced_idr", "1"]);
+        return [.. args];
     }
 
     // atempo goes from half to double in one go: a quarter is two halvings, four times two doublings.
@@ -569,6 +593,7 @@ public static class FfmpegArgs
         args.AddRange([
             "-vf", Inv($"setpts={1 / speed:0.###}*PTS,fps={fps:0.###}") + ",format=nv12",
             "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"),
+            .. CopyKeyframes(encoderName, fps),
             "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "-f", "mp4", output,
         ]);
