@@ -251,7 +251,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         ProcessResult r;
         try
         {
-            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.SlowMotion(clip, PartFile.For(output), encoder, from, length, speed, info.AudioTracks, tracks, volumes, denoise, level),
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.SlowMotion(clip, PartFile.For(output), encoder, from, length, speed, info.AudioTracks, tracks, volumes, denoise, level, info.Fps),
                 FfmpegArgs.VerticalTimeout(length / speed), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -371,8 +371,9 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         try
         {
             await File.WriteAllTextAsync(list, FfmpegArgs.CutOutList(clip, parts), ct).ConfigureAwait(false);
+            // About the time it takes to copy the file, twice with faststart: a long session on a slow disk takes longer.
             r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Join(list, PartFile.For(output)),
-                TimeSpan.FromMinutes(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+                LongCopyTimeout(duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -383,7 +384,8 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             File.Delete(list);
         }
-        if (!r.Succeeded)
+        // A part that can't be read is skipped with exit code 0, as when joining: the copy would come out short.
+        if (!r.Succeeded || ClipJoiner.LostAClip(r.StdErr))
         {
             PartFile.Discard(output);
             throw new InvalidOperationException(L($"Could not cut the part out: {r.FirstError}", $"Não foi possível tirar o trecho: {r.FirstError}", $"No se pudo quitar el tramo: {r.FirstError}"));
@@ -408,7 +410,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         {
             // The picture is copied and the sound is light work: about the time it takes to copy the file.
             r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.MutePart(clip, PartFile.For(output), start, Math.Min(end, info.Duration)),
-                TimeSpan.FromMinutes(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+                LongCopyTimeout(info.Duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -424,6 +426,10 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         log.Information("Muted {Start:0.0}-{End:0.0} s of {Clip}: {Output}", start, end, clip, output);
         return output;
     }
+
+    // For a copy of all of a clip, which goes at about the speed of the disk: half an hour, or as long as the clip
+    // for a session of hours.
+    private static TimeSpan LongCopyTimeout(double durationSeconds) => TimeSpan.FromSeconds(Math.Max(30 * 60, durationSeconds));
 
     /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
