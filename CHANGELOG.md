@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Changed
+
+- CI and the release run what the library does without a GPU (trim, cut out, mute,
+  the player's tracks, joining, GIFs and pictures) through the very FFmpeg the app
+  ships, on a made-up clip, checking the packets that come out. Until now only the
+  arguments given to FFmpeg were tested.
+
 ## 0.8.41
 
 ### Fixed

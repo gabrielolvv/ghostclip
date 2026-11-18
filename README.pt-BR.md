@@ -167,8 +167,17 @@ dotnet build
 .\artifacts\bin\Debug\Ghostclip.exe
 ```
 
-Testes: `dotnet test --project tests/Ghostclip.Core.Tests`. Como gerar o
-instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
+Testes: `dotnet test --project tests/Ghostclip.Core.Tests`. Os testes de
+integração rodam o FFmpeg de verdade num clipe inventado (corte, tirar trecho,
+silenciar, as faixas do player, juntar, GIF, imagens) e precisam da pasta dele,
+como o CI faz com o build mínimo que vai no app:
+
+```powershell
+$env:GHOSTCLIP_FFMPEG_DIR = 'C:\caminho\do\ffmpeg\bin'
+dotnet test --project tests/Ghostclip.Integration.Tests
+```
+
+Como gerar o instalador e o FFmpeg mínimo está em [docs/releasing.md](docs/releasing.md).
 
 ## Uso
 

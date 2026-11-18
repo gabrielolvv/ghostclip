@@ -6,5 +6,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ghostclip.Core.Tests/Ghostclip.Core.Tests.csproj" />
+    <Project Path="tests/Ghostclip.Integration.Tests/Ghostclip.Integration.Tests.csproj" />
   </Folder>
 </Solution>
