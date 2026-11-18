@@ -353,6 +353,46 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return made;
     }
 
+    /// <summary>
+    /// Makes Game_..._cut.mp4 without the part from <paramref name="start"/> to <paramref name="end"/>, by stream copy:
+    /// what comes after goes on from the keyframe at or before <paramref name="end"/> (<see cref="CutOut"/>).
+    /// </summary>
+    public async Task<string> CutOutAsync(string clip, double start, double end, double duration, IReadOnlyList<double> keyframes, CancellationToken ct = default)
+    {
+        var parts = CutOut.Kept(start, end, duration, keyframes);
+        if (parts.Count == 0)
+        {
+            throw new InvalidOperationException(L("Nothing to cut out: mark a longer part, or one that isn't all of the clip.",
+                "Nada para tirar: marque um trecho maior, ou um que não seja o clipe todo.", "Nada que quitar: marca un tramo más largo, o uno que no sea todo el clip."));
+        }
+        var output = ClipNaming.DerivedPath(clip, "cut", p => File.Exists(p) || File.Exists(PartFile.For(p)));
+        var list = Path.Combine(paths.DataDir, $"cut-{Guid.NewGuid():N}.ffconcat");
+        ProcessResult r;
+        try
+        {
+            await File.WriteAllTextAsync(list, FfmpegArgs.CutOutList(clip, parts), ct).ConfigureAwait(false);
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Join(list, PartFile.For(output)),
+                TimeSpan.FromMinutes(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        finally
+        {
+            File.Delete(list);
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not cut the part out: {r.FirstError}", $"Não foi possível tirar o trecho: {r.FirstError}", $"No se pudo quitar el tramo: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Cut {Start:0.0}-{End:0.0} s out of {Clip}: {Output}", start, end, clip, output);
+        return output;
+    }
+
     /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
     {

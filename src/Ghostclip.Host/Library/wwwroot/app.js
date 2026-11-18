@@ -1580,6 +1580,12 @@ $('a-trim').addEventListener('click', () => {
   toast(L('Saving trim…', 'Salvando corte…', 'Guardando recorte…'));
   post({ type: 'trim', path: state.current.path, start: state.start, end: state.end });
 });
+$('a-cut').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-cut').classList.contains('busy')) return;
+  busy($('a-cut'), true);
+  toast(L('Cutting the marked part out…', 'Tirando o trecho marcado…', 'Quitando el tramo marcado…'));
+  post({ type: 'cutOut', path: state.current.path, start: state.start, end: state.end });
+});
 $('a-discord').addEventListener('click', () => {
   if (!state.current || $('a-discord').classList.contains('busy')) return;
   busy($('a-discord'), true);
@@ -2060,6 +2066,10 @@ function onDone(message) {
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
       break;
+    case 'cutOut':
+      busy($('a-cut'), false);
+      toast(L('Saved without the marked part', 'Salvo sem o trecho marcado', 'Guardado sin el tramo marcado'), false, open);
+      break;
     case 'slow':
       busy($('a-slow'), false);
       toast(L('Slow-motion copy saved', 'Cópia em câmera lenta salva', 'Copia en cámara lenta guardada'), false, open);
@@ -2208,6 +2218,7 @@ function onMessage(message) {
       break;
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
+      if (message.op === 'cutOut') busy($('a-cut'), false);
       if (message.op === 'copyTrim') busy($('a-copy-trim'), false);
       if (message.op === 'cover') busy($('a-cover'), false);
       if (message.op === 'compress') busy($('a-discord'), false);
