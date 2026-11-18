@@ -51,6 +51,29 @@ internal static partial class Ff
     public static async Task<double> DurationAsync(string file) =>
         double.Parse((await ProbeAsync("-show_entries", "format=duration", "-of", "csv=p=0", file).ConfigureAwait(false)).Trim(), CultureInfo.InvariantCulture);
 
+    /// <summary>Each stream's start time, and the name of each audio track, in stream order.</summary>
+    public static async Task<IReadOnlyList<(string Type, double Start, string Name)>> StreamInfoAsync(string file) =>
+        [.. (await ProbeAsync("-show_entries", "stream=codec_type,start_time:stream_tags=handler_name", "-of", "csv=p=0", file).ConfigureAwait(false))
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(l => l.Split(','))
+            .Select(p => (p[0], double.Parse(p[1], CultureInfo.InvariantCulture), p.Length > 2 ? p[2] : ""))];
+
+    /// <summary>
+    /// Cuts the clip into 2 s MPEG-TS segments named as the recorder names them, with the recorder's segment options:
+    /// what the replay buffer holds.
+    /// </summary>
+    public static async Task<IReadOnlyList<string>> SegmentsAsync(string dir, long startNumber)
+    {
+        Directory.CreateDirectory(dir);
+        await RunAsync([
+            "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-i", Clip, "-map", "0", "-c", "copy",
+            "-f", "segment", "-segment_time", "2", "-segment_format", "mpegts",
+            "-segment_start_number", startNumber.ToString(CultureInfo.InvariantCulture), "-reset_timestamps", "0",
+            Path.Combine(dir, SegmentRing.FfmpegPattern),
+        ]).ConfigureAwait(false);
+        return [.. Directory.GetFiles(dir, "seg_*.ts").Order(StringComparer.Ordinal)];
+    }
+
     public static async Task<IReadOnlyList<string>> StreamsAsync(string file) =>
         [.. (await ProbeAsync("-show_entries", "stream=codec_type", "-of", "csv=p=0", file).ConfigureAwait(false))
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
