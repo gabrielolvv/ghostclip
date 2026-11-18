@@ -974,6 +974,7 @@ function openClip(path) {
   showExportFlags();
   closeExportMenu(false);
   $('a-audio').hidden = false;
+  $('a-mute').hidden = false;
   $('tracks-row').hidden = true;
   $('confirm').hidden = true;
   $('rename').hidden = true;
@@ -1184,6 +1185,7 @@ const tracksDenoised = new Set();
 function showExportTracks(meta) {
   const names = trackNames(meta);
   $('a-audio').hidden = names.length === 0;
+  $('a-mute').hidden = names.length === 0;
   $('tracks-row').hidden = names.length < 2;
   const list = $('track-list');
   list.replaceChildren();
@@ -1579,6 +1581,12 @@ $('a-trim').addEventListener('click', () => {
   busy($('a-trim'), true);
   toast(L('Saving trim…', 'Salvando corte…', 'Guardando recorte…'));
   post({ type: 'trim', path: state.current.path, start: state.start, end: state.end });
+});
+$('a-mute').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-mute').classList.contains('busy')) return;
+  busy($('a-mute'), true);
+  toast(L('Muting the marked part…', 'Silenciando o trecho marcado…', 'Silenciando el tramo marcado…'));
+  post({ type: 'mute', path: state.current.path, start: state.start, end: state.end });
 });
 $('a-cut').addEventListener('click', () => {
   if (!state.current || !currentMeta() || $('a-cut').classList.contains('busy')) return;
@@ -2066,6 +2074,10 @@ function onDone(message) {
       busy($('a-frame'), false);
       toast(L('Frame saved', 'Quadro salvo', 'Fotograma guardado'), false, open);
       break;
+    case 'mute':
+      busy($('a-mute'), false);
+      toast(L('Saved with the marked part muted', 'Salvo com o trecho marcado em silêncio', 'Guardado con el tramo marcado en silencio'), false, open);
+      break;
     case 'cutOut':
       busy($('a-cut'), false);
       toast(L('Saved without the marked part', 'Salvo sem o trecho marcado', 'Guardado sin el tramo marcado'), false, open);
@@ -2219,6 +2231,7 @@ function onMessage(message) {
     case 'error':
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'cutOut') busy($('a-cut'), false);
+      if (message.op === 'mute') busy($('a-mute'), false);
       if (message.op === 'copyTrim') busy($('a-copy-trim'), false);
       if (message.op === 'cover') busy($('a-cover'), false);
       if (message.op === 'compress') busy($('a-discord'), false);

@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Mute part in the Export menu: a copy with no sound in the trim marks, on every track,
+  to keep something said there from being shared. The picture is copied as it is and
+  each track stays on its own, so it's done in about the time it takes to copy the file.
+- The self-test also mutes a part of its clip.
+
 ## 0.8.36
 
 ### Added
