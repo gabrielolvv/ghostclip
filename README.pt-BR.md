@@ -20,6 +20,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 
 ## Recursos
 
+### Gravação
+
 - **Instant replay** dos últimos 60 s (configurável) no Alt+F10, salvo em MP4
   numa pasta por jogo, sem reencode. Uma segunda tecla opcional salva um clipe
   com duração própria, 15 s de início.
@@ -43,6 +45,9 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Perfis por jogo** para duração do clipe, fonte de áudio e microfone mudo, e
   para gravar a sessão sozinho, de quando o jogo abre até ele fechar.
 - **Buffer de replay no disco que você escolher,** para poupar o SSD do sistema.
+
+### Biblioteca e player
+
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
   player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
   aponta para ele; favoritos, etiquetas que a busca encontra, filtro por data,
@@ -54,6 +59,9 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   tudo.
 - **Tocar todos** os vídeos de uma lista, um depois do outro, para rever um jogo ou
   os favoritos.
+
+### Edição e compartilhamento
+
 - **Copiar corte:** o trecho marcado na área de transferência, pronto para colar, num passo só.
 - **Corte** arrastando duas alças, com a roda do mouse para dar zoom e o quadro sob o
   ponteiro mostrado acima da linha do tempo, sem reencode. O início encaixa num
@@ -80,6 +88,9 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Escolher a capa do clipe** para o cartão na biblioteca, a partir do quadro na tela.
 - **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.
+
+### Manutenção
+
 - **Limite de espaço** (opcional): passado dele, os clipes e prints mais
   antigos dão lugar aos novos. Favoritos, clipes renomeados e qualquer coisa
   que o Ghostclip não criou nunca são tocados.
