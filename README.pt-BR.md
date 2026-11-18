@@ -67,9 +67,11 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
   de áudio entram, em que volume, se o ruído sai do microfone, se o som sai num volume
   só e se entra e sai em fade.
 - **GIF** de até 15 s a partir do trecho marcado, para conversas que não tocam vídeo.
+  É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
 - **Câmera lenta** de até 20 s a partir do trecho marcado, na metade ou num quarto da
   velocidade, no encoder da GPU.
-  É a única exportação na CPU, em baixa prioridade, só enquanto está sendo feito.
+- **Acelerar** até 30 minutos a partir do trecho marcado, no dobro ou no quádruplo da
+  velocidade, para passar por um trecho longo de uma sessão num vídeo curto.
 - **Só o áudio:** o som do trecho marcado como .m4a, para aquela fala da call.
 - **Escolher a capa do clipe** para o cartão na biblioteca, a partir do quadro na tela.
 - **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.

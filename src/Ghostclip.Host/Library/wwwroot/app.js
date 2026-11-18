@@ -927,7 +927,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // How fast the player goes. It changes what you see, never the file, so every clip starts at normal speed.
-const SPEEDS = [0.25, 0.5, 1, 2];
+const SPEEDS = [0.25, 0.5, 1, 2, 4];
 
 function setSpeed(speed) {
   // The default too: a video that loads again, after a delete that failed, keeps this speed.
@@ -937,10 +937,16 @@ function setSpeed(speed) {
   $('speed').classList.toggle('changed', speed !== 1);
   // The slow-motion copy goes at what you're watching, when that's slower.
   $('slow-speed').textContent = `${slowSpeed()}x`;
+  // And the sped-up copy at what you're watching, when that's faster.
+  $('fast-speed').textContent = `${fastSpeed()}x`;
 }
 
 function slowSpeed() {
   return video.playbackRate < 1 ? video.playbackRate : 0.5;
+}
+
+function fastSpeed() {
+  return video.playbackRate > 1 ? video.playbackRate : 2;
 }
 
 function stepSpeed(by, wrap) {
@@ -1674,6 +1680,13 @@ $('a-slow').addEventListener('click', () => {
   toast(L(`Making the ${speed}x copy…`, `Fazendo a cópia em ${speed}x…`, `Haciendo la copia a ${speed}x…`));
   post({ type: 'slow', path: state.current.path, start: state.start, end: state.end, speed, ...exportTracks() });
 });
+$('a-fast').addEventListener('click', () => {
+  if (!state.current || !currentMeta() || $('a-fast').classList.contains('busy')) return;
+  busy($('a-fast'), true);
+  const speed = fastSpeed();
+  toast(L(`Making the ${speed}x copy…`, `Fazendo a cópia em ${speed}x…`, `Haciendo la copia a ${speed}x…`));
+  post({ type: 'fast', path: state.current.path, start: state.start, end: state.end, speed, ...exportTracks() });
+});
 $('a-marks').addEventListener('click', () => {
   if (!state.current || $('a-marks').classList.contains('busy')) return;
   busy($('a-marks'), true);
@@ -2051,6 +2064,10 @@ function onDone(message) {
       busy($('a-slow'), false);
       toast(L('Slow-motion copy saved', 'Cópia em câmera lenta salva', 'Copia en cámara lenta guardada'), false, open);
       break;
+    case 'fast':
+      busy($('a-fast'), false);
+      toast(L('Sped-up copy saved', 'Cópia acelerada salva', 'Copia acelerada guardada'), false, open);
+      break;
     case 'gif':
       busy($('a-gif'), false);
       toast(L(`GIF saved: ${message.message}`, `GIF salvo: ${message.message}`, `GIF guardado: ${message.message}`), false, open);
@@ -2197,6 +2214,7 @@ function onMessage(message) {
       if (message.op === 'vertical') busy($('a-vertical'), false);
       if (message.op === 'gif') busy($('a-gif'), false);
       if (message.op === 'slow') busy($('a-slow'), false);
+      if (message.op === 'fast') busy($('a-fast'), false);
       if (message.op === 'frame') busy($('a-frame'), false);
       if (message.op === 'audio') busy($('a-audio'), false);
       if (message.op === 'bookmarkClips') busy($('a-marks'), false);

@@ -81,6 +81,9 @@ internal sealed class SelfTest(GhostclipPaths paths, GhostclipConfig config, Cli
                 await Step(L("Slow motion", "Câmera lenta", "Cámara lenta"), async () =>
                     Size(await tools.SlowMotionAsync(clip, 0, 2, 0.5, null, null, null, ct: ct).ConfigureAwait(true))).ConfigureAwait(true);
 
+                await Step(L("Speed up", "Acelerar", "Acelerar"), async () =>
+                    Size(await tools.FastForwardAsync(clip, 0, 0, 4, null, null, null, ct: ct).ConfigureAwait(true))).ConfigureAwait(true);
+
                 await Step("GIF", async () =>
                 {
                     var (gif, _) = await tools.GifAsync(clip, 0, 2, ct).ConfigureAwait(true);

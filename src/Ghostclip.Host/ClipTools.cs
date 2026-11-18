@@ -269,6 +269,37 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return output;
     }
 
+    /// <summary>
+    /// Makes Game_..._fast.mp4 from the trim marks, up to their first <see cref="FfmpegArgs.FastForwardMaxSeconds"/> seconds,
+    /// at <paramref name="speed"/>, on the GPU encoder.
+    /// </summary>
+    public async Task<string> FastForwardAsync(string clip, double start, double end, double speed, IReadOnlyList<int>? tracks, IReadOnlyList<double>? volumes, IReadOnlyList<int>? denoise, bool level = false, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        var encoder = HardwareEncoder(config());
+        var (from, length) = FfmpegArgs.FastForwardRange(start, end, info.Duration);
+        var output = ClipNaming.DerivedPath(clip, "fast", File.Exists);
+        ProcessResult r;
+        try
+        {
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.FastForward(clip, PartFile.For(output), encoder, from, length, speed, info.Fps, info.AudioTracks, tracks, volumes, denoise, level),
+                FfmpegArgs.VerticalTimeout(length), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not make the sped-up copy: {r.FirstError}", $"Não foi possível fazer a cópia acelerada: {r.FirstError}", $"No se pudo hacer la copia acelerada: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Sped-up copy of {Clip} at {Speed}x, {Length:0.0} s from {Start:0.0}: {Output}", clip, speed, length, from, output);
+        return output;
+    }
+
     /// <summary>Makes Game_..._gif.gif from the trim marks, up to their last <see cref="FfmpegArgs.GifMaxSeconds"/> seconds.</summary>
     public async Task<(string Output, long Bytes)> GifAsync(string clip, double start, double end, CancellationToken ct = default)
     {
