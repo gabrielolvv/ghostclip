@@ -599,13 +599,29 @@ public static class FfmpegArgs
     public static string ConcatList(IEnumerable<string> files)
     {
         var sb = new StringBuilder("ffconcat version 1.0\n");
-        foreach (var file in files)
+        foreach (var file in files) sb.Append("file '").Append(ConcatPath(file)).Append("'\n");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The ffconcat list for <see cref="Join"/> that takes <paramref name="parts"/> of one clip, for cutting out what's
+    /// between them. Each in point is a keyframe time from the library, kept to the microsecond as in <see cref="Trim"/>:
+    /// rounded to milliseconds, 21.666667 would fall before the keyframe and the demuxer would seek back to the one before.
+    /// </summary>
+    public static string CutOutList(string clip, IReadOnlyList<CutOut.Part> parts)
+    {
+        var sb = new StringBuilder("ffconcat version 1.0\n");
+        foreach (var part in parts)
         {
-            var path = file.Replace('\\', '/').Replace("'", @"'\''", StringComparison.Ordinal);
-            sb.Append("file '").Append(path).Append("'\n");
+            sb.Append("file '").Append(ConcatPath(clip)).Append("'\n");
+            if (part.In > 0) sb.Append(Inv($"inpoint {part.In:0.000000}\n"));
+            if (part.Out is { } end) sb.Append(Inv($"outpoint {end:0.######}\n"));
         }
         return sb.ToString();
     }
+
+    // Forward slashes, and single quotes escaped.
+    private static string ConcatPath(string file) => file.Replace('\\', '/').Replace("'", @"'\''", StringComparison.Ordinal);
 
     private static string Inv(FormattableString value) => value.ToString(CultureInfo.InvariantCulture);
 }

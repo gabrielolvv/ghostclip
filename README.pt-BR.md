@@ -58,6 +58,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Corte** arrastando duas alças, com a roda do mouse para dar zoom e o quadro sob o
   ponteiro mostrado acima da linha do tempo, sem reencode. O início encaixa num
   keyframe, então o resultado começa exatamente onde a linha do tempo mostra.
+- **Tirar trecho:** o contrário do corte, para tirar uma parte parada do meio: o que
+  vem antes e depois da marcação, juntos, também sem reencode.
 - **Comprimir para o Discord:** reencoda o trecho marcado na GPU para caber no limite
   de upload (10 MB por padrão), juntando jogo e microfone numa faixa só.
 - **Enviar ao Discord** pelo player, por um webhook seu, ajustado ao limite. É o

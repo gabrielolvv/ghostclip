@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Cut out, beside Save trim: a copy without the marked part, joining what comes before
+  and after it, to take a dull stretch out of the middle of a clip. No re-encoding, so
+  it's done in about the time it takes to copy the file; what comes after starts at a
+  keyframe, up to 2 s before the end mark.
+- The self-test also cuts a part out of its clip and checks what's left.
+
 ## 0.8.35
 
 ### Added

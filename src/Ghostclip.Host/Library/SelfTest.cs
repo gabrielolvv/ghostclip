@@ -72,6 +72,17 @@ internal sealed class SelfTest(GhostclipPaths paths, GhostclipConfig config, Cli
                     return Size(trim);
                 }).ConfigureAwait(true);
 
+                await Step(L("Cut out a part", "Tirar um trecho", "Quitar un tramo"), async () =>
+                {
+                    var keys = await ProcessRunner.RunAsync(tools.Ffprobe(), FfmpegArgs.Keyframes(clip), TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(true);
+                    if (!keys.Succeeded) throw new InvalidOperationException(keys.FirstError);
+                    // Keyframes every second: the second in the middle goes, two stay.
+                    var cut = await tools.CutOutAsync(clip, 1, 2, 3, ClipMedia.ParseKeyframes(keys.StdOut), ct).ConfigureAwait(true);
+                    var left = (await tools.ProbeAsync(cut, ct).ConfigureAwait(true)).Duration;
+                    if (Math.Abs(left - 2) > 0.3) throw new InvalidOperationException($"{left:0.00} s left of 3, not 2");
+                    return Size(cut);
+                }).ConfigureAwait(true);
+
                 await Step(L("Discord size, with volume, noise reduction and fade", "Tamanho do Discord, com volume, redução de ruído e fade", "Tamaño de Discord, con volumen, reducción de ruido y fundido"), async () =>
                     Size((await tools.CompressAsync(clip, null, [1, 0.5], [1], true, ct: ct).ConfigureAwait(true)).Path)).ConfigureAwait(true);
 

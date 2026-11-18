@@ -290,6 +290,11 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cuts[0],
                         Message: cuts.Count.ToString(CultureInfo.InvariantCulture)));
                     break;
+                case "cutOut":
+                    var (cutMeta, _) = await Track(_meta.GetAsync(path, _closing.Token)).ConfigureAwait(true);
+                    var cutOut = await Job(_tools.CutOutAsync(path, r.Start, r.End, cutMeta.Duration, cutMeta.Keyframes, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: cutOut));
+                    break;
                 case "audio":
                     var audio = await Job(_tools.AudioOnlyAsync(path, r.Start, r.End, r.Tracks, r.Volumes, r.Denoise, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: audio));
