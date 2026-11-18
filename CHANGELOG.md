@@ -3,6 +3,16 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- The library's player plays every track: the microphone and Discord too, not just
+  the game. Each plays at the volume set for it in the row of tracks, turned off when
+  it's off there, so what you hear is what the copies get. The tracks come apart from
+  the clip once, by stream copy, into the app's cache; a clip with one track plays as
+  before.
+
 ## 0.8.38
 
 ### Fixed

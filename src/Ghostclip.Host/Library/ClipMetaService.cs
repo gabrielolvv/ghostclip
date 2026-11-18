@@ -82,6 +82,53 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
         }
     }
 
+    /// <summary>
+    /// A clip's audio track <paramref name="track"/> on its own, made once by stream copy and cached beside its details,
+    /// for the player to play beside the video, which plays the first track only.
+    /// </summary>
+    public async Task<string> TrackFileAsync(string clip, int track, CancellationToken ct)
+    {
+        var info = new FileInfo(clip);
+        var key = ClipMedia.CacheKey(clip, info.Length, info.LastWriteTimeUtc);
+        var file = Path.Combine(ThumbsDir, ClipMedia.TrackName(key, track));
+        if (File.Exists(file))
+        {
+            ClipMedia.Touch(file, DateTime.UtcNow);
+            return file;
+        }
+
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Directory.CreateDirectory(ThumbsDir);
+            var part = $"{file}.{Guid.NewGuid():N}.part";
+            ProcessResult r;
+            try
+            {
+                // About the time it takes to read the file: a session of hours on a slow disk takes a while.
+                r = await ProcessRunner.RunAsync(tools.Ffmpeg(), FfmpegArgs.ExtractTrack(clip, part, track),
+                    TimeSpan.FromMinutes(10), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                TryDelete(part);
+                throw;
+            }
+            if (!r.Succeeded || !File.Exists(part))
+            {
+                TryDelete(part);
+                throw new InvalidOperationException($"Track {track} of {Path.GetFileName(clip)}: {(r.TimedOut ? "timed out" : r.FirstError)}");
+            }
+            File.Move(part, file, overwrite: true);
+            log.Information("Track {Track} of {Clip} for the player: {File}", track, clip, file);
+            return file;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private static ClipMeta? ReadCached(string metaFile)
     {
         try

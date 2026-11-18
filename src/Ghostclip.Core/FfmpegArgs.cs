@@ -631,6 +631,16 @@ public static class FfmpegArgs
         ];
     }
 
+    /// <summary>
+    /// One audio track of a clip on its own, by stream copy, for the player to play beside the video: it plays the
+    /// first track only. About the time it takes to read the file.
+    /// </summary>
+    public static IReadOnlyList<string> ExtractTrack(string input, string output, int track) =>
+    [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-i", input,
+        "-map", Inv($"0:a:{track}"), "-vn", "-c", "copy", "-f", "mp4", output,
+    ];
+
     /// <summary>Several clips into one by stream copy, every track included. See <see cref="ClipJoiner"/>.</summary>
     public static IReadOnlyList<string> Join(string concatListPath, string outputPath) =>
     [
