@@ -72,6 +72,24 @@ public class CutOutTests
         Assert.Contains("inpoint 21.666667\n", list);
     }
 
+    [Theory]
+    [InlineData(1, 60, 1 / 60.0)]
+    [InlineData(2, 30, 2 / 30.0)]
+    [InlineData(0, 60, 0)]
+    [InlineData(1, 0, 0)]
+    public void B_frames_put_a_keyframe_ahead_in_decoding_by_as_many_frames(int bFrames, double fps, double lead) =>
+        Assert.Equal(lead, CutOut.OutLead(bFrames, fps), 9);
+
+    [Fact]
+    public void With_b_frames_the_out_point_comes_that_much_earlier()
+    {
+        // The demuxer stops by decoding time, where a keyframe at 10 s comes a frame early: at 10 it would come in,
+        // a frame of the part cut out.
+        var list = FfmpegArgs.CutOutList("a.mp4", [new CutOut.Part(0, 10), new CutOut.Part(20, null)], CutOut.OutLead(1, 60));
+        Assert.Contains("outpoint 9.983333\n", list);
+        Assert.Contains("inpoint 20.000000\n", list);
+    }
+
     [Fact]
     public void A_cut_copy_is_named_and_listed_as_a_copy_of_its_clip()
     {
