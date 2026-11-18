@@ -145,9 +145,11 @@ public static class ClipMedia
             var key = fileName.Split('.')[0];
             if (key.Length != 16 || !key.All(Uri.IsHexDigit)) continue;
             var leftover = fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+            // A track for the player is as big as the sound of a session and comes back from the clip in seconds.
+            var track = fileName.Contains(".track", StringComparison.OrdinalIgnoreCase);
             try
             {
-                if (nowUtc - File.GetLastWriteTimeUtc(file) < (leftover ? TimeSpan.FromDays(1) : age)) continue;
+                if (nowUtc - File.GetLastWriteTimeUtc(file) < (leftover ? TimeSpan.FromDays(1) : track ? TrackCacheAge : age)) continue;
                 File.Delete(file);
                 removed++;
             }
@@ -180,6 +182,9 @@ public static class ClipMedia
     /// </summary>
     public static string ThumbName(string key, double? coverAt) =>
         coverAt is { } at ? string.Create(CultureInfo.InvariantCulture, $"{key}.{(long)Math.Round(at * 1000)}.jpg") : key + ".jpg";
+
+    /// <summary>How long a track for the player stays in the cache unused (<see cref="PruneCache"/>).</summary>
+    public static readonly TimeSpan TrackCacheAge = TimeSpan.FromDays(7);
 
     /// <summary>The cache file of a clip's audio track <paramref name="track"/>, for the player (<see cref="FfmpegArgs.ExtractTrack"/>).</summary>
     public static string TrackName(string key, int track) => string.Create(CultureInfo.InvariantCulture, $"{key}.track{track}.mp4");

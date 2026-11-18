@@ -13,6 +13,9 @@ namespace Ghostclip.Host.Library;
 internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILogger log)
 {
     private readonly SemaphoreSlim _gate = new(2);
+    private readonly SemaphoreSlim _trackGate = new(1);
+    // Tracks being taken out, by clip, to stop when the clip is let go of or about to move: FFmpeg holds it open.
+    private readonly Dictionary<string, List<TrackRun>> _trackRuns = new(StringComparer.OrdinalIgnoreCase);
 
     public string ThumbsDir { get; } = Path.Combine(paths.DataDir, "Thumbs");
 
@@ -97,9 +100,66 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
             return file;
         }
 
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        var run = new TrackRun();
+        lock (_trackRuns)
+        {
+            if (!_trackRuns.TryGetValue(clip, out var runs)) _trackRuns[clip] = runs = [];
+            runs.Add(run);
+        }
         try
         {
+            using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct, run.Stop.Token);
+            return await ExtractTrackAsync(clip, track, file, stop.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_trackRuns)
+            {
+                if (_trackRuns.TryGetValue(clip, out var runs) && runs.Remove(run) && runs.Count == 0) _trackRuns.Remove(clip);
+            }
+            run.Done.TrySetResult();
+        }
+    }
+
+    /// <summary>
+    /// Stops the tracks being taken out of these clips and waits for FFmpeg to let go of them: for a clip about to be
+    /// deleted, renamed or moved, or that the player left before its tracks were ready.
+    /// </summary>
+    public async Task StopTracksAsync(IEnumerable<string> clips)
+    {
+        var runs = new List<TrackRun>();
+        lock (_trackRuns)
+        {
+            foreach (var clip in clips)
+            {
+                if (_trackRuns.Remove(clip, out var those)) runs.AddRange(those);
+            }
+        }
+        if (runs.Count == 0) return;
+        foreach (var run in runs) run.Stop.Cancel();
+        try
+        {
+            // FFmpeg is killed and waited for (ProcessRunner): once each has ended, the file is free.
+            await Task.WhenAll(runs.Select(r => r.Done.Task)).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            log.Warning("A track for the player was still being taken out after 10 s");
+        }
+    }
+
+    // One at a time, and on a gate of their own: a session's tracks take a while, and the cards' details mustn't wait
+    // for them. A second request for the same track waits here and finds it made.
+    private async Task<string> ExtractTrackAsync(string clip, int track, string file, CancellationToken ct)
+    {
+        await _trackGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (File.Exists(file))
+            {
+                ClipMedia.Touch(file, DateTime.UtcNow);
+                return file;
+            }
             Directory.CreateDirectory(ThumbsDir);
             var part = $"{file}.{Guid.NewGuid():N}.part";
             ProcessResult r;
@@ -125,8 +185,15 @@ internal sealed class ClipMetaService(GhostclipPaths paths, ClipTools tools, ILo
         }
         finally
         {
-            _gate.Release();
+            _trackGate.Release();
         }
+    }
+
+    // Not disposed: StopTracksAsync may cancel one just as it ends.
+    private sealed class TrackRun
+    {
+        public CancellationTokenSource Stop { get; } = new();
+        public TaskCompletionSource Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     private static ClipMeta? ReadCached(string metaFile)

@@ -3,6 +3,23 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Deleting, renaming or moving a clip no longer fails while its microphone or Discord
+  track is still being taken out for the player: that stops first, and lets go of the
+  file. Leaving a clip before its tracks are ready stops it too.
+- When deleting or renaming a clip fails, the player hears its other tracks again,
+  instead of the game alone.
+- A track shorter than the video stays quiet past its end, instead of playing bits of
+  its start over and over.
+- Taking tracks out for the player waits its turn on its own, so the cards' thumbnails
+  and details don't wait behind a long session; a second request for the same track
+  finds it made.
+- The tracks kept for the player leave the cache after a week unused, as they come back
+  from the clip in seconds, rather than taking room for three months.
+
 ## 0.8.39
 
 ### Added

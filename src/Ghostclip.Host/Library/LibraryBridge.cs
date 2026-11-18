@@ -220,6 +220,8 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("done", Op: r.Type, Output: joined));
                     return;
                 }
+                // A track being taken out for the player holds the file open.
+                if (r.Type is "deleteMany" or "moveGame") await _meta.StopTracksAsync(selection).ConfigureAwait(true);
                 if (r.Type == "moveGame")
                 {
                     MoveToGame(selection, r.Name);
@@ -348,7 +350,12 @@ internal sealed class LibraryBridge : IDisposable
                 case "reveal":
                     Process.Start("explorer.exe", $"/select,\"{path}\"");
                     break;
+                case "tracksStop":
+                    // The player left the clip before its tracks were ready.
+                    await _meta.StopTracksAsync([path]).ConfigureAwait(true);
+                    break;
                 case "delete":
+                    await _meta.StopTracksAsync([path]).ConfigureAwait(true);
                     RecycleBin.Send(path, _window.Handle);
                     // In the Recycle Bin already: a favorites file that can't be written mustn't report it as kept.
                     UpdateLibraryQuietly(s => s.Forget(path));
@@ -363,6 +370,7 @@ internal sealed class LibraryBridge : IDisposable
                     await ListAsync().ConfigureAwait(true);
                     break;
                 case "rename":
+                    await _meta.StopTracksAsync([path]).ConfigureAwait(true);
                     // Same folder, same extension: only the name people see changes.
                     var renamed = ClipNaming.RenamedPath(path, r.Name ?? "", File.Exists);
                     if (renamed is not null)
@@ -513,7 +521,7 @@ internal sealed class LibraryBridge : IDisposable
         var thumbs = ThumbsDir;
         _ = Task.Run(() =>
         {
-            // The cache first: it is small and local, and done before the page asks for thumbnails.
+            // The cache first: it is local, and done before the page asks for thumbnails.
             try
             {
                 var pruned = ClipMedia.PruneCache(thumbs, TimeSpan.FromDays(90), DateTime.UtcNow);

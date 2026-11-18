@@ -34,11 +34,40 @@ public class PlayerTracksTests
             File.SetLastWriteTimeUtc(old, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
             var fresh = Path.Combine(dir, ClipMedia.TrackName("fedcba9876543210", 1));
             File.WriteAllText(fresh, "");
-            File.SetLastWriteTimeUtc(fresh, new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc));
+            File.SetLastWriteTimeUtc(fresh, new DateTime(2026, 11, 14, 0, 0, 0, DateTimeKind.Utc));
 
             Assert.Equal(1, ClipMedia.PruneCache(dir, TimeSpan.FromDays(90), new DateTime(2026, 11, 16, 0, 0, 0, DateTimeKind.Utc)));
             Assert.False(File.Exists(old));
             Assert.True(File.Exists(fresh));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void A_track_unused_for_a_week_is_pruned_as_it_comes_back_from_the_clip_in_seconds()
+    {
+        var dir = Directory.CreateTempSubdirectory("ghostclip-tracks-").FullName;
+        try
+        {
+            var now = new DateTime(2026, 11, 16, 0, 0, 0, DateTimeKind.Utc);
+            var track = Path.Combine(dir, ClipMedia.TrackName("0123456789abcdef", 1));
+            var thumb = Path.Combine(dir, "0123456789abcdef.jpg");
+            foreach (var f in new[] { track, thumb })
+            {
+                File.WriteAllText(f, "");
+                File.SetLastWriteTimeUtc(f, now.AddDays(-8));
+            }
+            var recent = Path.Combine(dir, ClipMedia.TrackName("fedcba9876543210", 1));
+            File.WriteAllText(recent, "");
+            File.SetLastWriteTimeUtc(recent, now.AddDays(-6));
+
+            Assert.Equal(1, ClipMedia.PruneCache(dir, TimeSpan.FromDays(90), now));
+            Assert.False(File.Exists(track));
+            Assert.True(File.Exists(thumb));
+            Assert.True(File.Exists(recent));
         }
         finally
         {

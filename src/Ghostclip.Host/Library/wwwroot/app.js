@@ -903,6 +903,7 @@ function showView(name) {
 // copies get. A track that can't come apart is just not heard.
 let extraAudio = [];
 let tracksFor = null;
+let tracksPending = false; // asked for and not answered: still being taken out of the clip
 
 function trackGain(i) {
   if (tracksOff.has(i)) return 0;
@@ -923,6 +924,7 @@ function requestTracks(meta) {
   const clip = state.current;
   if (!clip || clip.image || !meta || meta.audioTracks < 2 || tracksFor === clip.path) return;
   tracksFor = clip.path;
+  tracksPending = true;
   post({ type: 'tracks', path: clip.path });
 }
 
@@ -949,7 +951,10 @@ function releaseAudio(a) {
 function releaseTracks() {
   for (const a of extraAudio) releaseAudio(a);
   extraAudio = [];
+  // Left before they were ready: taking them out holds the clip open, and it may be about to be deleted or renamed.
+  if (tracksFor && tracksPending) post({ type: 'tracksStop', path: tracksFor });
   tracksFor = null;
+  tracksPending = false;
   applyVolumes();
 }
 
@@ -958,9 +963,11 @@ function syncTracks(force = false) {
   for (const a of extraAudio) {
     if (a.readyState === 0) continue;
     if (a.playbackRate !== video.playbackRate) a.playbackRate = video.playbackRate;
+    // A track shorter than the video stays quiet past its end: play() on an ended one would start it over.
+    const past = a.duration > 0 && video.currentTime >= a.duration - 0.05;
     const at = Math.min(video.currentTime, a.duration || video.currentTime);
-    if (force || Math.abs(a.currentTime - at) > 0.12) a.currentTime = at;
-    if (video.paused || video.ended) {
+    if (!past && (force || Math.abs(a.currentTime - at) > 0.12)) a.currentTime = at;
+    if (video.paused || video.ended || past) {
       if (!a.paused) a.pause();
     } else if (a.paused) {
       a.play().catch(() => {});
@@ -2316,7 +2323,10 @@ function onMessage(message) {
       break;
     }
     case 'tracks':
-      if (state.current && state.current.path === message.path && tracksFor === message.path) attachTracks(message.trackUrls || []);
+      if (state.current && state.current.path === message.path && tracksFor === message.path) {
+        tracksPending = false;
+        attachTracks(message.trackUrls || []);
+      }
       break;
     case 'meta': {
       state.meta.set(message.path, { meta: message.meta, thumb: message.thumb });
@@ -2354,6 +2364,8 @@ function onMessage(message) {
       // Not deleted or not renamed: the player had let go of the file, so it takes it back.
       if ((message.op === 'delete' || message.op === 'rename') && state.current && state.current.path === message.path && !state.current.image) {
         video.src = `${state.current.url}?v=${encodeURIComponent(state.current.version)}`;
+        // And its other tracks, let go of with it.
+        requestTracks(currentMeta());
       }
       // A clip whose details can't be read keeps its plain tile and is asked for again when the list next
       // changes (a clip still being copied in, say); only say so when it's open.
