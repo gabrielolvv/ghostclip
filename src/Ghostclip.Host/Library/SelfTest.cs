@@ -83,6 +83,14 @@ internal sealed class SelfTest(GhostclipPaths paths, GhostclipConfig config, Cli
                     return Size(cut);
                 }).ConfigureAwait(true);
 
+                await Step(L("Mute a part", "Silenciar um trecho", "Silenciar un tramo"), async () =>
+                {
+                    var muted = await tools.MutePartAsync(clip, 1, 2, ct).ConfigureAwait(true);
+                    var info = await tools.ProbeAsync(muted, ct).ConfigureAwait(true);
+                    if (info.AudioTracks != 2) throw new InvalidOperationException($"{info.AudioTracks} tracks left of 2");
+                    return Size(muted);
+                }).ConfigureAwait(true);
+
                 await Step(L("Discord size, with volume, noise reduction and fade", "Tamanho do Discord, com volume, redução de ruído e fade", "Tamaño de Discord, con volumen, reducción de ruido y fundido"), async () =>
                     Size((await tools.CompressAsync(clip, null, [1, 0.5], [1], true, ct: ct).ConfigureAwait(true)).Path)).ConfigureAwait(true);
 

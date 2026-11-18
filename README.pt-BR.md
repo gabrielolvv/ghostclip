@@ -75,6 +75,8 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 - **Acelerar** até 30 minutos a partir do trecho marcado, no dobro ou no quádruplo da
   velocidade, para passar por um trecho longo de uma sessão num vídeo curto.
 - **Só o áudio:** o som do trecho marcado como .m4a, para aquela fala da call.
+- **Silenciar trecho:** uma cópia sem som no trecho marcado, para o que alguém disse e
+  não deve ser compartilhado. A imagem e as faixas separadas ficam como estão.
 - **Escolher a capa do clipe** para o cartão na biblioteca, a partir do quadro na tela.
 - **Salvar um quadro** do clipe como imagem, exatamente o que está na tela.
 - **Juntar clipes** num vídeo só, sem reencode, para um compilado.

@@ -588,6 +588,24 @@ public static class FfmpegArgs
         "-loop", "0", "-f", "gif", output,
     ];
 
+    /// <summary>
+    /// A copy with the sound of every track taken out from <paramref name="start"/> to <paramref name="end"/>, to keep
+    /// something said there from being shared. The picture is copied as it is; the sound is encoded again, each track
+    /// on its own as in the clip.
+    /// </summary>
+    public static IReadOnlyList<string> MutePart(string input, string output, double start, double end)
+    {
+        start = Math.Max(0, start);
+        if (!(end > start)) throw new ArgumentOutOfRangeException(nameof(end), end, "The marks take in nothing.");
+        return
+        [
+            "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-i", input,
+            "-map", "0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+            "-filter:a", Inv($"volume=enable='between(t,{start:0.###},{end:0.###})':volume=0"),
+            "-movflags", "+faststart", "-f", "mp4", output,
+        ];
+    }
+
     /// <summary>Several clips into one by stream copy, every track included. See <see cref="ClipJoiner"/>.</summary>
     public static IReadOnlyList<string> Join(string concatListPath, string outputPath) =>
     [

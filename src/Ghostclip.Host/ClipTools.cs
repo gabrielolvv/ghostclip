@@ -393,6 +393,38 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         return output;
     }
 
+    /// <summary>Makes Game_..._muted.mp4 with no sound from <paramref name="start"/> to <paramref name="end"/>, the picture as it is.</summary>
+    public async Task<string> MutePartAsync(string clip, double start, double end, CancellationToken ct = default)
+    {
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
+        if (info.AudioTracks == 0) throw new InvalidOperationException(L("This clip has no sound.", "Este clipe não tem som.", "Este clip no tiene sonido."));
+        if (Math.Min(end, info.Duration) <= Math.Max(0, start))
+        {
+            throw new InvalidOperationException(L("Mark the part to mute first.", "Marque antes o trecho a silenciar.", "Marca antes el tramo que silenciar."));
+        }
+        var output = ClipNaming.DerivedPath(clip, "muted", File.Exists);
+        ProcessResult r;
+        try
+        {
+            // The picture is copied and the sound is light work: about the time it takes to copy the file.
+            r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.MutePart(clip, PartFile.For(output), start, Math.Min(end, info.Duration)),
+                TimeSpan.FromMinutes(30), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            PartFile.Discard(output);
+            throw;
+        }
+        if (!r.Succeeded)
+        {
+            PartFile.Discard(output);
+            throw new InvalidOperationException(L($"Could not mute the part: {r.FirstError}", $"Não foi possível silenciar o trecho: {r.FirstError}", $"No se pudo silenciar el tramo: {r.FirstError}"));
+        }
+        PartFile.Commit(output);
+        log.Information("Muted {Start:0.0}-{End:0.0} s of {Clip}: {Output}", start, end, clip, output);
+        return output;
+    }
+
     /// <summary>Joins clips by stream copy into Game_..._joined.mp4 next to the oldest, in the order they were saved.</summary>
     public async Task<string> JoinAsync(IReadOnlyList<string> clips, CancellationToken ct = default)
     {

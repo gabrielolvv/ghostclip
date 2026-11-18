@@ -74,6 +74,8 @@ QuickSync). There is no CPU encoder fallback.
 - **Speed up** up to 30 minutes from the trim marks, at twice or four times the speed,
   to get through a long stretch of a session in a short video.
 - **Audio only:** the sound of the trim marks as an .m4a, for that line from the call.
+- **Mute part:** a copy with no sound in the trim marks, for what someone said that
+  shouldn't be shared. The picture and the separate tracks stay as they are.
 - **Choose a clip's cover** for its card in the library, from the frame on screen.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
 - **Join clips** into one video, without re-encoding, for a compilation.
