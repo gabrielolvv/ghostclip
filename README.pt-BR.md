@@ -49,7 +49,9 @@ loopback do próprio Windows e a codificação roda no encoder de hardware da GP
 ### Biblioteca e player
 
 - **Biblioteca de clipes.** Todos os clipes e prints por jogo, com miniaturas,
-  player e linha do tempo sobre a forma de onda do áudio; o clipe toca quando você
+  player que toca todas as faixas (o microfone e o Discord também, no volume
+  ajustado para cada uma, como as cópias recebem) e linha do tempo sobre a forma
+  de onda do áudio; o clipe toca quando você
   aponta para ele; favoritos, etiquetas que a busca encontra, filtro por data,
   tamanho dos cartões, renomear, mudar de jogo um clipe salvo no jogo errado, ir de
   uma cópia ao clipe de onde ela saiu e ações em vários de uma vez. Mostra o que a gravação
@@ -281,8 +283,8 @@ GPUs, principalmente NVIDIA e AMD, são muito bem-vindos numa issue.
   encaixa o início ali, e o `--trim` corta a partir do keyframe anterior.
 - O player da biblioteca precisa das Extensões de Vídeo HEVC da Microsoft
   Store para mostrar clipes HEVC; sem elas, toca só o som. H.264, o padrão,
-  sempre toca. A prévia toca a faixa do jogo; o microfone está no arquivo e
-  na versão para o Discord.
+  sempre toca. A prévia de um cartão, quando você aponta para ele, toca só a
+  faixa do jogo; o player toca todas.
 - Detecção do jogo para o áudio só do jogo: um programa conta como jogo quando
   roda em tela cheia ou sem borda, ou quando tem perfil. Jogo em janela precisa
   de perfil.

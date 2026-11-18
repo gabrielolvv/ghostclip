@@ -47,7 +47,9 @@ QuickSync). There is no CPU encoder fallback.
 ### Library and player
 
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
-  player and a timeline over the audio waveform; a clip plays as you point at
+  player that plays every track (the microphone and Discord too, at the volume
+  set for each, as the copies get them) and a timeline over the audio waveform;
+  a clip plays as you point at
   it; favorites, tags the search finds, a date filter, card sizes, renaming,
   moving a clip saved under the wrong game, going from a copy back to its clip, and
   acting on several at once. It shows what recording uses now: CPU, memory and
@@ -279,8 +281,8 @@ NVIDIA and AMD especially, are very welcome in an issue.
   the start there, and `--trim` cuts from the keyframe before the start.
 - The library's player needs the HEVC Video Extensions from the Microsoft
   Store to show HEVC clips; without them it plays the sound only. H.264,
-  the default, always plays. The preview plays the game track; the
-  microphone is in the file and in the Discord version.
+  the default, always plays. A card's preview, as you point at it, plays the
+  game track only; the player plays them all.
 - Game detection for game-only audio: a program counts as the game when it
   runs fullscreen or borderless, or has a profile. A windowed game needs a
   profile.

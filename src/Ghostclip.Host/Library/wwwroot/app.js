@@ -898,17 +898,93 @@ function showView(name) {
   $('nav-settings').classList.toggle('on', name === 'settings');
 }
 
+// The video element plays a clip's first track only. The others (the microphone, Discord) come apart from it in the
+// app's cache and play beside it here, kept to its time, at the volume set for each track: what you hear is what the
+// copies get. A track that can't come apart is just not heard.
+let extraAudio = [];
+let tracksFor = null;
+
+function trackGain(i) {
+  if (tracksOff.has(i)) return 0;
+  return (trackVolumes.get(i) ?? 100) / 100;
+}
+
+// The player's volume times each track's. An element goes up to 1: a track turned up past 100% plays at full.
+function applyVolumes() {
+  const master = Number($('volume').value) / 100;
+  video.volume = Math.min(1, master * (extraAudio.length ? trackGain(0) : 1));
+  for (const a of extraAudio) {
+    a.volume = Math.min(1, master * trackGain(Number(a.dataset.track)));
+    a.muted = video.muted;
+  }
+}
+
+function requestTracks(meta) {
+  const clip = state.current;
+  if (!clip || clip.image || !meta || meta.audioTracks < 2 || tracksFor === clip.path) return;
+  tracksFor = clip.path;
+  post({ type: 'tracks', path: clip.path });
+}
+
+function attachTracks(urls) {
+  for (const a of extraAudio) releaseAudio(a);
+  extraAudio = urls.map((url, i) => {
+    const a = new Audio();
+    a.preload = 'auto';
+    a.dataset.track = String(i + 1);
+    a.playbackRate = video.playbackRate;
+    a.addEventListener('loadedmetadata', () => syncTracks(true));
+    a.src = `${url}?v=${encodeURIComponent(state.current ? state.current.version : '')}`;
+    return a;
+  });
+  applyVolumes();
+}
+
+function releaseAudio(a) {
+  a.pause();
+  a.removeAttribute('src');
+  a.load();
+}
+
+function releaseTracks() {
+  for (const a of extraAudio) releaseAudio(a);
+  extraAudio = [];
+  tracksFor = null;
+  applyVolumes();
+}
+
+// Each track at the video's time, playing when it plays. A small drift is let be: setting the time is heard as a skip.
+function syncTracks(force = false) {
+  for (const a of extraAudio) {
+    if (a.readyState === 0) continue;
+    if (a.playbackRate !== video.playbackRate) a.playbackRate = video.playbackRate;
+    const at = Math.min(video.currentTime, a.duration || video.currentTime);
+    if (force || Math.abs(a.currentTime - at) > 0.12) a.currentTime = at;
+    if (video.paused || video.ended) {
+      if (!a.paused) a.pause();
+    } else if (a.paused) {
+      a.play().catch(() => {});
+    }
+  }
+}
+
+for (const type of ['play', 'pause', 'seeking', 'seeked', 'ratechange']) video.addEventListener(type, () => syncTracks(type !== 'ratechange' && type !== 'pause'));
+video.addEventListener('timeupdate', () => syncTracks());
+video.addEventListener('waiting', () => { for (const a of extraAudio) a.pause(); });
+video.addEventListener('playing', () => syncTracks(true));
+
 // How loud the player goes. It changes what you hear, never the file, and stays from clip to clip and between visits.
 const VOLUMES = ['100', ...Array.from({ length: 20 }, (_, i) => String(i * 5))];
 
 function setVolume(percent, keep = true) {
-  video.volume = percent / 100;
   $('volume').value = percent;
+  applyVolumes();
   if (keep) keepChoice('playerVolume', String(percent));
 }
 
 function setMuted(muted, keep = true) {
   video.muted = muted;
+  for (const a of extraAudio) a.muted = muted;
   $('mute').setAttribute('aria-pressed', String(muted));
   $('mute').setAttribute('aria-label', muted ? L('Unmute', 'Ativar o som', 'Activar el sonido') : L('Mute', 'Silenciar', 'Silenciar'));
   if (keep) keepChoice('playerMuted', String(muted));
@@ -919,7 +995,7 @@ setMuted(readChoice('playerMuted', ['false', 'true']) === 'true', false);
 
 $('volume').addEventListener('input', () => {
   setVolume(Number($('volume').value));
-  if (video.muted && video.volume > 0) setMuted(false);
+  if (video.muted && Number($('volume').value) > 0) setMuted(false);
 });
 // Let go of with the mouse, it gives the keys back to the player. By keyboard, it keeps its place.
 $('volume').addEventListener('pointerup', () => $('volume').blur());
@@ -1021,6 +1097,7 @@ function openClip(path) {
     image.src = url;
   } else {
     image.removeAttribute('src');
+    releaseTracks();
     video.src = url;
   }
   state.start = 0;
@@ -1127,6 +1204,7 @@ function releaseVideo() {
   video.removeAttribute('src');
   video.load();
   releaseScrub();
+  releaseTracks();
 }
 
 // The frame under the pointer on the timeline, or at the handle being dragged, from a second video that only
@@ -1222,11 +1300,13 @@ function showExportTracks(meta) {
     slider.addEventListener('input', () => {
       trackVolumes.set(i, Number(slider.value));
       percent.textContent = `${slider.value}%`;
+      applyVolumes();
     });
     b.addEventListener('click', () => {
       if (!tracksOff.delete(i)) tracksOff.add(i);
       b.setAttribute('aria-pressed', String(!tracksOff.has(i)));
       slider.disabled = tracksOff.has(i);
+      applyVolumes();
     });
     const track = el('span', 'track');
     track.append(b, slider, percent);
@@ -1287,6 +1367,7 @@ function setupTimeline() {
   $('clip-info').textContent = [`${meta.height}P${Math.round(meta.fps)}`, codecLabel(meta.videoCodec),
     tracksLabel(meta), fmtSize(clip.bytes)].join(' · ');
   showExportTracks(meta);
+  requestTracks(meta);
   $('t-end').textContent = fmtTime(meta.duration);
   placeBookmarks();
   layoutRange();
@@ -2234,6 +2315,9 @@ function onMessage(message) {
       }
       break;
     }
+    case 'tracks':
+      if (state.current && state.current.path === message.path && tracksFor === message.path) attachTracks(message.trackUrls || []);
+      break;
     case 'meta': {
       state.meta.set(message.path, { meta: message.meta, thumb: message.thumb });
       const card = [...document.querySelectorAll('.card')].find(c => c.dataset.path === message.path);
@@ -2249,6 +2333,8 @@ function onMessage(message) {
       onDone(message);
       break;
     case 'error':
+      // A track that can't come apart is just not heard: the clip plays with the rest.
+      if (message.op === 'tracks') break;
       if (message.op === 'trim') busy($('a-trim'), false);
       if (message.op === 'cutOut') busy($('a-cut'), false);
       if (message.op === 'mute') busy($('a-mute'), false);

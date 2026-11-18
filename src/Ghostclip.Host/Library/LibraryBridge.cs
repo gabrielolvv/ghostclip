@@ -263,6 +263,17 @@ internal sealed class LibraryBridge : IDisposable
                     _window.Post(new LibraryEvent("meta", Path: path, Meta: meta,
                         Thumb: thumb is null ? null : $"https://{LibraryWindow.CacheHost}/{Path.GetFileName(thumb)}"));
                     break;
+                case "tracks":
+                    // The player plays the first track; the others come apart to play beside it, in their order.
+                    var (trackMeta, _) = await Track(_meta.GetAsync(path, _closing.Token, LibraryStore.Read(_paths.LibraryFile).CoverFor(path))).ConfigureAwait(true);
+                    var trackUrls = new List<string>();
+                    for (var t = 1; t < trackMeta.AudioTracks; t++)
+                    {
+                        var trackFile = await Track(_meta.TrackFileAsync(path, t, _closing.Token)).ConfigureAwait(true);
+                        trackUrls.Add($"https://{LibraryWindow.CacheHost}/{Path.GetFileName(trackFile)}");
+                    }
+                    _window.Post(new LibraryEvent("tracks", Path: path, TrackUrls: trackUrls));
+                    break;
                 case "trim":
                     var trimmed = await Job(_tools.TrimAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: trimmed));

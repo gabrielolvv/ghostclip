@@ -181,6 +181,9 @@ public static class ClipMedia
     public static string ThumbName(string key, double? coverAt) =>
         coverAt is { } at ? string.Create(CultureInfo.InvariantCulture, $"{key}.{(long)Math.Round(at * 1000)}.jpg") : key + ".jpg";
 
+    /// <summary>The cache file of a clip's audio track <paramref name="track"/>, for the player (<see cref="FfmpegArgs.ExtractTrack"/>).</summary>
+    public static string TrackName(string key, int track) => string.Create(CultureInfo.InvariantCulture, $"{key}.track{track}.mp4");
+
     public static string CacheKey(string path, long bytes, DateTime lastWriteUtc)
     {
         var text = string.Create(CultureInfo.InvariantCulture, $"{Path.GetFullPath(path).ToUpperInvariant()}|{bytes}|{lastWriteUtc.Ticks}");
