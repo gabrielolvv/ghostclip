@@ -11,6 +11,10 @@ update prompt (`build/release.ps1` refuses to pack a version without one).
   the player's tracks, joining, GIFs and pictures) through the very FFmpeg the app
   ships, on a made-up clip, checking the packets that come out. Until now only the
   arguments given to FFmpeg were tested.
+- So does the hotkey's save: the replay buffer's segments, made with the recorder's own
+  segment options, joined into an MP4 by the app's list and remux, including the newest
+  segment cut off mid-write, segments from before and after a worker restart, and the
+  audio shift.
 
 ## 0.8.41
 

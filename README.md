@@ -167,8 +167,8 @@ dotnet build
 ```
 
 Tests: `dotnet test --project tests/Ghostclip.Core.Tests`. The integration
-tests run the real FFmpeg on a made-up clip (trim, cut out, mute, the player's
-tracks, joining, GIFs, pictures) and need its folder, as CI gives them the
+tests run the real FFmpeg on a made-up clip (saving from the replay buffer, trim,
+cut out, mute, the player's tracks, joining, GIFs, pictures) and need its folder, as CI gives them the
 minimal build the app ships:
 
 ```powershell
