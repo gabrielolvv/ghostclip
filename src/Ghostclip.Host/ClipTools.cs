@@ -7,7 +7,7 @@ using Serilog;
 namespace Ghostclip.Host;
 
 /// <param name="AudioTitles">Track names saving wrote ("Game", "Microphone", "Discord"); empty for clips with unnamed tracks.</param>
-internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec, IReadOnlyList<string> AudioTitles);
+internal sealed record ClipInfo(double Duration, int Height, double Fps, int AudioTracks, string VideoCodec, IReadOnlyList<string> AudioTitles, int BFrames = 0);
 
 /// <summary>
 /// Trimming, "compress for Discord", the vertical copy and joining. All run at below-normal
@@ -18,13 +18,13 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
     public async Task<ClipInfo> ProbeAsync(string clip, CancellationToken ct = default)
     {
         var r = await ProcessRunner.RunAsync(Ffprobe(), [
-            "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate:stream_tags=handler_name", "-of", "json", clip,
+            "-v", "error", "-show_entries", "format=duration:stream=codec_type,codec_name,height,r_frame_rate,has_b_frames:stream_tags=handler_name", "-of", "json", clip,
         ], TimeSpan.FromSeconds(20), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);
         if (!r.Succeeded) throw new InvalidOperationException(L($"Could not read the clip: {r.FirstError}", $"Não foi possível ler o clipe: {r.FirstError}", $"No se pudo leer el clip: {r.FirstError}"));
 
         using var json = JsonDocument.Parse(r.StdOut);
         var duration = double.Parse(json.RootElement.GetProperty("format").GetProperty("duration").GetString()!, CultureInfo.InvariantCulture);
-        int height = 0, audio = 0;
+        int height = 0, audio = 0, bFrames = 0;
         double fps = 0;
         var codec = "";
         var titles = new List<string>();
@@ -40,6 +40,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             {
                 height = s.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
                 codec = s.TryGetProperty("codec_name", out var c) ? c.GetString() ?? "" : "";
+                bFrames = s.TryGetProperty("has_b_frames", out var b) && b.ValueKind == JsonValueKind.Number && b.TryGetInt32(out var delay) ? delay : 0;
                 var rate = s.TryGetProperty("r_frame_rate", out var f) ? f.GetString() ?? "" : "";
                 var parts = rate.Split('/');
                 if (parts.Length == 2 && double.TryParse(parts[0], CultureInfo.InvariantCulture, out var n) &&
@@ -51,7 +52,7 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
         }
         // MP4 names an unnamed track "SoundHandler": only names saving gave count.
         return new ClipInfo(duration, height, fps, audio, codec,
-            titles.Any(t => t is "Game" or "Microphone" or "Discord") ? titles : []);
+            titles.Any(t => t is "Game" or "Microphone" or "Discord") ? titles : [], bFrames);
     }
 
     /// <summary>Cuts by stream copy into Game_..._trim.mp4. Takes about as long as copying the file.</summary>
@@ -365,12 +366,14 @@ internal sealed class ClipTools(GhostclipPaths paths, Func<GhostclipConfig> conf
             throw new InvalidOperationException(L("Nothing to cut out: mark a longer part, or one that isn't all of the clip.",
                 "Nada para tirar: marque um trecho maior, ou um que não seja o clipe todo.", "Nada que quitar: marca un tramo más largo, o uno que no sea todo el clip."));
         }
+        // A clip made elsewhere may have B-frames; Ghostclip's own have none.
+        var info = await ProbeAsync(clip, ct).ConfigureAwait(false);
         var output = ClipNaming.DerivedPath(clip, "cut", p => File.Exists(p) || File.Exists(PartFile.For(p)));
         var list = Path.Combine(paths.DataDir, $"cut-{Guid.NewGuid():N}.ffconcat");
         ProcessResult r;
         try
         {
-            await File.WriteAllTextAsync(list, FfmpegArgs.CutOutList(clip, parts), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(list, FfmpegArgs.CutOutList(clip, parts, CutOut.OutLead(info.BFrames, info.Fps)), ct).ConfigureAwait(false);
             // About the time it takes to copy the file, twice with faststart: a long session on a slow disk takes longer.
             r = await ProcessRunner.RunAsync(Ffmpeg(), FfmpegArgs.Join(list, PartFile.For(output)),
                 LongCopyTimeout(duration), ProcessPriorityClass.BelowNormal, ct).ConfigureAwait(false);

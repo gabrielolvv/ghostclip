@@ -9,6 +9,13 @@ public static class CutOut
     /// <summary>A stretch of the clip kept: from <paramref name="In"/>, up to <paramref name="Out"/> or to its end.</summary>
     public sealed record Part(double In, double? Out);
 
+    /// <summary>
+    /// How much earlier an out point goes in a clip with B-frames: the demuxer stops by decoding time, where a keyframe
+    /// comes <paramref name="bFrames"/> frames ahead, so at the mark itself that keyframe, of the part cut out, would
+    /// come in. Ghostclip's recordings and copies have none.
+    /// </summary>
+    public static double OutLead(int bFrames, double fps) => bFrames > 0 && fps > 0 ? bFrames / fps : 0;
+
     // Closer than this to the start or the end of the clip counts as at it.
     private const double Edge = 0.05;
 

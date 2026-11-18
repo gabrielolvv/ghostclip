@@ -3,6 +3,15 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Fixed
+
+- Cut out on a clip made elsewhere with B-frames, as an OBS recording, no longer brings
+  a frame of the part cut out back in at the splice when the clip has one B-frame of
+  delay, and gets closer to the marks with more. Ghostclip's own recordings and copies
+  have none and were exact already.
+
 ## 0.8.40
 
 ### Fixed

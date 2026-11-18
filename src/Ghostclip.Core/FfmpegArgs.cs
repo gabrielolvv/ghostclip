@@ -661,14 +661,15 @@ public static class FfmpegArgs
     /// between them. Each in point is a keyframe time from the library, kept to the microsecond as in <see cref="Trim"/>:
     /// rounded to milliseconds, 21.666667 would fall before the keyframe and the demuxer would seek back to the one before.
     /// </summary>
-    public static string CutOutList(string clip, IReadOnlyList<CutOut.Part> parts)
+    /// <param name="outLead">How much earlier each out point goes (<see cref="CutOut.OutLead"/>).</param>
+    public static string CutOutList(string clip, IReadOnlyList<CutOut.Part> parts, double outLead = 0)
     {
         var sb = new StringBuilder("ffconcat version 1.0\n");
         foreach (var part in parts)
         {
             sb.Append("file '").Append(ConcatPath(clip)).Append("'\n");
             if (part.In > 0) sb.Append(Inv($"inpoint {part.In:0.000000}\n"));
-            if (part.Out is { } end) sb.Append(Inv($"outpoint {end:0.######}\n"));
+            if (part.Out is { } end) sb.Append(Inv($"outpoint {Math.Max(0, end - outLead):0.######}\n"));
         }
         return sb.ToString();
     }
