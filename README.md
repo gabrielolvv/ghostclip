@@ -20,6 +20,8 @@ QuickSync). There is no CPU encoder fallback.
 
 ## Features
 
+### Recording
+
 - **Instant replay** of the last 60 s (configurable) on Alt+F10, saved as MP4
   in a folder per game, with no re-encode. An optional second key saves a clip
   of its own length, 15 s to start with.
@@ -41,6 +43,9 @@ QuickSync). There is no CPU encoder fallback.
 - **Per-game profiles** for clip length, audio source and microphone mute, and to
   record the session by itself from when the game opens until it closes.
 - **Replay buffer on the drive you choose,** to spare the system's SSD.
+
+### Library and player
+
 - **Clip library.** Every clip and screenshot by game, with thumbnails, a
   player and a timeline over the audio waveform; a clip plays as you point at
   it; favorites, tags the search finds, a date filter, card sizes, renaming,
@@ -52,6 +57,9 @@ QuickSync). There is no CPU encoder fallback.
   trim marks, or all of it.
 - **Play all** the videos in a list, one after another, to go back over a game or
   your favorites.
+
+### Editing and sharing
+
 - **Copy trim:** the marked part on the clipboard, ready to paste, in one step.
 - **Trim** by dragging two handles, with the wheel to zoom in and the frame under
   the pointer shown above the timeline, without re-encoding. The start snaps to
@@ -79,6 +87,9 @@ QuickSync). There is no CPU encoder fallback.
 - **Choose a clip's cover** for its card in the library, from the frame on screen.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
 - **Join clips** into one video, without re-encoding, for a compilation.
+
+### Housekeeping
+
 - **Space limit** (optional): past it, the oldest clips and screenshots make
   room for new ones. Favorites, clips you renamed and anything Ghostclip
   didn't make are never touched.
