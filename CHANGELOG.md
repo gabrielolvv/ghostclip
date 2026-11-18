@@ -3,6 +3,17 @@
 Each release's section here becomes its notes on GitHub Releases and in the
 update prompt (`build/release.ps1` refuses to pack a version without one).
 
+## Unreleased
+
+### Added
+
+- Speed up in the Export menu: a copy of the trim marks, their first 30 minutes at most,
+  at the player's speed when it's sped up (2x or 4x) and twice as fast otherwise, to get
+  through a long stretch of a session. The sound speeds up too, without going higher.
+  Frames are dropped to keep the clip's rate, on the GPU encoder.
+- The player goes up to 4x.
+- The self-test also checks the sped-up copy.
+
 ## 0.8.34
 
 ### Fixed

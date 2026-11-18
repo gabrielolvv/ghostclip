@@ -304,6 +304,12 @@ internal sealed class LibraryBridge : IDisposable
                         r.Tracks, r.Volumes, r.Denoise, r.Level, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: slow));
                     break;
+                case "fast":
+                    // The player's speed when it's sped up; twice otherwise.
+                    var fast = await Job(_tools.FastForwardAsync(path, r.Start, r.End, r.Speed is > 1 and <= 4 ? r.Speed : 2,
+                        r.Tracks, r.Volumes, r.Denoise, r.Level, _closing.Token)).ConfigureAwait(true);
+                    _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: fast));
+                    break;
                 case "gif":
                     var (gif, gifBytes) = await Job(_tools.GifAsync(path, r.Start, r.End, _closing.Token)).ConfigureAwait(true);
                     _window.Post(new LibraryEvent("done", Op: r.Type, Path: path, Output: gif,

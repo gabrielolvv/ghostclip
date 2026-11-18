@@ -519,13 +519,60 @@ public static class FfmpegArgs
         return args;
     }
 
-    // atempo slows to half at most in one go: a quarter is two halvings.
+    // atempo goes from half to double in one go: a quarter is two halvings, four times two doublings.
     private static string Tempo(double speed)
     {
         var parts = new List<string>();
         for (; speed < 0.5 - 1e-9; speed /= 0.5) parts.Add("atempo=0.5");
+        for (; speed > 2 + 1e-9; speed /= 2) parts.Add("atempo=2");
         parts.Add(Inv($"atempo={speed:0.###}"));
         return string.Join(',', parts);
+    }
+
+    /// <summary>The most of a clip a sped-up copy takes: at four times, a quarter of an hour still plays for over seven minutes.</summary>
+    public const double FastForwardMaxSeconds = 30 * 60;
+
+    /// <summary>
+    /// What a sped-up copy takes: the trim marks, up to their first <see cref="FastForwardMaxSeconds"/>. Unlike a GIF
+    /// or slow motion, it's for getting through a long stretch from where it starts, not for the moment at its end.
+    /// Marks that make no sense count as the whole clip.
+    /// </summary>
+    public static (double Start, double Length) FastForwardRange(double start, double end, double duration)
+    {
+        start = Math.Max(0, start);
+        end = Math.Min(end, duration);
+        if (end <= start) (start, end) = (0, duration);
+        return (start, Math.Min(end - start, FastForwardMaxSeconds));
+    }
+
+    /// <summary>
+    /// A sped-up copy of <paramref name="length"/> seconds from <paramref name="start"/>, on the hardware encoder: frames
+    /// are dropped to keep the clip's rate, so twice as fast at 60 fps shows every other one. The sound goes faster
+    /// without going higher, after the tracks are mixed into one as in the other copies.
+    /// </summary>
+    /// <param name="speed">Above 1, up to 4.</param>
+    /// <param name="fps">The clip's frame rate; 60 when not known.</param>
+    public static IReadOnlyList<string> FastForward(string input, string output, string encoderName, double start, double length, double speed, double fps, int audioTracks,
+        IReadOnlyList<int>? keep = null, IReadOnlyList<double>? volumes = null, IReadOnlyList<int>? denoise = null, bool level = false)
+    {
+        if (!(speed > 1 && speed <= 4)) throw new ArgumentOutOfRangeException(nameof(speed), speed, "Faster than normal, up to four times.");
+        if (!(fps > 0)) fps = 60;
+        const int VideoKbps = 12000;
+        var args = new List<string>
+        {
+            "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-hwaccel", "d3d11va",
+            "-ss", Inv($"{start}"), "-t", Inv($"{length}"), "-i", input,
+        };
+        var tracks = ClipMedia.TracksToKeep(audioTracks, keep);
+        if (tracks.Count == 0) args.AddRange(["-map", "0:v:0", "-an"]);
+        else args.AddRange(["-filter_complex", MixGraph(tracks, volumes, denoise, then: Tempo(speed), level: level), "-map", "0:v:0", "-map", "[a]"]);
+        args.AddRange([
+            "-vf", Inv($"setpts={1 / speed:0.###}*PTS,fps={fps:0.###}") + ",format=nv12",
+            "-c:v", encoderName, "-b:v", Inv($"{VideoKbps}k"), "-maxrate", Inv($"{VideoKbps}k"), "-bufsize", Inv($"{VideoKbps * 2}k"),
+            "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart", "-f", "mp4", output,
+        ]);
+        return args;
     }
 
     /// <summary>

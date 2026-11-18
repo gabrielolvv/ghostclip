@@ -66,9 +66,11 @@ QuickSync). There is no CPU encoder fallback.
   whether the sound is evened out to one steady loudness, and whether it fades in
   and out.
 - **GIF** of up to 15 s from the trim marks, for chats that won't play a video.
+  It's the one export on the CPU, at low priority, only while it's being made.
 - **Slow motion** of up to 20 s from the trim marks, at half or a quarter speed,
   on the GPU encoder.
-  It's the one export on the CPU, at low priority, only while it's being made.
+- **Speed up** up to 30 minutes from the trim marks, at twice or four times the speed,
+  to get through a long stretch of a session in a short video.
 - **Audio only:** the sound of the trim marks as an .m4a, for that line from the call.
 - **Choose a clip's cover** for its card in the library, from the frame on screen.
 - **Save a frame** of a clip as a picture, exactly the one on screen.
