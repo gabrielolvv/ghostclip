@@ -55,6 +55,11 @@ if (-not $SkipTests) {
 $ffmpeg = Join-Path $FFmpegDir 'ffmpeg.exe'
 if (-not (Test-Path -LiteralPath $ffmpeg)) { throw "Minimal FFmpeg not found in $FFmpegDir. Run build\ffmpeg\build.ps1 first." }
 Invoke-Step 'FFmpeg check' { & (Join-Path $root 'build\ffmpeg\verify.ps1') -FFmpeg $ffmpeg }
+if (-not $SkipTests) {
+    # What the library does without a GPU, run by this very FFmpeg on a made-up clip.
+    $env:GHOSTCLIP_FFMPEG_DIR = $FFmpegDir
+    Invoke-Step 'integration tests' { dotnet test --project (Join-Path $root 'tests\Ghostclip.Integration.Tests') -c Release }
+}
 
 if (Test-Path -LiteralPath $publish) { Remove-Item -LiteralPath $publish -Recurse -Force }
 $common = @('-c', 'Release', '-r', 'win-x64', '--self-contained', "-p:Version=$Version", '-o', $publish, '-nologo', '-v', 'q')
