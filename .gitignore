@@ -9,6 +9,8 @@
 # Media produced while testing
 *.ts
 *.mp4
+# except the made-up clip the integration tests run FFmpeg on
+!/tests/Ghostclip.Integration.Tests/Fixtures/*.mp4
 
 # .NET
 artifacts/
